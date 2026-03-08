@@ -1,5 +1,7 @@
 #include "gfnotary.hpp"
 
+#include <eosio/dispatcher.hpp>
+
 void gfnotary::addwhuser(const name& account, const string& note) {
     require_auth(get_self());
     check(is_account(account), "account does not exist");
@@ -346,4 +348,23 @@ void gfnotary::validate_text(
         check(!value.empty(), string(field_name) + " cannot be empty");
     }
     check(value.size() <= max_length, string(field_name) + " is too long");
+}
+
+extern "C" {
+    [[eosio::wasm_entry]]
+    void apply(uint64_t receiver, uint64_t code, uint64_t action) {
+        if (code == receiver) {
+            switch (action) {
+                EOSIO_DISPATCH_HELPER(
+                    gfnotary,
+                    (addwhuser)(rmwhuser)(addnporg)(rmnporg)(setpaytoken)(rmpaytoken)(submitfree)(withdraw)(quote)(iswhuser)(isnporg)
+                )
+            }
+            return;
+        }
+
+        if (action == "transfer"_n.value) {
+            eosio::execute_action(name(receiver), name(code), &gfnotary::ontransfer);
+        }
+    }
 }

@@ -11,6 +11,14 @@ This contract targets GlobalForce testnet and accepts only `GFT` from `eosio.tok
 
 ## Build
 
+Linux / WSL:
+
+```bash
+./scripts/build-testnet.sh
+```
+
+PowerShell:
+
 ```powershell
 ./scripts/build-testnet.ps1
 ```

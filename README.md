@@ -53,3 +53,8 @@ cleos push action eosio.token transfer '[
 - New `proofs` rows are stored with `get_self()` as RAM payer, so storage is paid by the contract account.
 - CPU/NET of the user-signed transfer transaction are still paid by the signer unless you add an external sponsorship layer.
 - The contract is intentionally small so it can be extended later with batching, Merkle roots, anchoring, and richer receipts.
+
+## Testnet
+
+- Build script: `scripts/build-testnet.ps1`
+- Deploy guide: `docs/testnet-deploy.md`

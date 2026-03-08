@@ -100,7 +100,7 @@ private:
         }
     };
 
-    struct [[eosio::table("proofsv2")]] proof_row {
+    struct [[eosio::table("proofsv2")]] proofv2_row {
         uint64_t proof_id;
         name submitter;
         string object_hash;
@@ -125,8 +125,8 @@ private:
     >;
     using proof_table = multi_index<
         "proofsv2"_n,
-        proof_row,
-        indexed_by<"bysubmitter"_n, const_mem_fun<proof_row, uint64_t, &proof_row::by_submitter>>
+        proofv2_row,
+        indexed_by<"bysubmitter"_n, const_mem_fun<proofv2_row, uint64_t, &proofv2_row::by_submitter>>
     >;
 
     static constexpr uint8_t hash_size = 32;

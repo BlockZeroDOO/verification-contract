@@ -52,6 +52,63 @@ void gfnotary::rmnporg(const name& account) {
     nonprofits.erase(existing);
 }
 
+void gfnotary::setpaytoken(
+    const name& token_contract,
+    const asset& retail_price,
+    const asset& wholesale_price
+) {
+    require_auth(get_self());
+    check(is_account(token_contract), "token_contract does not exist");
+    validate_payment_price(retail_price, "retail_price");
+    validate_payment_price(wholesale_price, "wholesale_price");
+    check(
+        retail_price.symbol == wholesale_price.symbol,
+        "retail_price and wholesale_price must use the same symbol"
+    );
+    check(
+        wholesale_price.amount <= retail_price.amount,
+        "wholesale_price cannot exceed retail_price"
+    );
+
+    payment_token_table payment_tokens(get_self(), get_self().value);
+    auto by_token = payment_tokens.get_index<"bytokensym"_n>();
+    auto key = make_payment_key(token_contract, retail_price.symbol.code());
+    auto existing = by_token.find(key);
+
+    if (existing == by_token.end()) {
+        payment_tokens.emplace(get_self(), [&](auto& row) {
+            row.config_id = payment_tokens.available_primary_key();
+            if (row.config_id == 0) {
+                row.config_id = 1;
+            }
+            row.token_contract = token_contract;
+            row.retail_price = retail_price;
+            row.wholesale_price = wholesale_price;
+            row.updated_at = time_point_sec(current_time_point());
+        });
+        return;
+    }
+
+    by_token.modify(existing, get_self(), [&](auto& row) {
+        row.retail_price = retail_price;
+        row.wholesale_price = wholesale_price;
+        row.updated_at = time_point_sec(current_time_point());
+    });
+}
+
+void gfnotary::rmpaytoken(const name& token_contract, const symbol& token_symbol) {
+    require_auth(get_self());
+    check(token_symbol.is_valid(), "token_symbol is invalid");
+
+    payment_token_table payment_tokens(get_self(), get_self().value);
+    auto by_token = payment_tokens.get_index<"bytokensym"_n>();
+    auto key = make_payment_key(token_contract, token_symbol.code());
+    auto existing = by_token.find(key);
+    check(existing != by_token.end(), "payment token config does not exist");
+
+    by_token.erase(existing);
+}
+
 void gfnotary::submitfree(
     const name& submitter,
     const string& object_hash,
@@ -75,20 +132,28 @@ void gfnotary::submitfree(
         hash_algorithm,
         canonicalization_profile,
         client_reference,
+        name{},
         nonprofit_price()
     );
 }
 
-void gfnotary::withdraw(const name& to, const asset& quantity, const string& memo) {
+void gfnotary::withdraw(
+    const name& token_contract,
+    const name& to,
+    const asset& quantity,
+    const string& memo
+) {
     require_auth(get_self());
+    check(is_account(token_contract), "token_contract does not exist");
     check(is_account(to), "to account does not exist");
-    check(quantity.symbol == gft_symbol(), "only GFT withdrawals are allowed");
     check(quantity.amount > 0, "quantity must be positive");
     validate_text(memo, 128, "memo", true);
 
+    get_payment_token(token_contract, quantity.symbol.code());
+
     action(
         permission_level{get_self(), "active"_n},
-        token_contract(),
+        token_contract,
         "transfer"_n,
         std::make_tuple(get_self(), to, quantity, memo)
     ).send();
@@ -99,9 +164,8 @@ void gfnotary::ontransfer(const name& from, const name& to, const asset& quantit
         return;
     }
 
-    check(get_first_receiver() == token_contract(), "unsupported token contract");
-    check(quantity.symbol == gft_symbol(), "payment must be in GFT");
     check(quantity.amount > 0, "payment must be positive");
+    check(!isnporg(from), "nonprofit accounts must use submitfree");
 
     auto parts = split_memo(memo, '|');
     check(parts.size() == 3 || parts.size() == 4, "memo format must be hash|algorithm|canonicalization|client_reference");
@@ -117,15 +181,28 @@ void gfnotary::ontransfer(const name& from, const name& to, const asset& quantit
     validate_text(client_reference, 128, "client_reference", true);
     check(hash_algorithm == "SHA-256", "only SHA-256 is currently supported");
 
-    const asset expected_price = resolve_price(from);
+    const name payment_token_contract = get_first_receiver();
+    const asset expected_price = resolve_price(from, payment_token_contract, quantity.symbol);
     check(quantity == expected_price, "incorrect payment amount for current pricing tier");
 
-    store_proof(from, object_hash, hash_algorithm, canonicalization_profile, client_reference, quantity);
+    store_proof(
+        from,
+        object_hash,
+        hash_algorithm,
+        canonicalization_profile,
+        client_reference,
+        payment_token_contract,
+        quantity
+    );
 }
 
-asset gfnotary::quote(const name& account) const {
+asset gfnotary::quote(
+    const name& account,
+    const name& token_contract,
+    const symbol& token_symbol
+) const {
     check(is_account(account), "account does not exist");
-    return resolve_price(account);
+    return resolve_price(account, token_contract, token_symbol);
 }
 
 bool gfnotary::iswhuser(const name& account) const {
@@ -138,32 +215,49 @@ bool gfnotary::isnporg(const name& account) const {
     return nonprofits.find(account.value) != nonprofits.end();
 }
 
-symbol gfnotary::gft_symbol() const {
-    return symbol(symbol_code("GFT"), 4);
-}
-
-name gfnotary::token_contract() const {
-    return "eosio.token"_n;
+symbol gfnotary::free_symbol() const {
+    return symbol(symbol_code("FREE"), 4);
 }
 
 asset gfnotary::nonprofit_price() const {
-    return asset{0, gft_symbol()};
+    return asset{0, free_symbol()};
 }
 
-asset gfnotary::retail_price() const {
-    return asset{10000, gft_symbol()};
+uint128_t gfnotary::make_payment_key(const name& token_contract, const symbol_code& token_symbol) const {
+    return (static_cast<uint128_t>(token_contract.value) << 64) | token_symbol.raw();
 }
 
-asset gfnotary::wholesale_price() const {
-    return asset{1000, gft_symbol()};
+gfnotary::payment_token gfnotary::get_payment_token(
+    const name& token_contract,
+    const symbol_code& token_symbol
+) const {
+    payment_token_table payment_tokens(get_self(), get_self().value);
+    auto by_token = payment_tokens.get_index<"bytokensym"_n>();
+    auto key = make_payment_key(token_contract, token_symbol);
+    auto existing = by_token.find(key);
+    check(existing != by_token.end(), "payment token is not configured");
+    return *existing;
 }
 
-asset gfnotary::resolve_price(const name& account) const {
+asset gfnotary::resolve_price(
+    const name& account,
+    const name& token_contract,
+    const symbol& token_symbol
+) const {
+    check(is_account(token_contract), "token_contract does not exist");
+    check(token_symbol.is_valid(), "token_symbol is invalid");
+
+    auto payment_token = get_payment_token(token_contract, token_symbol.code());
+    check(
+        payment_token.retail_price.symbol == token_symbol,
+        "token_symbol precision does not match configured payment token"
+    );
+
     if (isnporg(account)) {
-        return nonprofit_price();
+        return asset{0, token_symbol};
     }
 
-    return iswhuser(account) ? wholesale_price() : retail_price();
+    return iswhuser(account) ? payment_token.wholesale_price : payment_token.retail_price;
 }
 
 void gfnotary::validate_hash(const string& hex) const {
@@ -172,6 +266,12 @@ void gfnotary::validate_hash(const string& hex) const {
     for (char ch : hex) {
         (void)from_hex(ch);
     }
+}
+
+void gfnotary::validate_payment_price(const asset& price, const char* field_name) const {
+    check(price.is_valid(), string(field_name) + " is invalid");
+    check(price.amount > 0, string(field_name) + " must be positive");
+    check(price.symbol.is_valid(), string(field_name) + " has invalid symbol");
 }
 
 std::vector<string> gfnotary::split_memo(const string& memo, char delimiter) const {
@@ -213,6 +313,7 @@ void gfnotary::store_proof(
     const string& hash_algorithm,
     const string& canonicalization_profile,
     const string& client_reference,
+    const name& payment_token_contract,
     const asset& price
 ) {
     proof_table proofs(get_self(), get_self().value);
@@ -228,6 +329,7 @@ void gfnotary::store_proof(
         row.hash_algorithm = hash_algorithm;
         row.canonicalization_profile = canonicalization_profile;
         row.client_reference = client_reference;
+        row.payment_token_contract = payment_token_contract;
         row.price_charged = price;
         row.wholesale_pricing = iswhuser(submitter);
         row.submitted_at = time_point_sec(current_time_point());

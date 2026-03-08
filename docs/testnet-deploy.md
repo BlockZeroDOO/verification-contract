@@ -1,6 +1,6 @@
 # Testnet Deploy
 
-This contract targets GlobalForce testnet and accepts only `GFT` from `eosio.token`.
+This contract targets GlobalForce testnet and accepts payment tokens configured in the `paytokens` table.
 
 ## Prerequisites
 
@@ -56,13 +56,29 @@ cleos -u https://dev-history.globalforce.io push action gfnotary addnporg '["cha
 cleos -u https://dev-history.globalforce.io push action gfnotary rmnporg '["charity.acc"]' -p gfnotary@active
 ```
 
-## Pricing
+## Payment token configuration
 
-- retail: `1.0000 GFT`
-- wholesale: `0.1000 GFT`
-- nonprofit: `0.0000 GFT`
+```powershell
+cleos -u https://dev-history.globalforce.io push action gfnotary setpaytoken '[
+  "eosio.token",
+  "1.0000 GFT",
+  "0.1000 GFT"
+]' -p gfnotary@active
+```
 
-Applicable price is determined by membership in the `nonprofit` and `wholesale` tables.
+Remove a payment token:
+
+```powershell
+cleos -u https://dev-history.globalforce.io push action gfnotary rmpaytoken '[
+  "eosio.token",
+  "4,GFT"
+]' -p gfnotary@active
+```
+
+Applicable price is determined by:
+
+- membership in the `nonprofit` and `wholesale` tables
+- the selected token configuration in `paytokens`
 
 ## Record creation by payment
 
@@ -109,6 +125,7 @@ cleos -u https://dev-history.globalforce.io push action gfnotary submitfree '[
 ## Read tables
 
 ```powershell
+cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary paytokens
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary wholesale
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary nonprofit
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary proofs
@@ -123,12 +140,17 @@ export OWNER_ACCOUNT=globalnotary
 export RETAIL_ACCOUNT=yourretailacc
 export WHOLESALE_ACCOUNT=yourwholesale
 export NONPROFIT_ACCOUNT=yournonprofit
+export PAYMENT_TOKEN_CONTRACT=eosio.token
+export PAYMENT_TOKEN_SYMBOL=4,GFT
+export RETAIL_PRICE="1.0000 GFT"
+export WHOLESALE_PRICE="0.1000 GFT"
 ./scripts/smoke-test.sh
 ```
 
 The script verifies:
 
 - wholesale account can be added and removed
+- payment token configuration can be created or updated
 - wholesale payment of `0.1000 GFT` creates a proof with `wholesale_pricing=true`
 - retail payment of `1.0000 GFT` creates a proof with `wholesale_pricing=false`
 - nonprofit account can be added and submit a free proof
@@ -139,12 +161,13 @@ Requirements:
 - `cleos`
 - `jq`
 - imported keys for `OWNER_ACCOUNT`, `RETAIL_ACCOUNT`, `WHOLESALE_ACCOUNT`, and `NONPROFIT_ACCOUNT`
-- enough `GFT` balance on both payer accounts
+- enough balance in the configured payment token on both payer accounts
 
 ## Withdraw collected payments
 
 ```powershell
 cleos -u https://dev-history.globalforce.io push action gfnotary withdraw '[
+  "eosio.token",
   "owneraccount",
   "10.0000 GFT",
   "withdraw testnet revenue"

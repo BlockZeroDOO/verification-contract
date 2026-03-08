@@ -4,6 +4,10 @@ set -euo pipefail
 
 RPC_URL="${RPC_URL:-https://dev-history.globalforce.io}"
 CONTRACT_ACCOUNT="${CONTRACT_ACCOUNT:-globalnotary}"
+PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
+PAYMENT_TOKEN_SYMBOL="${PAYMENT_TOKEN_SYMBOL:-4,GFT}"
+RETAIL_PRICE="${RETAIL_PRICE:-1.0000 GFT}"
+WHOLESALE_PRICE="${WHOLESALE_PRICE:-0.1000 GFT}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the contract admin account.}"
 : "${RETAIL_ACCOUNT:?Set RETAIL_ACCOUNT to a funded retail test account.}"
@@ -99,6 +103,9 @@ assert_proof_by_reference() {
 log "Initial proof count"
 INITIAL_PROOFS="$(count_rows proofs)"
 
+log "Ensuring payment token config exists"
+cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" setpaytoken "[\"${PAYMENT_TOKEN_CONTRACT}\",\"${RETAIL_PRICE}\",\"${WHOLESALE_PRICE}\"]" -p "${OWNER_ACCOUNT}@active"
+
 log "Resetting wholesale test account state"
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" rmwhuser "[\"${WHOLESALE_ACCOUNT}\"]" -p "${OWNER_ACCOUNT}@active" >/dev/null 2>&1 || true
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" rmnporg "[\"${NONPROFIT_ACCOUNT}\"]" -p "${OWNER_ACCOUNT}@active" >/dev/null 2>&1 || true
@@ -110,22 +117,22 @@ WHOLESALE_TABLE="$(get_table_json wholesale)"
 assert_contains_account "${WHOLESALE_ACCOUNT}" "${WHOLESALE_TABLE}"
 
 log "Submitting wholesale payment"
-cleos -u "${RPC_URL}" push action eosio.token transfer "[\"${WHOLESALE_ACCOUNT}\",\"${CONTRACT_ACCOUNT}\",\"0.1000 GFT\",\"${WHOLESALE_MEMO}\"]" -p "${WHOLESALE_ACCOUNT}@active"
-assert_proof_by_reference "${WHOLESALE_REF}" "${WHOLESALE_ACCOUNT}" "0.1000 GFT" "true"
+cleos -u "${RPC_URL}" push action "${PAYMENT_TOKEN_CONTRACT}" transfer "[\"${WHOLESALE_ACCOUNT}\",\"${CONTRACT_ACCOUNT}\",\"${WHOLESALE_PRICE}\",\"${WHOLESALE_MEMO}\"]" -p "${WHOLESALE_ACCOUNT}@active"
+assert_proof_by_reference "${WHOLESALE_REF}" "${WHOLESALE_ACCOUNT}" "${WHOLESALE_PRICE}" "true"
 
 log "Removing wholesale status"
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" rmwhuser "[\"${WHOLESALE_ACCOUNT}\"]" -p "${OWNER_ACCOUNT}@active"
 
 log "Submitting retail payment"
-cleos -u "${RPC_URL}" push action eosio.token transfer "[\"${RETAIL_ACCOUNT}\",\"${CONTRACT_ACCOUNT}\",\"1.0000 GFT\",\"${RETAIL_MEMO}\"]" -p "${RETAIL_ACCOUNT}@active"
-assert_proof_by_reference "${RETAIL_REF}" "${RETAIL_ACCOUNT}" "1.0000 GFT" "false"
+cleos -u "${RPC_URL}" push action "${PAYMENT_TOKEN_CONTRACT}" transfer "[\"${RETAIL_ACCOUNT}\",\"${CONTRACT_ACCOUNT}\",\"${RETAIL_PRICE}\",\"${RETAIL_MEMO}\"]" -p "${RETAIL_ACCOUNT}@active"
+assert_proof_by_reference "${RETAIL_REF}" "${RETAIL_ACCOUNT}" "${RETAIL_PRICE}" "false"
 
 log "Adding nonprofit account ${NONPROFIT_ACCOUNT}"
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" addnporg "[\"${NONPROFIT_ACCOUNT}\",\"smoke test nonprofit\"]" -p "${OWNER_ACCOUNT}@active"
 
 log "Submitting nonprofit proof without payment"
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" submitfree "[\"${NONPROFIT_ACCOUNT}\",\"${BASE_HASH}\",\"SHA-256\",\"none\",\"${NONPROFIT_REF}\"]" -p "${NONPROFIT_ACCOUNT}@active"
-assert_proof_by_reference "${NONPROFIT_REF}" "${NONPROFIT_ACCOUNT}" "0.0000 GFT" "false"
+assert_proof_by_reference "${NONPROFIT_REF}" "${NONPROFIT_ACCOUNT}" "0.0000 FREE" "false"
 
 FINAL_PROOFS="$(count_rows proofs)"
 EXPECTED_FINAL_PROOFS="$((INITIAL_PROOFS + 3))"

@@ -16,17 +16,25 @@ Adds an account to the nonprofit pricing table maintained by the contract.
 
 Removes an account from the nonprofit pricing table maintained by the contract.
 
+## setpaytoken
+
+Creates or updates a payment token configuration, including retail and wholesale prices.
+
+## rmpaytoken
+
+Removes a payment token configuration from the contract.
+
 ## submitfree
 
 Creates a proof record without token payment for an account registered in the nonprofit table.
 
 ## withdraw
 
-Transfers collected `GFT` tokens from the contract account to the specified recipient.
+Transfers collected tokens from the contract account to the specified recipient through the selected token contract.
 
 ## quote
 
-Returns the currently applicable price tier for the specified account.
+Returns the currently applicable price for the specified account and configured payment token.
 
 ## iswhuser
 

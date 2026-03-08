@@ -26,6 +26,59 @@ void gfnotary::rmwhuser(const name& account) {
     wholesale.erase(existing);
 }
 
+void gfnotary::addnporg(const name& account, const string& note) {
+    require_auth(get_self());
+    check(is_account(account), "account does not exist");
+    validate_text(note, 256, "note", true);
+
+    nonprofit_table nonprofits(get_self(), get_self().value);
+    auto existing = nonprofits.find(account.value);
+    check(existing == nonprofits.end(), "account is already marked as nonprofit");
+
+    nonprofits.emplace(get_self(), [&](auto& row) {
+        row.account = account;
+        row.note = note;
+        row.added_at = time_point_sec(current_time_point());
+    });
+}
+
+void gfnotary::rmnporg(const name& account) {
+    require_auth(get_self());
+
+    nonprofit_table nonprofits(get_self(), get_self().value);
+    auto existing = nonprofits.find(account.value);
+    check(existing != nonprofits.end(), "account is not in nonprofit table");
+
+    nonprofits.erase(existing);
+}
+
+void gfnotary::submitfree(
+    const name& submitter,
+    const string& object_hash,
+    const string& hash_algorithm,
+    const string& canonicalization_profile,
+    const string& client_reference
+) {
+    require_auth(submitter);
+    check(is_account(submitter), "submitter account does not exist");
+    check(isnporg(submitter), "submitter is not in nonprofit table");
+
+    validate_hash(object_hash);
+    validate_text(hash_algorithm, 16, "hash_algorithm", false);
+    validate_text(canonicalization_profile, 32, "canonicalization_profile", false);
+    validate_text(client_reference, 128, "client_reference", true);
+    check(hash_algorithm == "SHA-256", "only SHA-256 is currently supported");
+
+    store_proof(
+        submitter,
+        object_hash,
+        hash_algorithm,
+        canonicalization_profile,
+        client_reference,
+        nonprofit_price()
+    );
+}
+
 void gfnotary::withdraw(const name& to, const asset& quantity, const string& memo) {
     require_auth(get_self());
     check(is_account(to), "to account does not exist");
@@ -80,12 +133,21 @@ bool gfnotary::iswhuser(const name& account) const {
     return wholesale.find(account.value) != wholesale.end();
 }
 
+bool gfnotary::isnporg(const name& account) const {
+    nonprofit_table nonprofits(get_self(), get_self().value);
+    return nonprofits.find(account.value) != nonprofits.end();
+}
+
 symbol gfnotary::gft_symbol() const {
     return symbol(symbol_code("GFT"), 4);
 }
 
 name gfnotary::token_contract() const {
     return "eosio.token"_n;
+}
+
+asset gfnotary::nonprofit_price() const {
+    return asset{0, gft_symbol()};
 }
 
 asset gfnotary::retail_price() const {
@@ -97,6 +159,10 @@ asset gfnotary::wholesale_price() const {
 }
 
 asset gfnotary::resolve_price(const name& account) const {
+    if (isnporg(account)) {
+        return nonprofit_price();
+    }
+
     return iswhuser(account) ? wholesale_price() : retail_price();
 }
 

@@ -49,12 +49,20 @@ cleos -u https://dev-history.globalforce.io push action gfnotary addwhuser '["st
 cleos -u https://dev-history.globalforce.io push action gfnotary rmwhuser '["studio.partner"]' -p gfnotary@active
 ```
 
+## Nonprofit management
+
+```powershell
+cleos -u https://dev-history.globalforce.io push action gfnotary addnporg '["charity.acc","Non-commercial organization"]' -p gfnotary@active
+cleos -u https://dev-history.globalforce.io push action gfnotary rmnporg '["charity.acc"]' -p gfnotary@active
+```
+
 ## Pricing
 
 - retail: `1.0000 GFT`
 - wholesale: `0.1000 GFT`
+- nonprofit: `0.0000 GFT`
 
-Applicable price is determined by membership in the `wholesale` table.
+Applicable price is determined by membership in the `nonprofit` and `wholesale` tables.
 
 ## Record creation by payment
 
@@ -86,10 +94,23 @@ cleos -u https://dev-history.globalforce.io push action eosio.token transfer '[
 ]' -p studio.partner@active
 ```
 
+Nonprofit example:
+
+```powershell
+cleos -u https://dev-history.globalforce.io push action gfnotary submitfree '[
+  "charity.acc",
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "SHA-256",
+  "none",
+  "charity-0001"
+]' -p charity.acc@active
+```
+
 ## Read tables
 
 ```powershell
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary wholesale
+cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary nonprofit
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary proofs
 ```
 
@@ -101,6 +122,7 @@ Linux / WSL:
 export OWNER_ACCOUNT=globalnotary
 export RETAIL_ACCOUNT=yourretailacc
 export WHOLESALE_ACCOUNT=yourwholesale
+export NONPROFIT_ACCOUNT=yournonprofit
 ./scripts/smoke-test.sh
 ```
 
@@ -109,13 +131,14 @@ The script verifies:
 - wholesale account can be added and removed
 - wholesale payment of `0.1000 GFT` creates a proof with `wholesale_pricing=true`
 - retail payment of `1.0000 GFT` creates a proof with `wholesale_pricing=false`
-- total row count in `proofs` increases by 2
+- nonprofit account can be added and submit a free proof
+- total row count in `proofs` increases by 3
 
 Requirements:
 
 - `cleos`
 - `jq`
-- imported keys for `OWNER_ACCOUNT`, `RETAIL_ACCOUNT`, and `WHOLESALE_ACCOUNT`
+- imported keys for `OWNER_ACCOUNT`, `RETAIL_ACCOUNT`, `WHOLESALE_ACCOUNT`, and `NONPROFIT_ACCOUNT`
 - enough `GFT` balance on both payer accounts
 
 ## Withdraw collected payments

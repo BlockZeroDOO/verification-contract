@@ -11,26 +11,35 @@ contract includes:
 
 - fixed testnet pricing in `GFT`
 - a dedicated `wholesale` table for special-price accounts
+- a dedicated `nonprofit` table for free non-commercial organizations
 - `addwhuser` and `rmwhuser` actions for wholesale account management
+- `addnporg` and `rmnporg` actions for nonprofit account management
+- `submitfree` for nonprofit proof submission without token payment
 - automatic proof creation on incoming token payment
 
 ## Tables
 
 - `wholesale`: list of accounts eligible for wholesale pricing
+- `nonprofit`: list of accounts that can submit proofs for free
 - `proofs`: submitted proof records with the effective price and pricing mode
 
 ## Actions
 
 - `addwhuser(name account, string note)`
 - `rmwhuser(name account)`
+- `addnporg(name account, string note)`
+- `rmnporg(name account)`
+- `submitfree(name submitter, string object_hash, string hash_algorithm, string canonicalization_profile, string client_reference)`
 - `withdraw(name to, asset quantity, string memo)`
 - `quote(name account)` read-only helper that returns the current effective price
 - `iswhuser(name account)` read-only helper that checks wholesale membership
+- `isnporg(name account)` read-only helper that checks nonprofit membership
 
 ## Example flow
 
 ```bash
 cleos push action gfnotary addwhuser '["studio.partner", "B2B wholesale client"]' -p gfnotary
+cleos push action gfnotary addnporg '["charity.acc", "nonprofit organization"]' -p gfnotary
 cleos push action eosio.token transfer '[
   "retail.user",
   "gfnotary",
@@ -44,12 +53,20 @@ cleos push action eosio.token transfer '[
   "0.1000 GFT",
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|SHA-256|none|batch-2026-0001"
 ]' -p studio.partner
+
+cleos push action gfnotary submitfree '[
+  "charity.acc",
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "SHA-256",
+  "none",
+  "charity-0001"
+]' -p charity.acc
 ```
 
 ## Notes
 
 - Contract listens only to `eosio.token::transfer` and accepts only `GFT`.
-- Retail price is fixed to `1.0000 GFT`, wholesale price to `0.1000 GFT`.
+- Retail price is fixed to `1.0000 GFT`, wholesale price to `0.1000 GFT`, nonprofit price to `0.0000 GFT`.
 - New `proofs` rows are stored with `get_self()` as RAM payer, so storage is paid by the contract account.
 - CPU/NET of the user-signed transfer transaction are still paid by the signer unless you add an external sponsorship layer.
 - The contract is intentionally small so it can be extended later with batching, Merkle roots, anchoring, and richer receipts.

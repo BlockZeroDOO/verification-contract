@@ -8,6 +8,7 @@ CONTRACT_ACCOUNT="${CONTRACT_ACCOUNT:-globalnotary}"
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the contract admin account.}"
 : "${RETAIL_ACCOUNT:?Set RETAIL_ACCOUNT to a funded retail test account.}"
 : "${WHOLESALE_ACCOUNT:?Set WHOLESALE_ACCOUNT to a funded wholesale test account.}"
+: "${NONPROFIT_ACCOUNT:?Set NONPROFIT_ACCOUNT to a nonprofit test account.}"
 
 if command -v jq >/dev/null 2>&1; then
     JQ_BIN="jq"
@@ -25,12 +26,14 @@ BASE_HASH="${BASE_HASH:-0123456789abcdef0123456789abcdef0123456789abcdef01234567
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
 WHOLESALE_REF="wh-${TIMESTAMP}"
 RETAIL_REF="rt-${TIMESTAMP}"
+NONPROFIT_REF="np-${TIMESTAMP}"
 WHOLESALE_MEMO="${BASE_HASH}|SHA-256|none|${WHOLESALE_REF}"
 RETAIL_MEMO="${BASE_HASH}|SHA-256|none|${RETAIL_REF}"
 
 cleanup() {
     set +e
     cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" rmwhuser "[\"${WHOLESALE_ACCOUNT}\"]" -p "${OWNER_ACCOUNT}@active" >/dev/null 2>&1
+    cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" rmnporg "[\"${NONPROFIT_ACCOUNT}\"]" -p "${OWNER_ACCOUNT}@active" >/dev/null 2>&1
 }
 
 trap cleanup EXIT
@@ -98,6 +101,7 @@ INITIAL_PROOFS="$(count_rows proofs)"
 
 log "Resetting wholesale test account state"
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" rmwhuser "[\"${WHOLESALE_ACCOUNT}\"]" -p "${OWNER_ACCOUNT}@active" >/dev/null 2>&1 || true
+cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" rmnporg "[\"${NONPROFIT_ACCOUNT}\"]" -p "${OWNER_ACCOUNT}@active" >/dev/null 2>&1 || true
 
 log "Adding wholesale account ${WHOLESALE_ACCOUNT}"
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" addwhuser "[\"${WHOLESALE_ACCOUNT}\",\"smoke test account\"]" -p "${OWNER_ACCOUNT}@active"
@@ -116,9 +120,16 @@ log "Submitting retail payment"
 cleos -u "${RPC_URL}" push action eosio.token transfer "[\"${RETAIL_ACCOUNT}\",\"${CONTRACT_ACCOUNT}\",\"1.0000 GFT\",\"${RETAIL_MEMO}\"]" -p "${RETAIL_ACCOUNT}@active"
 assert_proof_by_reference "${RETAIL_REF}" "${RETAIL_ACCOUNT}" "1.0000 GFT" "false"
 
+log "Adding nonprofit account ${NONPROFIT_ACCOUNT}"
+cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" addnporg "[\"${NONPROFIT_ACCOUNT}\",\"smoke test nonprofit\"]" -p "${OWNER_ACCOUNT}@active"
+
+log "Submitting nonprofit proof without payment"
+cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" submitfree "[\"${NONPROFIT_ACCOUNT}\",\"${BASE_HASH}\",\"SHA-256\",\"none\",\"${NONPROFIT_REF}\"]" -p "${NONPROFIT_ACCOUNT}@active"
+assert_proof_by_reference "${NONPROFIT_REF}" "${NONPROFIT_ACCOUNT}" "0.0000 GFT" "false"
+
 FINAL_PROOFS="$(count_rows proofs)"
-EXPECTED_FINAL_PROOFS="$((INITIAL_PROOFS + 2))"
+EXPECTED_FINAL_PROOFS="$((INITIAL_PROOFS + 3))"
 assert_eq "${EXPECTED_FINAL_PROOFS}" "${FINAL_PROOFS}" "proof row count after smoke test"
 
 log "Smoke test passed"
-log "Created references: ${WHOLESALE_REF}, ${RETAIL_REF}"
+log "Created references: ${WHOLESALE_REF}, ${RETAIL_REF}, ${NONPROFIT_REF}"

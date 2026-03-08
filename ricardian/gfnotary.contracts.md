@@ -31,15 +31,3 @@ Creates a proof record without token payment for an account registered in the no
 ## withdraw
 
 Transfers collected tokens from the contract account to the specified recipient through the selected token contract.
-
-## quote
-
-Returns the currently applicable price for the specified account and configured payment token.
-
-## iswhuser
-
-Returns whether the specified account is currently marked as wholesale.
-
-## isnporg
-
-Returns whether the specified account is currently marked as nonprofit.

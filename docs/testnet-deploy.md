@@ -80,6 +80,10 @@ Applicable price is determined by:
 - membership in the `nonprofit` and `wholesale` tables
 - the selected token configuration in `paytokens`
 
+Note:
+
+- `quote`, `iswhuser`, and `isnporg` are not exposed as callable ABI actions in the current build because CDT 4.1.1 dispatcher support is limited to `void` actions.
+
 ## Record creation by payment
 
 Memo format:

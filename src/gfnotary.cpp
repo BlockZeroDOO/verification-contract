@@ -357,7 +357,7 @@ extern "C" {
             switch (action) {
                 EOSIO_DISPATCH_HELPER(
                     gfnotary,
-                    (addwhuser)(rmwhuser)(addnporg)(rmnporg)(setpaytoken)(rmpaytoken)(submitfree)(withdraw)(quote)(iswhuser)(isnporg)
+                    (addwhuser)(rmwhuser)(addnporg)(rmnporg)(setpaytoken)(rmpaytoken)(submitfree)(withdraw)
                 )
             }
             return;

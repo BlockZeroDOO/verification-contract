@@ -35,9 +35,10 @@ contract includes:
 - `rmpaytoken(name token_contract, symbol token_symbol)`
 - `submitfree(name submitter, string object_hash, string hash_algorithm, string canonicalization_profile, string client_reference)`
 - `withdraw(name token_contract, name to, asset quantity, string memo)`
-- `quote(name account, name token_contract, symbol token_symbol)` read-only helper that returns the current effective price
-- `iswhuser(name account)` read-only helper that checks wholesale membership
-- `isnporg(name account)` read-only helper that checks nonprofit membership
+
+## Internal helpers
+
+- `quote(...)`, `iswhuser(...)`, `isnporg(...)` remain available as C++ contract helpers, but are not exposed as ABI actions because CDT 4.1.1 dispatcher support is limited to `void` actions.
 
 ## Example flow
 

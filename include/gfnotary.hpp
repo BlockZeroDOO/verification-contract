@@ -56,17 +56,14 @@ public:
         const string& memo
     );
 
-    [[eosio::action, eosio::read_only]]
     asset quote(
         const name& account,
         const name& token_contract,
         const symbol& token_symbol
     ) const;
 
-    [[eosio::action, eosio::read_only]]
     bool iswhuser(const name& account) const;
 
-    [[eosio::action, eosio::read_only]]
     bool isnporg(const name& account) const;
 
     [[eosio::on_notify("*::transfer")]]

@@ -100,7 +100,7 @@ private:
         }
     };
 
-    struct [[eosio::table("proofs")]] proof_row {
+    struct [[eosio::table("proofsv2")]] proof_row {
         uint64_t proof_id;
         name submitter;
         string object_hash;
@@ -124,7 +124,7 @@ private:
         indexed_by<"bytokensym"_n, const_mem_fun<payment_token, uint128_t, &payment_token::bytokensym>>
     >;
     using proof_table = multi_index<
-        "proofs"_n,
+        "proofsv2"_n,
         proof_row,
         indexed_by<"bysubmitter"_n, const_mem_fun<proof_row, uint64_t, &proof_row::by_submitter>>
     >;

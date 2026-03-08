@@ -23,7 +23,7 @@ contract includes:
 - `paytokens`: accepted payment tokens with `token_contract`, `retail_price`, and `wholesale_price`
 - `wholesale`: list of accounts eligible for wholesale pricing
 - `nonprofit`: list of accounts that can submit proofs for free
-- `proofs`: submitted proof records with the effective price, pricing mode, and payment token contract
+- `proofsv2`: submitted proof records with the effective price, pricing mode, and payment token contract
 
 ## Actions
 
@@ -73,7 +73,7 @@ cleos push action gfnotary submitfree '[
 
 - Contract listens to `*::transfer`, but only accepts tokens configured in `paytokens`.
 - Retail and wholesale prices are configured per token in `paytokens`; nonprofit submissions are stored as `0.0000 FREE`.
-- New `proofs` rows are stored with `get_self()` as RAM payer, so storage is paid by the contract account.
+- New `proofsv2` rows are stored with `get_self()` as RAM payer, so storage is paid by the contract account.
 - CPU/NET of the user-signed transfer transaction are still paid by the signer unless you add an external sponsorship layer.
 - The contract is intentionally small so it can be extended later with batching, Merkle roots, anchoring, and richer receipts.
 

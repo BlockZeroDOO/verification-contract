@@ -132,7 +132,7 @@ cleos -u https://dev-history.globalforce.io push action gfnotary submitfree '[
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary paytokens
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary wholesale
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary nonprofit
-cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary proofs
+cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary proofsv2
 ```
 
 ## Smoke test
@@ -158,7 +158,7 @@ The script verifies:
 - wholesale payment of `0.1000 GFT` creates a proof with `wholesale_pricing=true`
 - retail payment of `1.0000 GFT` creates a proof with `wholesale_pricing=false`
 - nonprofit account can be added and submit a free proof
-- total row count in `proofs` increases by 3
+- total row count in `proofsv2` increases by 3
 
 Requirements:
 
@@ -180,6 +180,6 @@ cleos -u https://dev-history.globalforce.io push action gfnotary withdraw '[
 
 ## Resource note
 
-The contract pays RAM for stored rows because `proofs.emplace` uses `get_self()` as payer.
+The contract pays RAM for stored rows because `proofs.emplace` uses `get_self()` as payer in the `proofsv2` table.
 CPU/NET for the incoming transfer transaction are still paid by the signing user unless you add
 an external sponsorship layer.

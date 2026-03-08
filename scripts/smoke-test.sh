@@ -83,7 +83,7 @@ assert_proof_by_reference() {
     local expected_wholesale="$4"
 
     local proofs_json proof_json submitter price wholesale_flag
-    proofs_json="$(get_table_json proofs)"
+    proofs_json="$(get_table_json proofsv2)"
     proof_json="$(printf '%s' "${proofs_json}" | "${JQ_BIN}" -c --arg ref "${reference}" '.rows[] | select(.client_reference == $ref)' | tail -n 1)"
 
     if [[ -z "${proof_json}" ]]; then
@@ -101,7 +101,7 @@ assert_proof_by_reference() {
 }
 
 log "Initial proof count"
-INITIAL_PROOFS="$(count_rows proofs)"
+INITIAL_PROOFS="$(count_rows proofsv2)"
 
 log "Ensuring payment token config exists"
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" setpaytoken "[\"${PAYMENT_TOKEN_CONTRACT}\",\"${RETAIL_PRICE}\",\"${WHOLESALE_PRICE}\"]" -p "${OWNER_ACCOUNT}@active"
@@ -134,7 +134,7 @@ log "Submitting nonprofit proof without payment"
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" submitfree "[\"${NONPROFIT_ACCOUNT}\",\"${BASE_HASH}\",\"SHA-256\",\"none\",\"${NONPROFIT_REF}\"]" -p "${NONPROFIT_ACCOUNT}@active"
 assert_proof_by_reference "${NONPROFIT_REF}" "${NONPROFIT_ACCOUNT}" "0.0000 FREE" "false"
 
-FINAL_PROOFS="$(count_rows proofs)"
+FINAL_PROOFS="$(count_rows proofsv2)"
 EXPECTED_FINAL_PROOFS="$((INITIAL_PROOFS + 3))"
 assert_eq "${EXPECTED_FINAL_PROOFS}" "${FINAL_PROOFS}" "proof row count after smoke test"
 

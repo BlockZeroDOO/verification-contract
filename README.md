@@ -57,4 +57,5 @@ cleos push action eosio.token transfer '[
 ## Testnet
 
 - Build scripts: `scripts/build-testnet.sh`, `scripts/build-testnet.ps1`
+- Smoke test: `scripts/smoke-test.sh`
 - Deploy guide: `docs/testnet-deploy.md`

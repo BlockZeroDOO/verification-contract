@@ -93,6 +93,31 @@ cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary wholesal
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary proofs
 ```
 
+## Smoke test
+
+Linux / WSL:
+
+```bash
+export OWNER_ACCOUNT=globalnotary
+export RETAIL_ACCOUNT=yourretailacc
+export WHOLESALE_ACCOUNT=yourwholesale
+./scripts/smoke-test.sh
+```
+
+The script verifies:
+
+- wholesale account can be added and removed
+- wholesale payment of `0.1000 GFT` creates a proof with `wholesale_pricing=true`
+- retail payment of `1.0000 GFT` creates a proof with `wholesale_pricing=false`
+- total row count in `proofs` increases by 2
+
+Requirements:
+
+- `cleos`
+- `jq`
+- imported keys for `OWNER_ACCOUNT`, `RETAIL_ACCOUNT`, and `WHOLESALE_ACCOUNT`
+- enough `GFT` balance on both payer accounts
+
 ## Withdraw collected payments
 
 ```powershell

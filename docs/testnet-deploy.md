@@ -62,9 +62,28 @@ cleos -u https://dev-history.globalforce.io push action gfnotary rmnporg '["char
 cleos -u https://dev-history.globalforce.io push action gfnotary setpaytoken '[
   "eosio.token",
   "1.0000 GFT",
-  "0.1000 GFT"
+  "0.1000 GFT",
+  "0.0100 GFT"
 ]' -p gfnotary@active
 ```
+
+## Free submission limits
+
+`submitfree` is disabled until a free-submission policy is configured.
+
+```powershell
+cleos -u https://dev-history.globalforce.io push action gfnotary setfreecfg '[
+  true,
+  100
+]' -p gfnotary@active
+```
+
+Parameters:
+
+- `enabled`: enables or disables `submitfree`
+- `daily_free_limit`: max free submissions across all nonprofit accounts during the current 24-hour UTC window
+
+The nonprofit cooldown is fixed in the contract at 60 seconds per account.
 
 Remove a payment token:
 
@@ -89,8 +108,13 @@ Note:
 Memo format:
 
 ```text
-<64-char hex hash>|SHA-256|<canonicalization>|<client_reference optional>
+<64-char hex hash>|SHA-256|<canonicalization>|<client_reference required>
 ```
+
+`client_reference` is the idempotency key for that submitter. Reusing the same `client_reference`
+from the same account rejects the request and prevents duplicate charging. Reusing the same
+`object_hash` with a new `client_reference` is allowed. `client_reference` must use printable
+ASCII characters and cannot contain `|`.
 
 Retail example:
 
@@ -99,7 +123,7 @@ cleos -u https://dev-history.globalforce.io push action eosio.token transfer '[
   "retail.user",
   "gfnotary",
   "1.0000 GFT",
-  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|SHA-256|none|retail-0001"
+  "1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|SHA-256|none|retail-0001"
 ]' -p retail.user@active
 ```
 
@@ -110,7 +134,7 @@ cleos -u https://dev-history.globalforce.io push action eosio.token transfer '[
   "studio.partner",
   "gfnotary",
   "0.1000 GFT",
-  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|SHA-256|none|batch-2026-0001"
+  "2123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|SHA-256|none|batch-2026-0001"
 ]' -p studio.partner@active
 ```
 
@@ -119,12 +143,22 @@ Nonprofit example:
 ```powershell
 cleos -u https://dev-history.globalforce.io push action gfnotary submitfree '[
   "charity.acc",
-  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "3123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   "SHA-256",
   "none",
   "charity-0001"
 ]' -p charity.acc@active
 ```
+
+## Idempotent request protection
+
+Proof creation is deduplicated by `submitter + client_reference`.
+
+Rules:
+
+- same `object_hash` with a new `client_reference` is allowed
+- same `client_reference` for the same submitter is rejected
+- same `client_reference` used by a different submitter is allowed
 
 ## Read tables
 
@@ -132,6 +166,8 @@ cleos -u https://dev-history.globalforce.io push action gfnotary submitfree '[
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary paytokens
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary wholesale
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary nonprofit
+cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary freepolicy
+cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary freeusage
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary proofsv2
 ```
 
@@ -148,16 +184,29 @@ export PAYMENT_TOKEN_CONTRACT=eosio.token
 export PAYMENT_TOKEN_SYMBOL=4,GFT
 export RETAIL_PRICE="1.0000 GFT"
 export WHOLESALE_PRICE="0.1000 GFT"
+export STORAGE_PRICE="0.0100 GFT"
+export FREE_ENABLED=true
+export FREE_DAILY_LIMIT=100
 ./scripts/smoke-test.sh
 ```
 
 The script verifies:
 
 - wholesale account can be added and removed
-- payment token configuration can be created or updated
+- payment token configuration can be created or updated, including `storage_price`
+- free submission config can be applied before nonprofit usage
+- nonprofit usage increments the global 24-hour sponsored counter in `freepolicy`
+- the same `object_hash` can be submitted by different accounts with different `client_reference` values
 - wholesale payment of `0.1000 GFT` creates a proof with `wholesale_pricing=true`
 - retail payment of `1.0000 GFT` creates a proof with `wholesale_pricing=false`
+- invalid paid `client_reference` is rejected
 - nonprofit account can be added and submit a free proof
+- invalid nonprofit `client_reference` is rejected
+- nonprofit cooldown rejects an immediate second `submitfree`
+- lowering `daily_free_limit` to the current usage blocks new nonprofit submissions on the same UTC day
+- `setfreecfg(false, ...)` disables free submissions immediately
+- re-enabling `setfreecfg(true, ...)` on the same UTC day does not reset `used_in_window`
+- duplicate `client_reference` for the same submitter is rejected
 - total row count in `proofsv2` increases by 3
 
 Requirements:

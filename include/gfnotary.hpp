@@ -2,13 +2,14 @@
 
 #include <eosio/action.hpp>
 #include <eosio/asset.hpp>
+#include <eosio/crypto.hpp>
 #include <eosio/eosio.hpp>
+#include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
 
 #include <string>
 #include <tuple>
-#include <vector>
 
 using namespace eosio;
 using std::string;
@@ -33,7 +34,8 @@ public:
     void setpaytoken(
         const name& token_contract,
         const asset& retail_price,
-        const asset& wholesale_price
+        const asset& wholesale_price,
+        const asset& storage_price
     );
 
     [[eosio::action]]
@@ -46,6 +48,12 @@ public:
         const string& hash_algorithm,
         const string& canonicalization_profile,
         const string& client_reference
+    );
+
+    [[eosio::action]]
+    void setfreecfg(
+        bool enabled,
+        uint32_t daily_free_limit
     );
 
     [[eosio::action]]
@@ -91,6 +99,7 @@ private:
         name token_contract;
         asset retail_price;
         asset wholesale_price;
+        asset storage_price;
         time_point_sec updated_at;
 
         uint64_t primary_key() const { return config_id; }
@@ -114,6 +123,26 @@ private:
 
         uint64_t primary_key() const { return proof_id; }
         uint64_t by_submitter() const { return submitter.value; }
+        checksum256 by_request() const { return gfnotary::compute_request_key(submitter, client_reference); }
+    };
+
+    struct pricing_decision {
+        asset price;
+        bool wholesale_pricing;
+    };
+
+    struct [[eosio::table("freepolicy")]] free_policy {
+        bool enabled = false;
+        time_point_sec window_start;
+        uint32_t daily_free_limit = 0;
+        uint32_t used_in_window = 0;
+        time_point_sec updated_at;
+    };
+
+    struct [[eosio::table("freeusage")]] free_usage_row {
+        name account;
+        time_point_sec last_submit_at;
+        uint64_t primary_key() const { return account.value; }
     };
 
     using wholesale_table = multi_index<"wholesale"_n, wholesale_user>;
@@ -126,19 +155,44 @@ private:
     using proof_table = multi_index<
         "proofsv2"_n,
         proof_row,
-        indexed_by<"bysubmitter"_n, const_mem_fun<proof_row, uint64_t, &proof_row::by_submitter>>
+        indexed_by<"bysubmitter"_n, const_mem_fun<proof_row, uint64_t, &proof_row::by_submitter>>,
+        indexed_by<"byrequest"_n, const_mem_fun<proof_row, checksum256, &proof_row::by_request>>
     >;
+    using free_usage_table = multi_index<"freeusage"_n, free_usage_row>;
+    using free_policy_singleton = singleton<"freepolicy"_n, free_policy>;
 
     static constexpr uint8_t hash_size = 32;
+    static constexpr uint32_t seconds_per_day = 24 * 60 * 60;
+    static constexpr uint32_t nonprofit_cooldown_sec = 60;
 
     symbol free_symbol() const;
     asset nonprofit_price() const;
+    free_policy get_free_policy() const;
+    time_point_sec current_day_start(const time_point_sec& timestamp) const;
     uint128_t make_payment_key(const name& token_contract, const symbol_code& token_symbol) const;
     payment_token get_payment_token(const name& token_contract, const symbol_code& token_symbol) const;
+    void consume_free_allowance(const name& submitter);
+    pricing_decision resolve_pricing(const name& account, const name& token_contract, const symbol& token_symbol) const;
+    pricing_decision resolve_paid_pricing(const name& account, const name& token_contract, const symbol& token_symbol) const;
+    pricing_decision resolve_token_pricing(
+        const name& token_contract,
+        const symbol& token_symbol,
+        bool wholesale_pricing
+    ) const;
     asset resolve_price(const name& account, const name& token_contract, const symbol& token_symbol) const;
+    static checksum256 compute_request_key(const name& submitter, const string& client_reference);
+    void validate_new_request(const checksum256& request_key) const;
     void validate_hash(const string& hex) const;
+    void validate_client_reference(const string& client_reference) const;
+    void validate_printable_ascii_text(
+        const string& value,
+        uint32_t max_length,
+        const char* field_name,
+        bool allow_empty
+    ) const;
     void validate_payment_price(const asset& price, const char* field_name) const;
-    std::vector<string> split_memo(const string& memo, char delimiter) const;
+    void validate_nonnegative_asset(const asset& quantity, const char* field_name) const;
+    std::tuple<string, string, string, string> parse_payment_memo(const string& memo) const;
     uint8_t from_hex(char c) const;
     void store_proof(
         const name& submitter,
@@ -147,7 +201,8 @@ private:
         const string& canonicalization_profile,
         const string& client_reference,
         const name& payment_token_contract,
-        const asset& price
+        const asset& price,
+        bool wholesale_pricing
     );
     void validate_text(const string& value, uint32_t max_length, const char* field_name, bool allow_empty) const;
 };

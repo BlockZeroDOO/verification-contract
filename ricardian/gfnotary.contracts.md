@@ -18,7 +18,8 @@ Removes an account from the nonprofit pricing table maintained by the contract.
 
 ## setpaytoken
 
-Creates or updates a payment token configuration, including retail and wholesale prices.
+Creates or updates a payment token configuration, including retail price, wholesale price,
+and storage price.
 
 ## rmpaytoken
 
@@ -28,6 +29,12 @@ Removes a payment token configuration from the contract.
 
 Creates a proof record without token payment for an account registered in the nonprofit table.
 
+## setfreecfg
+
+Creates or updates the nonprofit free-submission policy, including the contract-wide
+24-hour sponsored submission limit. Nonprofit accounts are additionally limited by a
+fixed 60-second cooldown between submissions.
+
 ## withdraw
 
-Transfers collected tokens from the contract account to the specified recipient through the selected token contract.
+Transfers tokens held by the contract account to the specified recipient through the selected token contract.

@@ -98,6 +98,7 @@ Applicable price is determined by:
 
 - membership in the `nonprofit` and `wholesale` tables
 - the selected token configuration in `paytokens`
+- `storage_price` is stored for external storage integration and does not affect the on-chain proof price
 
 Note:
 
@@ -114,7 +115,8 @@ Memo format:
 `client_reference` is the idempotency key for that submitter. Reusing the same `client_reference`
 from the same account rejects the request and prevents duplicate charging. Reusing the same
 `object_hash` with a new `client_reference` is allowed. `client_reference` must use printable
-ASCII characters and cannot contain `|`.
+ASCII characters and cannot contain `|`. `canonicalization_profile` must be non-empty printable
+ASCII up to 32 characters.
 
 Retail example:
 
@@ -226,6 +228,9 @@ cleos -u https://dev-history.globalforce.io push action gfnotary withdraw '[
   "withdraw testnet revenue"
 ]' -p gfnotary@active
 ```
+
+`withdraw` is not gated by the `paytokens` table, so it can recover tokens already held by the
+contract even after `rmpaytoken`.
 
 ## Resource note
 

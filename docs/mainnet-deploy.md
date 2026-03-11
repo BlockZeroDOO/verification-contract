@@ -69,6 +69,9 @@ cleos -u https://history.globalforce.io push action gfnotary setpaytoken '[
 ]' -p gfnotary@active
 ```
 
+`storage_price` is stored for external storage integration and does not change the on-chain proof
+price used by paid proof creation.
+
 ## Configure free submission policy
 
 For mainnet, do not leave `submitfree` unbounded. A conservative starting point looks like this:
@@ -95,6 +98,12 @@ Recommended client rule:
 - generate a new `client_reference` for every intentionally new proof
 - allow the same `object_hash` to be notarized multiple times
 - keep `client_reference` in printable ASCII and never include `|`
+- keep `canonicalization_profile` in non-empty printable ASCII up to 32 characters
+
+## Withdraw operations
+
+`withdraw` is not tied to the presence of a `paytokens` config entry. If the contract account still
+holds a token balance, the operator can withdraw it even after `rmpaytoken`.
 
 ## Verify on-chain state
 

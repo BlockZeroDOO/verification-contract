@@ -21,13 +21,14 @@ fi
 
 mkdir -p "${dist_dir}"
 
+pushd "${project_root}" >/dev/null
 "${compiler}" \
     -I "${include_dir}" \
-    -I "${project_root}/src" \
     -O3 \
     --abigen \
-    "${source_file}" \
+    "src/gfnotary.cpp" \
     -o "${wasm_file}"
+popd >/dev/null
 
 echo "Build completed:"
 echo "  WASM: ${wasm_file}"

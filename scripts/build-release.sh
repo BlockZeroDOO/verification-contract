@@ -22,13 +22,14 @@ fi
 
 mkdir -p "${dist_dir}"
 
+pushd "${project_root}" >/dev/null
 "${compiler}" \
     -I "${include_dir}" \
-    -I "${project_root}/src" \
     -O3 \
     --abigen \
-    "${source_file}" \
+    "src/gfnotary.cpp" \
     -o "${wasm_file}"
+popd >/dev/null
 
 if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "${wasm_file}" > "${wasm_file}.sha256"

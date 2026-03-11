@@ -21,13 +21,18 @@ if (-not $compiler) {
 
 New-Item -ItemType Directory -Force -Path $distDir | Out-Null
 
-& $compiler.Source `
-    -I $includeDir `
-    -I (Join-Path $projectRoot "src") `
-    -O3 `
-    --abigen `
-    $sourceFile `
-    -o $wasmFile
+Push-Location $projectRoot
+try {
+    & $compiler.Source `
+        -I $includeDir `
+        -O3 `
+        --abigen `
+        "src/gfnotary.cpp" `
+        -o $wasmFile
+}
+finally {
+    Pop-Location
+}
 
 Write-Host "Build completed:"
 Write-Host "  WASM: $wasmFile"

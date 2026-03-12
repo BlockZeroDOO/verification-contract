@@ -63,6 +63,18 @@ log() {
     printf '[smoke-test] %s\n' "$1"
 }
 
+append_precision_zero() {
+    local asset_string="$1"
+    local amount="${asset_string% *}"
+    local symbol="${asset_string#* }"
+
+    if [[ "${amount}" == *.* ]]; then
+        printf '%s0 %s\n' "${amount}" "${symbol}"
+    else
+        printf '%s.0 %s\n' "${amount}" "${symbol}"
+    fi
+}
+
 get_table_json() {
     local table="$1"
     cleos -u "${RPC_URL}" get table "${CONTRACT_ACCOUNT}" "${CONTRACT_ACCOUNT}" "${table}"
@@ -151,6 +163,17 @@ INITIAL_PROOFS="$(count_rows proofsv2)"
 
 log "Ensuring payment token config exists"
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" setpaytoken "[\"${PAYMENT_TOKEN_CONTRACT}\",\"${RETAIL_PRICE}\",\"${WHOLESALE_PRICE}\",\"${STORAGE_PRICE}\"]" -p "${OWNER_ACCOUNT}@active"
+assert_paytoken_config
+
+INVALID_RETAIL_PRICE="$(append_precision_zero "${RETAIL_PRICE}")"
+INVALID_WHOLESALE_PRICE="$(append_precision_zero "${WHOLESALE_PRICE}")"
+INVALID_STORAGE_PRICE="$(append_precision_zero "${STORAGE_PRICE}")"
+
+log "Verifying setpaytoken rejects precision mismatches against token stat"
+if cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" setpaytoken "[\"${PAYMENT_TOKEN_CONTRACT}\",\"${INVALID_RETAIL_PRICE}\",\"${INVALID_WHOLESALE_PRICE}\",\"${INVALID_STORAGE_PRICE}\"]" -p "${OWNER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: setpaytoken accepted a token precision that does not match token stat." >&2
+    exit 1
+fi
 assert_paytoken_config
 
 log "Configuring free submission limits"

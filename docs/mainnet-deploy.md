@@ -70,7 +70,8 @@ cleos -u https://history.globalforce.io push action gfnotary setpaytoken '[
 ```
 
 `storage_price` is stored for external storage integration and does not change the on-chain proof
-price used by paid proof creation.
+price used by paid proof creation. `setpaytoken` also validates the configured symbol precision
+against the token contract `stat` table, so a mismatched precision is rejected at configuration time.
 
 ## Configure free submission policy
 

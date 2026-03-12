@@ -67,6 +67,9 @@ cleos -u https://dev-history.globalforce.io push action gfnotary setpaytoken '[
 ]' -p gfnotary@active
 ```
 
+`setpaytoken` validates the configured symbol precision against the token contract `stat` table.
+If the token contract uses `4,GFT`, a config like `1.00000000 GFT` is rejected immediately.
+
 ## Free submission limits
 
 `submitfree` is disabled until a free-submission policy is configured.

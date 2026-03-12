@@ -11,6 +11,26 @@
 #include <eosio/dispatcher.hpp>
 
 namespace {
+struct token_stat_row {
+    asset supply;
+    asset max_supply;
+    name issuer;
+
+    uint64_t primary_key() const { return supply.symbol.code().raw(); }
+};
+
+using token_stat_table = eosio::multi_index<"stat"_n, token_stat_row>;
+
+void validate_token_contract_stat(const eosio::name& token_contract, const eosio::symbol& token_symbol) {
+    token_stat_table token_stats(token_contract, token_symbol.code().raw());
+    auto token_stat = token_stats.find(token_symbol.code().raw());
+    eosio::check(token_stat != token_stats.end(), "token symbol is not available in token contract stat table");
+    eosio::check(
+        token_stat->supply.symbol == token_symbol,
+        "token symbol precision does not match token contract stat"
+    );
+}
+
 #if !defined(GFNOTARY_HAS_EOSIO_DB_H) && !defined(GFNOTARY_HAS_EOSIOLIB_DB_H)
 extern "C" {
 __attribute__((eosio_wasm_import)) int32_t db_lowerbound_i64(uint64_t code, uint64_t scope, uint64_t table, uint64_t id);
@@ -315,6 +335,7 @@ void gfnotary::setpaytoken(
         wholesale_price.amount <= retail_price.amount,
         "wholesale_price cannot exceed retail_price"
     );
+    validate_token_contract_stat(token_contract, retail_price.symbol);
 
     payment_token_table payment_tokens(get_self(), get_self().value);
     auto by_token = payment_tokens.get_index<"bytokensym"_n>();

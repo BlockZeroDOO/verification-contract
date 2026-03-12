@@ -77,6 +77,7 @@ cleos push action gfnotary submitfree '[
 
 - Contract listens to `*::transfer`, but only accepts tokens configured in `paytokens2`.
 - Retail and wholesale prices drive on-chain proof pricing. `storage_price` is stored in `paytokens2` for external storage integration and does not change the on-chain proof price; nonprofit submissions are stored as `0.0000 FREE`.
+- `setpaytoken` validates the configured symbol precision against the token contract `stat` table, so invalid token precision is rejected before users attempt paid transfers.
 - `submitfree` is gated by `freepolicy`; nonprofit accounts can submit at most once every 60 seconds, and all nonprofit submissions share one contract-wide 24-hour sponsored limit.
 - `canonicalization_profile` must be non-empty printable ASCII up to 32 characters. The examples use `none`.
 - `client_reference` is required on both paid and free flows, acts as an idempotency key per submitter, and must use printable ASCII without `|`.

@@ -2,6 +2,32 @@
 
 #include <eosio/dispatcher.hpp>
 
+namespace {
+struct legacy_paytoken_pk_row {
+    uint64_t config_id;
+    uint64_t primary_key() const { return config_id; }
+};
+
+struct legacy_proof_pk_row {
+    uint64_t proof_id;
+    uint64_t primary_key() const { return proof_id; }
+};
+
+using legacy_paytoken_table = eosio::multi_index<"paytokens"_n, legacy_paytoken_pk_row>;
+using legacy_proof_table = eosio::multi_index<"proofs"_n, legacy_proof_pk_row>;
+
+template <typename Table>
+uint32_t erase_rows_batch(Table& table, uint32_t max_rows) {
+    uint32_t erased = 0;
+    auto it = table.begin();
+    while (it != table.end() && erased < max_rows) {
+        it = table.erase(it);
+        ++erased;
+    }
+    return erased;
+}
+}  // namespace
+
 void gfnotary::addwhuser(const name& account, const string& note) {
     require_auth(get_self());
     check(is_account(account), "account does not exist");
@@ -198,22 +224,22 @@ void gfnotary::wipeall(uint32_t max_rows) {
     uint32_t remaining = max_rows;
 
     legacy_paytoken_table legacy_paytokens(get_self(), get_self().value);
-    remaining -= erase_rows(legacy_paytokens, remaining);
+    remaining -= erase_rows_batch(legacy_paytokens, remaining);
 
     wholesale_table wholesale(get_self(), get_self().value);
-    remaining -= erase_rows(wholesale, remaining);
+    remaining -= erase_rows_batch(wholesale, remaining);
 
     nonprofit_table nonprofits(get_self(), get_self().value);
-    remaining -= erase_rows(nonprofits, remaining);
+    remaining -= erase_rows_batch(nonprofits, remaining);
 
     free_usage_table free_usage(get_self(), get_self().value);
-    remaining -= erase_rows(free_usage, remaining);
+    remaining -= erase_rows_batch(free_usage, remaining);
 
     legacy_proof_table legacy_proofs(get_self(), get_self().value);
-    remaining -= erase_rows(legacy_proofs, remaining);
+    remaining -= erase_rows_batch(legacy_proofs, remaining);
 
     proof_table proofs(get_self(), get_self().value);
-    remaining -= erase_rows(proofs, remaining);
+    remaining -= erase_rows_batch(proofs, remaining);
 
     free_policy_singleton policy_store(get_self(), get_self().value);
     if (policy_store.exists()) {

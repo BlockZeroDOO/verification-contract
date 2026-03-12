@@ -89,6 +89,8 @@ This means:
 - max `100` free submissions across all nonprofit accounts in the current 24-hour UTC window
 - a fixed `60` second cooldown between free submissions from the same nonprofit account
 
+The 60-second cooldown applies only to `submitfree`; paid retail and wholesale transfers are not rate-limited by time.
+
 ## Idempotent request protection
 
 `client_reference` is required and acts as an idempotency key per submitter.

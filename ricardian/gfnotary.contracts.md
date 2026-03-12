@@ -36,11 +36,6 @@ Creates or updates the nonprofit free-submission policy, including the contract-
 24-hour sponsored submission limit. Nonprofit accounts are additionally limited by a
 fixed 60-second cooldown between submissions.
 
-## wipeall
-
-Temporary maintenance action for testnet cleanup. Removes stored rows from contract-managed
-tables in batches and clears the free-submission singleton state.
-
 ## withdraw
 
 Transfers tokens held by the contract account to the specified recipient through the selected token contract.

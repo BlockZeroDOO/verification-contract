@@ -57,9 +57,6 @@ public:
     );
 
     [[eosio::action]]
-    void wipeall(uint32_t max_rows);
-
-    [[eosio::action]]
     void withdraw(
         const name& token_contract,
         const name& to,

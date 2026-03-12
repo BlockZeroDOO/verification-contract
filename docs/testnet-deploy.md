@@ -87,6 +87,7 @@ Parameters:
 - `daily_free_limit`: max free submissions across all nonprofit accounts during the current 24-hour UTC window
 
 The nonprofit cooldown is fixed in the contract at 60 seconds per account.
+This cooldown applies only to `submitfree`; paid retail and wholesale transfers are not rate-limited by time.
 
 Remove a payment token:
 
@@ -204,6 +205,7 @@ The script verifies:
 - the same `object_hash` can be submitted by different accounts with different `client_reference` values
 - wholesale payment of `0.1000 GFT` creates a proof with `wholesale_pricing=true`
 - retail payment of `1.0000 GFT` creates a proof with `wholesale_pricing=false`
+- the same retail account can submit two paid proofs back-to-back without a cooldown delay
 - invalid paid `client_reference` is rejected
 - nonprofit account can be added and submit a free proof
 - invalid nonprofit `client_reference` is rejected
@@ -212,7 +214,7 @@ The script verifies:
 - `setfreecfg(false, ...)` disables free submissions immediately
 - re-enabling `setfreecfg(true, ...)` on the same UTC day does not reset `used_in_window`
 - duplicate `client_reference` for the same submitter is rejected
-- total row count in `proofsv2` increases by 3
+- total row count in `proofsv2` increases by 4
 
 Requirements:
 

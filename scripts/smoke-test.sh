@@ -36,6 +36,7 @@ NONPROFIT_HASH="${NONPROFIT_HASH:-${SHARED_HASH}}"
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
 WHOLESALE_REF="wh-${TIMESTAMP}"
 RETAIL_REF="rt-${TIMESTAMP}"
+RETAIL_BURST_REF="rt-fast-${TIMESTAMP}"
 NONPROFIT_REF="np-${TIMESTAMP}"
 NONPROFIT_DUPLICATE_REF="np-retry-${TIMESTAMP}"
 NONPROFIT_LIMIT_REF="np-limit-${TIMESTAMP}"
@@ -46,6 +47,7 @@ INVALID_NONPROFIT_REF="bad|ref"
 INVALID_RETAIL_REF="$(printf 'x%.0s' {1..129})"
 WHOLESALE_MEMO="${WHOLESALE_HASH}|SHA-256|none|${WHOLESALE_REF}"
 RETAIL_MEMO="${RETAIL_HASH}|SHA-256|none|${RETAIL_REF}"
+RETAIL_BURST_MEMO="${RETAIL_HASH}|SHA-256|none|${RETAIL_BURST_REF}"
 DUPLICATE_RETAIL_MEMO="${RETAIL_HASH}|SHA-256|none|${DUPLICATE_RETAIL_REF}"
 INVALID_RETAIL_MEMO="${RETAIL_HASH}|SHA-256|none|${INVALID_RETAIL_REF}"
 
@@ -203,6 +205,10 @@ log "Submitting retail payment"
 cleos -u "${RPC_URL}" push action "${PAYMENT_TOKEN_CONTRACT}" transfer "[\"${RETAIL_ACCOUNT}\",\"${CONTRACT_ACCOUNT}\",\"${RETAIL_PRICE}\",\"${RETAIL_MEMO}\"]" -p "${RETAIL_ACCOUNT}@active"
 assert_proof_by_reference "${RETAIL_REF}" "${RETAIL_ACCOUNT}" "${RETAIL_PRICE}" "false"
 
+log "Verifying paid submissions are not throttled by nonprofit cooldown"
+cleos -u "${RPC_URL}" push action "${PAYMENT_TOKEN_CONTRACT}" transfer "[\"${RETAIL_ACCOUNT}\",\"${CONTRACT_ACCOUNT}\",\"${RETAIL_PRICE}\",\"${RETAIL_BURST_MEMO}\"]" -p "${RETAIL_ACCOUNT}@active"
+assert_proof_by_reference "${RETAIL_BURST_REF}" "${RETAIL_ACCOUNT}" "${RETAIL_PRICE}" "false"
+
 log "Verifying invalid paid client_reference is rejected"
 if cleos -u "${RPC_URL}" push action "${PAYMENT_TOKEN_CONTRACT}" transfer "[\"${RETAIL_ACCOUNT}\",\"${CONTRACT_ACCOUNT}\",\"${RETAIL_PRICE}\",\"${INVALID_RETAIL_MEMO}\"]" -p "${RETAIL_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: invalid paid client_reference was accepted." >&2
@@ -281,7 +287,7 @@ if cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" submitfree "[\"${WHOL
 fi
 
 FINAL_PROOFS="$(count_rows proofsv2)"
-EXPECTED_FINAL_PROOFS="$((INITIAL_PROOFS + 3))"
+EXPECTED_FINAL_PROOFS="$((INITIAL_PROOFS + 4))"
 assert_eq "${EXPECTED_FINAL_PROOFS}" "${FINAL_PROOFS}" "proof row count after smoke test"
 
 log "Smoke test passed"

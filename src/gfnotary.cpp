@@ -1,9 +1,25 @@
 #include <gfnotary.hpp>
 
+#if __has_include(<eosio/db.h>)
 #include <eosio/db.h>
+#define GFNOTARY_HAS_EOSIO_DB_H 1
+#elif __has_include(<eosiolib/db.h>)
+#include <eosiolib/db.h>
+#define GFNOTARY_HAS_EOSIOLIB_DB_H 1
+#endif
+
 #include <eosio/dispatcher.hpp>
 
 namespace {
+#if !defined(GFNOTARY_HAS_EOSIO_DB_H) && !defined(GFNOTARY_HAS_EOSIOLIB_DB_H)
+extern "C" {
+__attribute__((eosio_wasm_import)) int32_t db_lowerbound_i64(uint64_t code, uint64_t scope, uint64_t table, uint64_t id);
+__attribute__((eosio_wasm_import)) int32_t db_end_i64(uint64_t code, uint64_t scope, uint64_t table);
+__attribute__((eosio_wasm_import)) int32_t db_next_i64(int32_t iterator, uint64_t* primary);
+__attribute__((eosio_wasm_import)) void db_remove_i64(int32_t iterator);
+}
+#endif
+
 template <typename Table>
 uint32_t erase_rows_batch(Table& table, uint32_t max_rows) {
     uint32_t erased = 0;
@@ -15,18 +31,48 @@ uint32_t erase_rows_batch(Table& table, uint32_t max_rows) {
     return erased;
 }
 
-uint32_t erase_raw_rows(const eosio::name& code, const eosio::name& scope, const eosio::name& table, uint32_t max_rows) {
-    using namespace eosio::internal_use_do_not_use;
+inline int32_t db_lowerbound_i64_compat(uint64_t code, uint64_t scope, uint64_t table, uint64_t id) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    return eosio::internal_use_do_not_use::db_lowerbound_i64(code, scope, table, id);
+#else
+    return ::db_lowerbound_i64(code, scope, table, id);
+#endif
+}
 
+inline int32_t db_end_i64_compat(uint64_t code, uint64_t scope, uint64_t table) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    return eosio::internal_use_do_not_use::db_end_i64(code, scope, table);
+#else
+    return ::db_end_i64(code, scope, table);
+#endif
+}
+
+inline int32_t db_next_i64_compat(int32_t iterator, uint64_t* primary) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    return eosio::internal_use_do_not_use::db_next_i64(iterator, primary);
+#else
+    return ::db_next_i64(iterator, primary);
+#endif
+}
+
+inline void db_remove_i64_compat(int32_t iterator) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    eosio::internal_use_do_not_use::db_remove_i64(iterator);
+#else
+    ::db_remove_i64(iterator);
+#endif
+}
+
+uint32_t erase_raw_rows(const eosio::name& code, const eosio::name& scope, const eosio::name& table, uint32_t max_rows) {
     uint32_t erased = 0;
     uint64_t primary = 0;
-    int32_t iterator = db_lowerbound_i64(code.value, scope.value, table.value, 0);
-    const int32_t end = db_end_i64(code.value, scope.value, table.value);
+    int32_t iterator = db_lowerbound_i64_compat(code.value, scope.value, table.value, 0);
+    const int32_t end = db_end_i64_compat(code.value, scope.value, table.value);
 
     while (iterator != end && erased < max_rows) {
         const int32_t current = iterator;
-        iterator = db_next_i64(iterator, &primary);
-        db_remove_i64(current);
+        iterator = db_next_i64_compat(iterator, &primary);
+        db_remove_i64_compat(current);
         ++erased;
     }
 

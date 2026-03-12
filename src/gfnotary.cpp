@@ -17,6 +17,26 @@ __attribute__((eosio_wasm_import)) int32_t db_lowerbound_i64(uint64_t code, uint
 __attribute__((eosio_wasm_import)) int32_t db_end_i64(uint64_t code, uint64_t scope, uint64_t table);
 __attribute__((eosio_wasm_import)) int32_t db_next_i64(int32_t iterator, uint64_t* primary);
 __attribute__((eosio_wasm_import)) void db_remove_i64(int32_t iterator);
+__attribute__((eosio_wasm_import)) int32_t db_idx64_lowerbound(
+    uint64_t code,
+    uint64_t scope,
+    uint64_t table,
+    uint64_t* secondary,
+    uint64_t* primary
+);
+__attribute__((eosio_wasm_import)) int32_t db_idx64_end(uint64_t code, uint64_t scope, uint64_t table);
+__attribute__((eosio_wasm_import)) int32_t db_idx64_next(int32_t iterator, uint64_t* primary);
+__attribute__((eosio_wasm_import)) void db_idx64_remove(int32_t iterator);
+__attribute__((eosio_wasm_import)) int32_t db_idx128_lowerbound(
+    uint64_t code,
+    uint64_t scope,
+    uint64_t table,
+    unsigned __int128* secondary,
+    uint64_t* primary
+);
+__attribute__((eosio_wasm_import)) int32_t db_idx128_end(uint64_t code, uint64_t scope, uint64_t table);
+__attribute__((eosio_wasm_import)) int32_t db_idx128_next(int32_t iterator, uint64_t* primary);
+__attribute__((eosio_wasm_import)) void db_idx128_remove(int32_t iterator);
 }
 #endif
 
@@ -63,6 +83,82 @@ inline void db_remove_i64_compat(int32_t iterator) {
 #endif
 }
 
+inline int32_t db_idx64_lowerbound_compat(
+    uint64_t code,
+    uint64_t scope,
+    uint64_t table,
+    uint64_t* secondary,
+    uint64_t* primary
+) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    return eosio::internal_use_do_not_use::db_idx64_lowerbound(code, scope, table, secondary, primary);
+#else
+    return ::db_idx64_lowerbound(code, scope, table, secondary, primary);
+#endif
+}
+
+inline int32_t db_idx64_end_compat(uint64_t code, uint64_t scope, uint64_t table) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    return eosio::internal_use_do_not_use::db_idx64_end(code, scope, table);
+#else
+    return ::db_idx64_end(code, scope, table);
+#endif
+}
+
+inline int32_t db_idx64_next_compat(int32_t iterator, uint64_t* primary) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    return eosio::internal_use_do_not_use::db_idx64_next(iterator, primary);
+#else
+    return ::db_idx64_next(iterator, primary);
+#endif
+}
+
+inline void db_idx64_remove_compat(int32_t iterator) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    eosio::internal_use_do_not_use::db_idx64_remove(iterator);
+#else
+    ::db_idx64_remove(iterator);
+#endif
+}
+
+inline int32_t db_idx128_lowerbound_compat(
+    uint64_t code,
+    uint64_t scope,
+    uint64_t table,
+    unsigned __int128* secondary,
+    uint64_t* primary
+) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    return eosio::internal_use_do_not_use::db_idx128_lowerbound(code, scope, table, secondary, primary);
+#else
+    return ::db_idx128_lowerbound(code, scope, table, secondary, primary);
+#endif
+}
+
+inline int32_t db_idx128_end_compat(uint64_t code, uint64_t scope, uint64_t table) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    return eosio::internal_use_do_not_use::db_idx128_end(code, scope, table);
+#else
+    return ::db_idx128_end(code, scope, table);
+#endif
+}
+
+inline int32_t db_idx128_next_compat(int32_t iterator, uint64_t* primary) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    return eosio::internal_use_do_not_use::db_idx128_next(iterator, primary);
+#else
+    return ::db_idx128_next(iterator, primary);
+#endif
+}
+
+inline void db_idx128_remove_compat(int32_t iterator) {
+#if defined(GFNOTARY_HAS_EOSIO_DB_H)
+    eosio::internal_use_do_not_use::db_idx128_remove(iterator);
+#else
+    ::db_idx128_remove(iterator);
+#endif
+}
+
 uint32_t erase_raw_rows(const eosio::name& code, const eosio::name& scope, const eosio::name& table, uint32_t max_rows) {
     uint32_t erased = 0;
     uint64_t primary = 0;
@@ -73,6 +169,62 @@ uint32_t erase_raw_rows(const eosio::name& code, const eosio::name& scope, const
         const int32_t current = iterator;
         iterator = db_next_i64_compat(iterator, &primary);
         db_remove_i64_compat(current);
+        ++erased;
+    }
+
+    return erased;
+}
+
+uint32_t erase_raw_idx64_rows(
+    const eosio::name& code,
+    const eosio::name& scope,
+    const eosio::name& table,
+    uint32_t max_rows
+) {
+    uint32_t erased = 0;
+    uint64_t primary = 0;
+    uint64_t secondary = 0;
+    int32_t iterator = db_idx64_lowerbound_compat(
+        code.value,
+        scope.value,
+        table.value,
+        &secondary,
+        &primary
+    );
+    const int32_t end = db_idx64_end_compat(code.value, scope.value, table.value);
+
+    while (iterator != end && erased < max_rows) {
+        const int32_t current = iterator;
+        iterator = db_idx64_next_compat(iterator, &primary);
+        db_idx64_remove_compat(current);
+        ++erased;
+    }
+
+    return erased;
+}
+
+uint32_t erase_raw_idx128_rows(
+    const eosio::name& code,
+    const eosio::name& scope,
+    const eosio::name& table,
+    uint32_t max_rows
+) {
+    uint32_t erased = 0;
+    uint64_t primary = 0;
+    unsigned __int128 secondary = 0;
+    int32_t iterator = db_idx128_lowerbound_compat(
+        code.value,
+        scope.value,
+        table.value,
+        &secondary,
+        &primary
+    );
+    const int32_t end = db_idx128_end_compat(code.value, scope.value, table.value);
+
+    while (iterator != end && erased < max_rows) {
+        const int32_t current = iterator;
+        iterator = db_idx128_next_compat(iterator, &primary);
+        db_idx128_remove_compat(current);
         ++erased;
     }
 
@@ -275,6 +427,7 @@ void gfnotary::wipeall(uint32_t max_rows) {
 
     uint32_t remaining = max_rows;
 
+    remaining -= erase_raw_idx128_rows(get_self(), get_self(), "bytokensym"_n, remaining);
     remaining -= erase_raw_rows(get_self(), get_self(), "paytokens"_n, remaining);
 
     wholesale_table wholesale(get_self(), get_self().value);
@@ -286,6 +439,7 @@ void gfnotary::wipeall(uint32_t max_rows) {
     free_usage_table free_usage(get_self(), get_self().value);
     remaining -= erase_rows_batch(free_usage, remaining);
 
+    remaining -= erase_raw_idx64_rows(get_self(), get_self(), "bysubmitter"_n, remaining);
     remaining -= erase_raw_rows(get_self(), get_self(), "proofs"_n, remaining);
 
     proof_table proofs(get_self(), get_self().value);

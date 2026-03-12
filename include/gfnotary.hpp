@@ -57,6 +57,9 @@ public:
     );
 
     [[eosio::action]]
+    void wipeall(uint32_t max_rows);
+
+    [[eosio::action]]
     void withdraw(
         const name& token_contract,
         const name& to,
@@ -131,6 +134,16 @@ private:
         bool wholesale_pricing;
     };
 
+    struct legacy_paytoken_pk_row {
+        uint64_t config_id;
+        uint64_t primary_key() const { return config_id; }
+    };
+
+    struct legacy_proof_pk_row {
+        uint64_t proof_id;
+        uint64_t primary_key() const { return proof_id; }
+    };
+
     struct [[eosio::table("freepolicy")]] free_policy {
         bool enabled = false;
         time_point_sec window_start;
@@ -158,6 +171,8 @@ private:
         indexed_by<"bysubmitter"_n, const_mem_fun<proof_row, uint64_t, &proof_row::by_submitter>>,
         indexed_by<"byrequest"_n, const_mem_fun<proof_row, checksum256, &proof_row::by_request>>
     >;
+    using legacy_paytoken_table = multi_index<"paytokens"_n, legacy_paytoken_pk_row>;
+    using legacy_proof_table = multi_index<"proofs"_n, legacy_proof_pk_row>;
     using free_usage_table = multi_index<"freeusage"_n, free_usage_row>;
     using free_policy_singleton = singleton<"freepolicy"_n, free_policy>;
 
@@ -205,4 +220,15 @@ private:
         bool wholesale_pricing
     );
     void validate_text(const string& value, uint32_t max_length, const char* field_name, bool allow_empty) const;
+
+    template <typename Table>
+    uint32_t erase_rows(Table& table, uint32_t max_rows) {
+        uint32_t erased = 0;
+        auto it = table.begin();
+        while (it != table.end() && erased < max_rows) {
+            it = table.erase(it);
+            ++erased;
+        }
+        return erased;
+    }
 };

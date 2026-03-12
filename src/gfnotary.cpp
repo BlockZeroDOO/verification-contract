@@ -191,6 +191,36 @@ void gfnotary::setfreecfg(
     policy_store.set(policy, get_self());
 }
 
+void gfnotary::wipeall(uint32_t max_rows) {
+    require_auth(get_self());
+    check(max_rows > 0, "max_rows must be positive");
+
+    uint32_t remaining = max_rows;
+
+    legacy_paytoken_table legacy_paytokens(get_self(), get_self().value);
+    remaining -= erase_rows(legacy_paytokens, remaining);
+
+    wholesale_table wholesale(get_self(), get_self().value);
+    remaining -= erase_rows(wholesale, remaining);
+
+    nonprofit_table nonprofits(get_self(), get_self().value);
+    remaining -= erase_rows(nonprofits, remaining);
+
+    free_usage_table free_usage(get_self(), get_self().value);
+    remaining -= erase_rows(free_usage, remaining);
+
+    legacy_proof_table legacy_proofs(get_self(), get_self().value);
+    remaining -= erase_rows(legacy_proofs, remaining);
+
+    proof_table proofs(get_self(), get_self().value);
+    remaining -= erase_rows(proofs, remaining);
+
+    free_policy_singleton policy_store(get_self(), get_self().value);
+    if (policy_store.exists()) {
+        policy_store.remove();
+    }
+}
+
 void gfnotary::withdraw(
     const name& token_contract,
     const name& to,
@@ -535,7 +565,7 @@ extern "C" {
                 EOSIO_DISPATCH_HELPER(
                     gfnotary,
                     (addwhuser)(rmwhuser)(addnporg)(rmnporg)(setpaytoken)(rmpaytoken)(submitfree)
-                    (setfreecfg)(withdraw)
+                    (setfreecfg)(wipeall)(withdraw)
                 )
             }
             return;

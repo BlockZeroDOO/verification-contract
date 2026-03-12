@@ -1,63 +1,9 @@
 #include <gfnotary.hpp>
 
+#include <eosio/db.h>
 #include <eosio/dispatcher.hpp>
 
 namespace {
-struct legacy_paytoken_row {
-    uint64_t config_id;
-    name token_contract;
-    asset retail_price;
-    asset wholesale_price;
-    time_point_sec updated_at;
-
-    uint64_t primary_key() const { return config_id; }
-    uint128_t bytokensym() const {
-        return (static_cast<uint128_t>(token_contract.value) << 64) |
-               wholesale_price.symbol.code().raw();
-    }
-
-    EOSLIB_SERIALIZE(
-        legacy_paytoken_row,
-        (config_id)(token_contract)(retail_price)(wholesale_price)(updated_at)
-    )
-};
-
-struct legacy_proof_row {
-    uint64_t proof_id;
-    name submitter;
-    string object_hash;
-    string hash_algorithm;
-    string canonicalization_profile;
-    string client_reference;
-    asset price_charged;
-    bool wholesale_pricing;
-    time_point_sec submitted_at;
-
-    uint64_t primary_key() const { return proof_id; }
-    uint64_t by_submitter() const { return submitter.value; }
-
-    EOSLIB_SERIALIZE(
-        legacy_proof_row,
-        (proof_id)(submitter)(object_hash)(hash_algorithm)(canonicalization_profile)(
-            client_reference
-        )(price_charged)(wholesale_pricing)(submitted_at)
-    )
-};
-
-using legacy_paytoken_table = eosio::multi_index<
-    "paytokens"_n,
-    legacy_paytoken_row,
-    eosio::indexed_by<
-        "bytokensym"_n,
-        eosio::const_mem_fun<legacy_paytoken_row, uint128_t, &legacy_paytoken_row::bytokensym>>
-    >;
-using legacy_proof_table = eosio::multi_index<
-    "proofs"_n,
-    legacy_proof_row,
-    eosio::indexed_by<
-        "bysubmitter"_n,
-        eosio::const_mem_fun<legacy_proof_row, uint64_t, &legacy_proof_row::by_submitter>>>;
-
 template <typename Table>
 uint32_t erase_rows_batch(Table& table, uint32_t max_rows) {
     uint32_t erased = 0;
@@ -66,6 +12,24 @@ uint32_t erase_rows_batch(Table& table, uint32_t max_rows) {
         it = table.erase(it);
         ++erased;
     }
+    return erased;
+}
+
+uint32_t erase_raw_rows(const eosio::name& code, const eosio::name& scope, const eosio::name& table, uint32_t max_rows) {
+    using namespace eosio::internal_use_do_not_use;
+
+    uint32_t erased = 0;
+    uint64_t primary = 0;
+    int32_t iterator = db_lowerbound_i64(code.value, scope.value, table.value, 0);
+    const int32_t end = db_end_i64(code.value, scope.value, table.value);
+
+    while (iterator != end && erased < max_rows) {
+        const int32_t current = iterator;
+        iterator = db_next_i64(iterator, &primary);
+        db_remove_i64(current);
+        ++erased;
+    }
+
     return erased;
 }
 }  // namespace
@@ -265,8 +229,7 @@ void gfnotary::wipeall(uint32_t max_rows) {
 
     uint32_t remaining = max_rows;
 
-    legacy_paytoken_table legacy_paytokens(get_self(), get_self().value);
-    remaining -= erase_rows_batch(legacy_paytokens, remaining);
+    remaining -= erase_raw_rows(get_self(), get_self(), "paytokens"_n, remaining);
 
     wholesale_table wholesale(get_self(), get_self().value);
     remaining -= erase_rows_batch(wholesale, remaining);
@@ -277,8 +240,7 @@ void gfnotary::wipeall(uint32_t max_rows) {
     free_usage_table free_usage(get_self(), get_self().value);
     remaining -= erase_rows_batch(free_usage, remaining);
 
-    legacy_proof_table legacy_proofs(get_self(), get_self().value);
-    remaining -= erase_rows_batch(legacy_proofs, remaining);
+    remaining -= erase_raw_rows(get_self(), get_self(), "proofs"_n, remaining);
 
     proof_table proofs(get_self(), get_self().value);
     remaining -= erase_rows_batch(proofs, remaining);

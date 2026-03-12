@@ -9,7 +9,7 @@ The roadmap document frames the product as a proof-of-existence registry with a 
 model that distinguishes customer segments and volume-based pricing. Based on that, the
 contract includes:
 
-- configurable payment tokens in a `paytokens` table
+- configurable payment tokens in a `paytokens2` table
 - a dedicated `wholesale` table for special-price accounts
 - a dedicated `nonprofit` table for free non-commercial organizations
 - `addwhuser` and `rmwhuser` actions for wholesale account management
@@ -20,7 +20,7 @@ contract includes:
 
 ## Tables
 
-- `paytokens`: accepted payment tokens with `token_contract`, `retail_price`, `wholesale_price`, and `storage_price`
+- `paytokens2`: accepted payment tokens with `token_contract`, `retail_price`, `wholesale_price`, and `storage_price`
 - `wholesale`: list of accounts eligible for wholesale pricing
 - `nonprofit`: list of accounts that can submit proofs for free
 - `freepolicy`: singleton config for nonprofit free submissions, including the 24-hour global sponsor limit
@@ -75,14 +75,14 @@ cleos push action gfnotary submitfree '[
 
 ## Notes
 
-- Contract listens to `*::transfer`, but only accepts tokens configured in `paytokens`.
-- Retail and wholesale prices drive on-chain proof pricing. `storage_price` is stored in `paytokens` for external storage integration and does not change the on-chain proof price; nonprofit submissions are stored as `0.0000 FREE`.
+- Contract listens to `*::transfer`, but only accepts tokens configured in `paytokens2`.
+- Retail and wholesale prices drive on-chain proof pricing. `storage_price` is stored in `paytokens2` for external storage integration and does not change the on-chain proof price; nonprofit submissions are stored as `0.0000 FREE`.
 - `submitfree` is gated by `freepolicy`; nonprofit accounts can submit at most once every 60 seconds, and all nonprofit submissions share one contract-wide 24-hour sponsored limit.
 - `canonicalization_profile` must be non-empty printable ASCII up to 32 characters. The examples use `none`.
 - `client_reference` is required on both paid and free flows, acts as an idempotency key per submitter, and must use printable ASCII without `|`.
 - `object_hash` is not globally unique; the same document hash can be notarized multiple times as long as each request uses a new `client_reference`.
 - New `proofsv2` rows are stored with `get_self()` as RAM payer, so storage is paid by the contract account.
-- `withdraw` can transfer tokens already held by the contract account even if the corresponding `paytokens` config entry was later removed.
+- `withdraw` can transfer tokens already held by the contract account even if the corresponding `paytokens2` config entry was later removed.
 - CPU/NET of the user-signed transfer transaction are still paid by the signer unless you add an external sponsorship layer.
 - The contract is intentionally small so it can be extended later with batching, Merkle roots, anchoring, and richer receipts.
 

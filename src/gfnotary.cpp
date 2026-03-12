@@ -427,6 +427,9 @@ void gfnotary::wipeall(uint32_t max_rows) {
 
     uint32_t remaining = max_rows;
 
+    payment_token_table payment_tokens(get_self(), get_self().value);
+    remaining -= erase_rows_batch(payment_tokens, remaining);
+
     remaining -= erase_raw_idx128_rows(get_self(), get_self(), "bytokensym"_n, remaining);
     remaining -= erase_raw_rows(get_self(), get_self(), "paytokens"_n, remaining);
 

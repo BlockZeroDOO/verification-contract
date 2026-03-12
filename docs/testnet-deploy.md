@@ -1,6 +1,6 @@
 # Testnet Deploy
 
-This contract targets GlobalForce testnet and accepts payment tokens configured in the `paytokens` table.
+This contract targets GlobalForce testnet and accepts payment tokens configured in the `paytokens2` table.
 
 ## Prerequisites
 
@@ -97,7 +97,7 @@ cleos -u https://dev-history.globalforce.io push action gfnotary rmpaytoken '[
 Applicable price is determined by:
 
 - membership in the `nonprofit` and `wholesale` tables
-- the selected token configuration in `paytokens`
+- the selected token configuration in `paytokens2`
 - `storage_price` is stored for external storage integration and does not affect the on-chain proof price
 
 Note:
@@ -165,7 +165,7 @@ Rules:
 ## Read tables
 
 ```powershell
-cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary paytokens
+cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary paytokens2
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary wholesale
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary nonprofit
 cleos -u https://dev-history.globalforce.io get table gfnotary gfnotary freepolicy
@@ -229,7 +229,7 @@ cleos -u https://dev-history.globalforce.io push action gfnotary withdraw '[
 ]' -p gfnotary@active
 ```
 
-`withdraw` is not gated by the `paytokens` table, so it can recover tokens already held by the
+`withdraw` is not gated by the `paytokens2` table, so it can recover tokens already held by the
 contract even after `rmpaytoken`.
 
 ## Resource note

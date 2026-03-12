@@ -97,7 +97,7 @@ private:
         uint64_t primary_key() const { return account.value; }
     };
 
-    struct [[eosio::table("paytokens")]] payment_token {
+    struct [[eosio::table("paytokens2")]] payment_token {
         uint64_t config_id;
         name token_contract;
         asset retail_price;
@@ -151,7 +151,7 @@ private:
     using wholesale_table = multi_index<"wholesale"_n, wholesale_user>;
     using nonprofit_table = multi_index<"nonprofit"_n, nonprofit_org>;
     using payment_token_table = multi_index<
-        "paytokens"_n,
+        "paytokens2"_n,
         payment_token,
         indexed_by<"bytokensym"_n, const_mem_fun<payment_token, uint128_t, &payment_token::bytokensym>>
     >;

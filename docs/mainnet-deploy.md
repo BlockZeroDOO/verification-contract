@@ -4,7 +4,7 @@ This runbook prepares `gfnotary` for deployment to GlobalForce mainnet at `https
 
 ## Mainnet assumptions
 
-- contract account already exists on mainnet and has enough RAM for the `paytokens`, `wholesale`, `nonprofit`, `freepolicy`, `freeusage`, and `proofsv2` tables
+- contract account already exists on mainnet and has enough RAM for the `paytokens2`, `wholesale`, `nonprofit`, `freepolicy`, `freeusage`, and `proofsv2` tables
 - wallet keys for the deployment authority are imported into `cleos`
 - you have decided in advance which payment token contract and symbol will be accepted on mainnet
 - you understand that this contract needs ongoing admin access for:
@@ -102,13 +102,13 @@ Recommended client rule:
 
 ## Withdraw operations
 
-`withdraw` is not tied to the presence of a `paytokens` config entry. If the contract account still
+`withdraw` is not tied to the presence of a `paytokens2` config entry. If the contract account still
 holds a token balance, the operator can withdraw it even after `rmpaytoken`.
 
 ## Verify on-chain state
 
 ```powershell
-cleos -u https://history.globalforce.io get table gfnotary gfnotary paytokens
+cleos -u https://history.globalforce.io get table gfnotary gfnotary paytokens2
 cleos -u https://history.globalforce.io get table gfnotary gfnotary wholesale
 cleos -u https://history.globalforce.io get table gfnotary gfnotary nonprofit
 cleos -u https://history.globalforce.io get table gfnotary gfnotary freepolicy

@@ -97,7 +97,7 @@ assert_paytoken_config() {
     local table_json
     local storage_price
 
-    table_json="$(get_table_json paytokens)"
+    table_json="$(get_table_json paytokens2)"
     storage_price="$(printf '%s' "${table_json}" | "${JQ_BIN}" -r \
         --arg token_contract "${PAYMENT_TOKEN_CONTRACT}" \
         --arg retail_price "${RETAIL_PRICE}" \
@@ -109,7 +109,7 @@ assert_paytoken_config() {
         | .storage_price' | tail -n 1)"
 
     if [[ -z "${storage_price}" ]]; then
-        echo "Assertion failed: updated payment token config was not found in paytokens." >&2
+        echo "Assertion failed: updated payment token config was not found in paytokens2." >&2
         exit 1
     fi
 

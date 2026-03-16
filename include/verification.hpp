@@ -14,7 +14,7 @@
 using namespace eosio;
 using std::string;
 
-class [[eosio::contract("gfnotary")]] gfnotary : public contract {
+class [[eosio::contract("verification")]] verification : public contract {
 public:
     using contract::contract;
 
@@ -94,7 +94,7 @@ private:
         uint64_t primary_key() const { return account.value; }
     };
 
-    struct [[eosio::table("paytokens2")]] payment_token {
+    struct [[eosio::table("paytokens")]] payment_token {
         uint64_t config_id;
         name token_contract;
         asset retail_price;
@@ -109,7 +109,7 @@ private:
         }
     };
 
-    struct [[eosio::table("proofsv2")]] proof_row {
+    struct [[eosio::table("proofs")]] proof_row {
         uint64_t proof_id;
         name submitter;
         string object_hash;
@@ -123,7 +123,7 @@ private:
 
         uint64_t primary_key() const { return proof_id; }
         uint64_t by_submitter() const { return submitter.value; }
-        checksum256 by_request() const { return gfnotary::compute_request_key(submitter, client_reference); }
+        checksum256 by_request() const { return verification::compute_request_key(submitter, client_reference); }
     };
 
     struct pricing_decision {
@@ -148,12 +148,12 @@ private:
     using wholesale_table = multi_index<"wholesale"_n, wholesale_user>;
     using nonprofit_table = multi_index<"nonprofit"_n, nonprofit_org>;
     using payment_token_table = multi_index<
-        "paytokens2"_n,
+        "paytokens"_n,
         payment_token,
         indexed_by<"bytokensym"_n, const_mem_fun<payment_token, uint128_t, &payment_token::bytokensym>>
     >;
     using proof_table = multi_index<
-        "proofsv2"_n,
+        "proofs"_n,
         proof_row,
         indexed_by<"bysubmitter"_n, const_mem_fun<proof_row, uint64_t, &proof_row::by_submitter>>,
         indexed_by<"byrequest"_n, const_mem_fun<proof_row, checksum256, &proof_row::by_request>>

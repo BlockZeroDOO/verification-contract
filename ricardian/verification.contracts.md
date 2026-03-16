@@ -38,5 +38,5 @@ fixed 60-second cooldown between submissions.
 
 ## withdraw
 
-Transfers tokens held by the contract account to the specified recipient through the selected token contract.
-The transfer does not require an active `paytokens2` configuration row for that token.
+Transfers tokens held by the verification contract account to the specified recipient through the selected token contract.
+The transfer does not require an active `paytokens` configuration row for that token.

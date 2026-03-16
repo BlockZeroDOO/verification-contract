@@ -1,11 +1,11 @@
 param(
-    [string]$ContractName = "gfnotary"
+    [string]$ContractName = "verification"
 )
 
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$sourceFile = Join-Path $projectRoot "src\gfnotary.cpp"
+$sourceFile = Join-Path $projectRoot "src\verification.cpp"
 $includeDir = Join-Path $projectRoot "include"
 $distDir = Join-Path $projectRoot "dist\$ContractName"
 $wasmFile = Join-Path $distDir "$ContractName.wasm"
@@ -28,7 +28,7 @@ try {
         -I $includeDir `
         -O3 `
         --abigen `
-        "src/gfnotary.cpp" `
+        "src/verification.cpp" `
         -o $wasmFile
 }
 finally {

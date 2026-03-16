@@ -1,10 +1,10 @@
 # Mainnet Deploy
 
-This runbook prepares `gfnotary` for deployment to GlobalForce mainnet at `https://history.globalforce.io`.
+This runbook prepares `verification` for deployment to GlobalForce mainnet at `https://history.globalforce.io`.
 
 ## Mainnet assumptions
 
-- contract account already exists on mainnet and has enough RAM for the `paytokens2`, `wholesale`, `nonprofit`, `freepolicy`, `freeusage`, and `proofsv2` tables
+- contract account already exists on mainnet and has enough RAM for the `paytokens`, `wholesale`, `nonprofit`, `freepolicy`, `freeusage`, and `proofs` tables
 - wallet keys for the deployment authority are imported into `cleos`
 - you have decided in advance which payment token contract and symbol will be accepted on mainnet
 - you understand that this contract needs ongoing admin access for:
@@ -19,7 +19,7 @@ This runbook prepares `gfnotary` for deployment to GlobalForce mainnet at `https
 - build the release artifacts and archive the generated SHA-256 files
 - confirm the contract account name matches the deployed contract name and respects the 12-character account limit
 - make sure the account has `eosio.code` on `active`, because `withdraw` sends an inline token transfer
-- estimate RAM growth for `proofsv2`, because the contract pays RAM for stored proofs
+- estimate RAM growth for `proofs`, because the contract pays RAM for stored proofs
 - make sure the client always sends a non-empty `client_reference` for both paid and free proof creation
 - decide the post-deploy governance model before publishing the account name
 
@@ -39,15 +39,15 @@ PowerShell:
 
 Expected artifacts:
 
-- `dist/gfnotary/gfnotary.wasm`
-- `dist/gfnotary/gfnotary.abi`
-- `dist/gfnotary/gfnotary.wasm.sha256`
-- `dist/gfnotary/gfnotary.abi.sha256`
+- `dist/verification/verification.wasm`
+- `dist/verification/verification.abi`
+- `dist/verification/verification.wasm.sha256`
+- `dist/verification/verification.abi.sha256`
 
 ## Deploy to mainnet
 
 ```powershell
-cleos -u https://history.globalforce.io set contract gfnotary ./dist/gfnotary -p gfnotary@active
+cleos -u https://history.globalforce.io set contract verification ./dist/verification -p verification@active
 ```
 
 ## Add or preserve `eosio.code`
@@ -55,18 +55,18 @@ cleos -u https://history.globalforce.io set contract gfnotary ./dist/gfnotary -p
 `withdraw` uses an inline `transfer`, so `active` must keep `eosio.code`.
 
 ```powershell
-cleos -u https://history.globalforce.io set account permission gfnotary active --add-code -p gfnotary@active
+cleos -u https://history.globalforce.io set account permission verification active --add-code -p verification@active
 ```
 
 ## Configure accepted payment tokens
 
 ```powershell
-cleos -u https://history.globalforce.io push action gfnotary setpaytoken '[
+cleos -u https://history.globalforce.io push action verification setpaytoken '[
   "eosio.token",
   "1.0000 GFT",
   "0.1000 GFT",
   "0.0100 GFT"
-]' -p gfnotary@active
+]' -p verification@active
 ```
 
 `storage_price` is stored for external storage integration and does not change the on-chain proof
@@ -78,10 +78,10 @@ against the token contract `stat` table, so a mismatched precision is rejected a
 For mainnet, do not leave `submitfree` unbounded. A conservative starting point looks like this:
 
 ```powershell
-cleos -u https://history.globalforce.io push action gfnotary setfreecfg '[
+cleos -u https://history.globalforce.io push action verification setfreecfg '[
   true,
   100
-]' -p gfnotary@active
+]' -p verification@active
 ```
 
 This means:
@@ -105,18 +105,18 @@ Recommended client rule:
 
 ## Withdraw operations
 
-`withdraw` is not tied to the presence of a `paytokens2` config entry. If the contract account still
+`withdraw` is not tied to the presence of a `paytokens` config entry. If the contract account still
 holds a token balance, the operator can withdraw it even after `rmpaytoken`.
 
 ## Verify on-chain state
 
 ```powershell
-cleos -u https://history.globalforce.io get table gfnotary gfnotary paytokens2
-cleos -u https://history.globalforce.io get table gfnotary gfnotary wholesale
-cleos -u https://history.globalforce.io get table gfnotary gfnotary nonprofit
-cleos -u https://history.globalforce.io get table gfnotary gfnotary freepolicy
-cleos -u https://history.globalforce.io get table gfnotary gfnotary freeusage
-cleos -u https://history.globalforce.io get table gfnotary gfnotary proofsv2
+cleos -u https://history.globalforce.io get table verification verification paytokens
+cleos -u https://history.globalforce.io get table verification verification wholesale
+cleos -u https://history.globalforce.io get table verification verification nonprofit
+cleos -u https://history.globalforce.io get table verification verification freepolicy
+cleos -u https://history.globalforce.io get table verification verification freeusage
+cleos -u https://history.globalforce.io get table verification verification proofs
 ```
 
 ## Governance recommendation

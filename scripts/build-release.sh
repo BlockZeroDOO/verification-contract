@@ -2,10 +2,10 @@
 
 set -euo pipefail
 
-contract_name="${1:-gfnotary}"
+contract_name="${1:-verification}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd "${script_dir}/.." && pwd)"
-source_file="${project_root}/src/gfnotary.cpp"
+source_file="${project_root}/src/verification.cpp"
 include_dir="${project_root}/include"
 dist_dir="${project_root}/dist/${contract_name}"
 wasm_file="${dist_dir}/${contract_name}.wasm"
@@ -27,7 +27,7 @@ pushd "${project_root}" >/dev/null
     -I "${include_dir}" \
     -O3 \
     --abigen \
-    "src/gfnotary.cpp" \
+    "src/verification.cpp" \
     -o "${wasm_file}"
 popd >/dev/null
 

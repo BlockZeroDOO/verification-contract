@@ -3,7 +3,7 @@
 set -euo pipefail
 
 RPC_URL="${RPC_URL:-https://dev-history.globalforce.io}"
-CONTRACT_ACCOUNT="${CONTRACT_ACCOUNT:-globalnotary}"
+CONTRACT_ACCOUNT="${CONTRACT_ACCOUNT:-verification}"
 PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
 PAYMENT_TOKEN_SYMBOL="${PAYMENT_TOKEN_SYMBOL:-4,GFT}"
 RETAIL_PRICE="${RETAIL_PRICE:-1.0000 GFT}"
@@ -111,7 +111,7 @@ assert_paytoken_config() {
     local table_json
     local storage_price
 
-    table_json="$(get_table_json paytokens2)"
+    table_json="$(get_table_json paytokens)"
     storage_price="$(printf '%s' "${table_json}" | "${JQ_BIN}" -r \
         --arg token_contract "${PAYMENT_TOKEN_CONTRACT}" \
         --arg retail_price "${RETAIL_PRICE}" \
@@ -123,7 +123,7 @@ assert_paytoken_config() {
         | .storage_price' | tail -n 1)"
 
     if [[ -z "${storage_price}" ]]; then
-        echo "Assertion failed: updated payment token config was not found in paytokens2." >&2
+        echo "Assertion failed: updated payment token config was not found in paytokens." >&2
         exit 1
     fi
 
@@ -143,7 +143,7 @@ assert_proof_by_reference() {
     local expected_wholesale="$4"
 
     local proofs_json proof_json submitter price wholesale_flag
-    proofs_json="$(get_table_json proofsv2)"
+    proofs_json="$(get_table_json proofs)"
     proof_json="$(printf '%s' "${proofs_json}" | "${JQ_BIN}" -c --arg ref "${reference}" '.rows[] | select(.client_reference == $ref)' | tail -n 1)"
 
     if [[ -z "${proof_json}" ]]; then
@@ -161,7 +161,7 @@ assert_proof_by_reference() {
 }
 
 log "Initial proof count"
-INITIAL_PROOFS="$(count_rows proofsv2)"
+INITIAL_PROOFS="$(count_rows proofs)"
 
 log "Ensuring payment token config exists"
 cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" setpaytoken "[\"${PAYMENT_TOKEN_CONTRACT}\",\"${RETAIL_PRICE}\",\"${WHOLESALE_PRICE}\",\"${STORAGE_PRICE}\"]" -p "${OWNER_ACCOUNT}@active"
@@ -286,7 +286,7 @@ if cleos -u "${RPC_URL}" push action "${CONTRACT_ACCOUNT}" submitfree "[\"${WHOL
     exit 1
 fi
 
-FINAL_PROOFS="$(count_rows proofsv2)"
+FINAL_PROOFS="$(count_rows proofs)"
 EXPECTED_FINAL_PROOFS="$((INITIAL_PROOFS + 4))"
 assert_eq "${EXPECTED_FINAL_PROOFS}" "${FINAL_PROOFS}" "proof row count after smoke test"
 

@@ -25,7 +25,7 @@ contract includes:
 - `nonprofit`: list of accounts that can submit proofs for free
 - `freepolicy`: singleton config for nonprofit free submissions, including the 24-hour global sponsor limit
 - `freeusage`: per-account timestamp of the last nonprofit submission for 60-second cooldown enforcement
-- `proofs`: submitted proof records with the effective price, pricing mode, payment token contract, and client reference
+- `proofs`: submitted proof records with a compact `checksum256` object hash, the effective price, pricing mode, payment token contract, and client reference
 
 ## Actions
 
@@ -77,6 +77,8 @@ cleos push action verification submitfree '[
 
 - Contract listens to `*::transfer`, but only accepts tokens configured in `paytokens`.
 - Retail and wholesale prices drive on-chain proof pricing. `storage_price` is stored in `paytokens` for external storage integration and does not change the on-chain proof price; nonprofit submissions are stored as `0.0000 FREE`.
+- `proofs.object_hash` is stored on-chain as compact `checksum256`, not as a 64-character text string.
+- The contract currently accepts only `SHA-256`, so `hash_algorithm` is validated on input but is not redundantly stored in each proof row.
 - `setpaytoken` validates the configured symbol precision against the token contract `stat` table, so invalid token precision is rejected before users attempt paid transfers.
 - `submitfree` is gated by `freepolicy`; nonprofit accounts can submit at most once every 60 seconds, and all nonprofit submissions share one contract-wide 24-hour sponsored limit.
 - The 60-second cooldown applies only to `nonprofit` accounts using `submitfree`; paid retail and wholesale submissions have no time-based cooldown in the contract.

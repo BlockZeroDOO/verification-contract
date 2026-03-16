@@ -112,8 +112,7 @@ private:
     struct [[eosio::table("proofs")]] proof_row {
         uint64_t proof_id;
         name submitter;
-        string object_hash;
-        string hash_algorithm;
+        checksum256 object_hash;
         string canonicalization_profile;
         string client_reference;
         name payment_token_contract;
@@ -182,7 +181,7 @@ private:
     asset resolve_price(const name& account, const name& token_contract, const symbol& token_symbol) const;
     static checksum256 compute_request_key(const name& submitter, const string& client_reference);
     void validate_new_request(const checksum256& request_key) const;
-    void validate_hash(const string& hex) const;
+    checksum256 parse_hash(const string& hex) const;
     void validate_client_reference(const string& client_reference) const;
     void validate_printable_ascii_text(
         const string& value,
@@ -196,8 +195,7 @@ private:
     uint8_t from_hex(char c) const;
     void store_proof(
         const name& submitter,
-        const string& object_hash,
-        const string& hash_algorithm,
+        const checksum256& object_hash,
         const string& canonicalization_profile,
         const string& client_reference,
         const name& payment_token_contract,

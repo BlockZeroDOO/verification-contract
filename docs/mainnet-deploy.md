@@ -47,7 +47,7 @@ Expected artifacts:
 ## Deploy to mainnet
 
 ```powershell
-cleos -u https://history.globalforce.io set contract verification ./dist/verification -p verification@active
+cleos -u https://history.globalforce.io set contract --use-old-rpc --return-failure-trace false verification ./dist/verification -p verification@active
 ```
 
 ## Add or preserve `eosio.code`
@@ -55,30 +55,32 @@ cleos -u https://history.globalforce.io set contract verification ./dist/verific
 `withdraw` uses an inline `transfer`, so `active` must keep `eosio.code`.
 
 ```powershell
-cleos -u https://history.globalforce.io set account permission verification active --add-code -p verification@active
+cleos -u https://history.globalforce.io set account permission --use-old-rpc --return-failure-trace false verification active --add-code -p verification@active
 ```
 
 ## Configure accepted payment tokens
 
 ```powershell
-cleos -u https://history.globalforce.io push action verification setpaytoken '[
+cleos -u https://history.globalforce.io push action --use-old-rpc --return-failure-trace false verification setpaytoken '[
   "eosio.token",
-  "1.0000 GFT",
-  "0.1000 GFT",
-  "0.0100 GFT"
+  "1.0000 GFL",
+  "0.1000 GFL",
+  "0.0100 GFL"
 ]' -p verification@active
 ```
 
 `storage_price` is stored for external storage integration and does not change the on-chain proof
 price used by paid proof creation. `setpaytoken` also validates the configured symbol precision
 against the token contract `stat` table, so a mismatched precision is rejected at configuration time.
+The live mainnet `history.globalforce.io` endpoint does not support `/v1/chain/send_transaction2`,
+so the examples above use `--use-old-rpc --return-failure-trace false`.
 
 ## Configure free submission policy
 
 For mainnet, do not leave `submitfree` unbounded. A conservative starting point looks like this:
 
 ```powershell
-cleos -u https://history.globalforce.io push action verification setfreecfg '[
+cleos -u https://history.globalforce.io push action --use-old-rpc --return-failure-trace false verification setfreecfg '[
   true,
   100
 ]' -p verification@active

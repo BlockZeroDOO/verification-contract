@@ -2,6 +2,8 @@
 
 #include <eosio/dispatcher.hpp>
 
+#include <array>
+
 namespace {
 struct token_stat_row {
     asset supply;
@@ -161,7 +163,7 @@ void verification::submitfree(
     check(is_account(submitter), "submitter account does not exist");
     check(isnporg(submitter), "submitter is not in nonprofit table");
 
-    validate_hash(object_hash);
+    const auto parsed_hash = parse_hash(object_hash);
     validate_text(hash_algorithm, 16, "hash_algorithm", false);
     validate_printable_ascii_text(canonicalization_profile, 32, "canonicalization_profile", false);
     validate_client_reference(client_reference);
@@ -172,8 +174,7 @@ void verification::submitfree(
 
     store_proof(
         submitter,
-        object_hash,
-        hash_algorithm,
+        parsed_hash,
         canonicalization_profile,
         client_reference,
         name{},
@@ -245,7 +246,7 @@ void verification::ontransfer(const name& from, const name& to, const asset& qua
 
     auto [object_hash, hash_algorithm, canonicalization_profile, client_reference] = parse_payment_memo(memo);
 
-    validate_hash(object_hash);
+    const auto parsed_hash = parse_hash(object_hash);
     validate_text(hash_algorithm, 16, "hash_algorithm", false);
     validate_printable_ascii_text(canonicalization_profile, 32, "canonicalization_profile", false);
     validate_client_reference(client_reference);
@@ -259,8 +260,7 @@ void verification::ontransfer(const name& from, const name& to, const asset& qua
 
     store_proof(
         from,
-        object_hash,
-        hash_algorithm,
+        parsed_hash,
         canonicalization_profile,
         client_reference,
         payment_token_contract,
@@ -429,12 +429,17 @@ void verification::validate_new_request(const checksum256& request_key) const {
     check(existing_request == by_request.end(), "duplicate client_reference for submitter");
 }
 
-void verification::validate_hash(const string& hex) const {
+checksum256 verification::parse_hash(const string& hex) const {
     check(hex.size() == hash_size * 2, "object hash must be 64 hex characters");
 
-    for (char ch : hex) {
-        (void)from_hex(ch);
+    std::array<uint8_t, hash_size> bytes{};
+    for (size_t i = 0; i < bytes.size(); ++i) {
+        const auto high = from_hex(hex[i * 2]);
+        const auto low = from_hex(hex[i * 2 + 1]);
+        bytes[i] = static_cast<uint8_t>((high << 4) | low);
     }
+
+    return checksum256(bytes);
 }
 
 void verification::validate_client_reference(const string& client_reference) const {
@@ -509,8 +514,7 @@ uint8_t verification::from_hex(char c) const {
 
 void verification::store_proof(
     const name& submitter,
-    const string& object_hash,
-    const string& hash_algorithm,
+    const checksum256& object_hash,
     const string& canonicalization_profile,
     const string& client_reference,
     const name& payment_token_contract,
@@ -528,7 +532,6 @@ void verification::store_proof(
         row.proof_id = next_id;
         row.submitter = submitter;
         row.object_hash = object_hash;
-        row.hash_algorithm = hash_algorithm;
         row.canonicalization_profile = canonicalization_profile;
         row.client_reference = client_reference;
         row.payment_token_contract = payment_token_contract;

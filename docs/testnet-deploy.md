@@ -107,6 +107,7 @@ Applicable price is determined by:
 Note:
 
 - `quote`, `iswhuser`, and `isnporg` are not exposed as callable ABI actions in the current build because CDT 4.1.1 dispatcher support is limited to `void` actions.
+- `proofs.object_hash` is stored as compact `checksum256`; `hash_algorithm` is validated on input and currently fixed to `SHA-256`, so it is not redundantly stored in the row.
 
 ## Record creation by payment
 
@@ -187,7 +188,6 @@ export RETAIL_ACCOUNT=yourretailacc
 export WHOLESALE_ACCOUNT=yourwholesale
 export NONPROFIT_ACCOUNT=yournonprofit
 export PAYMENT_TOKEN_CONTRACT=eosio.token
-export PAYMENT_TOKEN_SYMBOL=4,GFT
 export RETAIL_PRICE="1.0000 GFT"
 export WHOLESALE_PRICE="0.1000 GFT"
 export STORAGE_PRICE="0.0100 GFT"

@@ -1,4 +1,4 @@
-# Verification Contract
+# Verification Contract for GlobalForce network
 
 This repository contains a minimal GlobalForce/Antelope-compatible smart contract for the
 `verification` smart contract concept described in the provided documents.
@@ -105,3 +105,7 @@ cleos push action verification submitfree '[
 
 - Windows environment check: `scripts/check-tauri-windows-env.ps1`
 - Windows setup guide: `docs/tauri-windows-setup.md`
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file.

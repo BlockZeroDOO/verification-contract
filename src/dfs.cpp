@@ -588,7 +588,10 @@ void dfs::ontransfer(
         return;
     }
 
-    auto [is_storage_payment, payment_reference, manifest_hash] = parse_storage_memo(memo);
+    const auto storage_memo = parse_storage_memo(memo);
+    const bool is_storage_payment = std::get<0>(storage_memo);
+    const string payment_reference = std::get<1>(storage_memo);
+    const string manifest_hash = std::get<2>(storage_memo);
     check(is_storage_payment, "unknown transfer memo type");
     require_enabled_token(get_first_receiver(), quantity.symbol);
 
@@ -633,7 +636,7 @@ dfs::accepted_token_row dfs::require_enabled_token(const name& token_contract, c
     return *token_itr;
 }
 
-dfs::balance_table::iterator dfs::find_balance(
+dfs::balance_table::const_iterator dfs::find_balance(
     balance_table& balances,
     const name& owner_account,
     const name& token_contract,
@@ -647,7 +650,7 @@ dfs::balance_table::iterator dfs::find_balance(
     return balances.iterator_to(*itr);
 }
 
-dfs::receipt_table::iterator dfs::find_receipt(receipt_table& receipts, const string& payment_reference) {
+dfs::receipt_table::const_iterator dfs::find_receipt(receipt_table& receipts, const string& payment_reference) {
     auto by_payref = receipts.get_index<"bypayref"_n>();
     auto receipt_itr = by_payref.find(compute_text_key(payment_reference));
     if (receipt_itr == by_payref.end()) {

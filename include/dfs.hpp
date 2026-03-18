@@ -316,8 +316,8 @@ private:
 
     pricing_policy get_policy() const;
     accepted_token_row require_enabled_token(const name& token_contract, const symbol& token_symbol) const;
-    balance_table::iterator find_balance(balance_table& balances, const name& owner_account, const name& token_contract, const symbol_code& symbol_code);
-    receipt_table::iterator find_receipt(receipt_table& receipts, const string& payment_reference);
+    balance_table::const_iterator find_balance(balance_table& balances, const name& owner_account, const name& token_contract, const symbol_code& symbol_code);
+    receipt_table::const_iterator find_receipt(receipt_table& receipts, const string& payment_reference);
     tuple<bool, string> parse_stake_memo(const string& memo) const;
     tuple<bool, string, string> parse_storage_memo(const string& memo) const;
     void validate_role(const name& role) const;

@@ -2,6 +2,7 @@
 
 #include <eosio/crypto.hpp>
 #include <eosio/eosio.hpp>
+#include <eosio/system.hpp>
 #include <eosio/time.hpp>
 
 #include <request_key.hpp>

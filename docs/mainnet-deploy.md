@@ -1,13 +1,17 @@
 # Mainnet Deploy
 
-This runbook prepares `verification` for deployment to GlobalForce mainnet at `https://history.globalforce.io`.
+This runbook prepares the two-contract architecture for GlobalForce mainnet at
+`https://history.globalforce.io`:
+
+- `verification`: immutable proof registry
+- `managementel`: pricing, nonprofit policy, role management, and treasury
 
 ## Mainnet assumptions
 
-- contract account already exists on mainnet and has enough RAM for the `paytokens`, `wholesale`, `nonprofit`, `freepolicy`, `freeusage`, and `proofs` tables
-- wallet keys for the deployment authority are imported into `cleos`
-- you have decided in advance which payment token contract and symbol will be accepted on mainnet
-- you understand that this contract needs ongoing admin access for:
+- both contract accounts already exist on mainnet and have enough RAM
+- wallet keys for the deployment authorities are imported into `cleos`
+- you have decided which payment token contract and symbol will be accepted on mainnet
+- you understand that `managementel` needs ongoing admin access for:
   - `setpaytoken`
   - `setfreecfg`
   - `addwhuser` / `rmwhuser`
@@ -17,11 +21,11 @@ This runbook prepares `verification` for deployment to GlobalForce mainnet at `h
 ## Preflight checklist
 
 - build the release artifacts and archive the generated SHA-256 files
-- confirm the contract account name matches the deployed contract name and respects the 12-character account limit
-- make sure the account has `eosio.code` on `active`, because `withdraw` sends an inline token transfer
-- estimate RAM growth for `proofs`, because the contract pays RAM for stored proofs
-- make sure the client always sends a non-empty `client_reference` for both paid and free proof creation
-- decide the post-deploy governance model before publishing the account name
+- confirm the account names match the deployed contract names and respect the 12-character account limit
+- make sure `managementel` will keep `eosio.code` on `active`
+- estimate RAM growth for `verification.proofs`, because `verification` pays RAM for stored proofs
+- make sure the client always sends a non-empty `client_reference`
+- decide the long-term governance model for both contracts before publishing account names
 
 ## Build release artifacts
 
@@ -43,47 +47,61 @@ Expected artifacts:
 - `dist/verification/verification.abi`
 - `dist/verification/verification.wasm.sha256`
 - `dist/verification/verification.abi.sha256`
+- `dist/managementel/managementel.wasm`
+- `dist/managementel/managementel.abi`
+- `dist/managementel/managementel.wasm.sha256`
+- `dist/managementel/managementel.abi.sha256`
 
 ## Deploy to mainnet
+
+The live mainnet `history.globalforce.io` endpoint does not support `/v1/chain/send_transaction2`,
+so the examples below use `--use-old-rpc --return-failure-trace false`.
+
+Deploy `verification` first:
 
 ```powershell
 cleos -u https://history.globalforce.io set contract --use-old-rpc --return-failure-trace false verification ./dist/verification -p verification@active
 ```
 
-## Add or preserve `eosio.code`
-
-`withdraw` uses an inline `transfer`, so `active` must keep `eosio.code`.
+Then deploy `managementel`:
 
 ```powershell
-cleos -u https://history.globalforce.io set account permission --use-old-rpc --return-failure-trace false verification active --add-code -p verification@active
+cleos -u https://history.globalforce.io set contract --use-old-rpc --return-failure-trace false managementel ./dist/managementel -p managementel@active
 ```
+
+## Add or preserve `eosio.code`
+
+`managementel` sends inline `verification::record` and inline token `transfer` actions, so
+`active` must keep `eosio.code`.
+
+```powershell
+cleos -u https://history.globalforce.io set account permission --use-old-rpc --return-failure-trace false managementel active --add-code -p managementel@active
+```
+
+`verification` does not require `eosio.code` for this design.
 
 ## Configure accepted payment tokens
 
 ```powershell
-cleos -u https://history.globalforce.io push action --use-old-rpc --return-failure-trace false verification setpaytoken '[
+cleos -u https://history.globalforce.io push action --use-old-rpc --return-failure-trace false managementel setpaytoken '[
   "eosio.token",
   "1.0000 GFL",
-  "0.1000 GFL",
-  "0.0100 GFL"
-]' -p verification@active
+  "0.1000 GFL"
+]' -p managementel@active
 ```
 
-`storage_price` is stored for external storage integration and does not change the on-chain proof
-price used by paid proof creation. `setpaytoken` also validates the configured symbol precision
-against the token contract `stat` table, so a mismatched precision is rejected at configuration time.
-The live mainnet `history.globalforce.io` endpoint does not support `/v1/chain/send_transaction2`,
-so the examples above use `--use-old-rpc --return-failure-trace false`.
+`setpaytoken` validates the configured symbol precision against the token contract `stat` table,
+so a mismatched precision is rejected during configuration.
 
 ## Configure free submission policy
 
-For mainnet, do not leave `submitfree` unbounded. A conservative starting point looks like this:
+For mainnet, do not leave `submitfree` unbounded. A conservative starting point:
 
 ```powershell
-cleos -u https://history.globalforce.io push action --use-old-rpc --return-failure-trace false verification setfreecfg '[
+cleos -u https://history.globalforce.io push action --use-old-rpc --return-failure-trace false managementel setfreecfg '[
   true,
   100
-]' -p verification@active
+]' -p managementel@active
 ```
 
 This means:
@@ -105,29 +123,24 @@ Recommended client rule:
 - keep `client_reference` in printable ASCII and never include `|`
 - keep `canonicalization_profile` in non-empty printable ASCII up to 32 characters
 
-## Withdraw operations
-
-`withdraw` is not tied to the presence of a `paytokens` config entry. If the contract account still
-holds a token balance, the operator can withdraw it even after `rmpaytoken`.
-
 ## Verify on-chain state
 
 ```powershell
-cleos -u https://history.globalforce.io get table verification verification paytokens
-cleos -u https://history.globalforce.io get table verification verification wholesale
-cleos -u https://history.globalforce.io get table verification verification nonprofit
-cleos -u https://history.globalforce.io get table verification verification freepolicy
-cleos -u https://history.globalforce.io get table verification verification freeusage
+cleos -u https://history.globalforce.io get table managementel managementel paytokens
+cleos -u https://history.globalforce.io get table managementel managementel wholesale
+cleos -u https://history.globalforce.io get table managementel managementel nonprofit
+cleos -u https://history.globalforce.io get table managementel managementel freepolicy
+cleos -u https://history.globalforce.io get table managementel managementel freeusage
 cleos -u https://history.globalforce.io get table verification verification proofs
 ```
 
 ## Governance recommendation
 
-The GlobalForce account model supports both immutable and producer-controlled contracts. For this contract, full immutability needs extra care:
+The split architecture lets you govern the contracts differently:
 
-- inference from the contract design: burning both `owner` and `active` to `eosio.null` would also remove the ability to run future admin actions such as `setpaytoken`, `setfreecfg`, and `withdraw`
-- safer mainnet posture: move `owner` to a multisig or producer-controlled authority, keep `active` operational with `eosio.code`, and optionally delegate daily operations to a linked custom permission such as `ops`
-- if you eventually want to freeze upgrades, do it only after payment-token configuration, withdrawal process, and long-term governance are finalized
+- `verification`: once stable, you can move toward an immutable or heavily governed posture because it only stores append-only proofs
+- `managementel`: keep operational governance, because it owns pricing, free policy, whitelist management, and treasury
+- safer mainnet posture: move `owner` to multisig or producer-controlled authority and keep `active` operational on `managementel` with `eosio.code`
 
 Relevant GlobalForce documentation:
 

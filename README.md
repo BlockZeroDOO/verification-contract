@@ -1,105 +1,146 @@
-# Verification Contract for GlobalForce network
+# Verification Contracts for GlobalForce
 
-This repository contains a minimal GlobalForce/Antelope-compatible smart contract for the
-`verification` smart contract concept described in the provided documents.
+This repository contains two Antelope-compatible smart contracts:
 
-## Why this contract shape
+- `verification`: immutable proof registry
+- `managementel`: pricing, access policy, nonprofit limits, and treasury
 
-The roadmap document frames the product as a proof-of-existence registry with a commercial
-model that distinguishes customer segments and volume-based pricing. Based on that, the
-contract includes:
+The split keeps the proof ledger small and append-only while allowing pricing and operations
+to evolve independently.
 
-- configurable payment tokens in a `paytokens` table
-- a dedicated `wholesale` table for special-price accounts
-- a dedicated `nonprofit` table for free non-commercial organizations
-- `addwhuser` and `rmwhuser` actions for wholesale account management
-- `addnporg` and `rmnporg` actions for nonprofit account management
-- `setpaytoken` and `rmpaytoken` for token pricing configuration
-- `submitfree` for nonprofit proof submission without token payment
-- automatic proof creation on incoming token payment
+## Contract roles
+
+### `verification`
+
+`verification` stores only proof facts:
+
+- `writer`
+- `submitter`
+- `object_hash`
+- `canonicalization_profile`
+- `client_reference`
+- `submitted_at`
+
+Only `managementel` is allowed to write proof rows. Clients calculate the hash locally, submit
+through `managementel`, and then verify the stored row directly on-chain.
+
+### `managementel`
+
+`managementel` handles:
+
+- payment token pricing in `paytokens`
+- wholesale accounts in `wholesale`
+- nonprofit accounts in `nonprofit`
+- nonprofit free-submission policy in `freepolicy`
+- nonprofit cooldown tracking in `freeusage`
+- paid submissions via `*::transfer`
+- free submissions via `submitfree`
+- treasury withdrawals
+
+Commercial history is intentionally not stored on-chain. File storage is fully decoupled from
+these contracts, and `storage_price` is no longer part of `paytokens`.
 
 ## Tables
 
-- `paytokens`: accepted payment tokens with `token_contract`, `retail_price`, `wholesale_price`, and `storage_price`
-- `wholesale`: list of accounts eligible for wholesale pricing
-- `nonprofit`: list of accounts that can submit proofs for free
-- `freepolicy`: singleton config for nonprofit free submissions, including the 24-hour global sponsor limit
-- `freeusage`: per-account timestamp of the last nonprofit submission for 60-second cooldown enforcement
-- `proofs`: submitted proof records with a compact `checksum256` object hash, the effective price, pricing mode, payment token contract, and client reference
+### `verification`
+
+- `proofs`: append-only proof records with `writer`, `submitter`, compact `checksum256 object_hash`,
+  `canonicalization_profile`, `client_reference`, and `submitted_at`
+
+### `managementel`
+
+- `paytokens`: accepted payment tokens with `token_contract`, `retail_price`, and `wholesale_price`
+- `wholesale`: accounts eligible for wholesale pricing
+- `nonprofit`: accounts allowed to use `submitfree`
+- `freepolicy`: singleton with `enabled`, `daily_free_limit`, `used_in_window`, and current UTC window start
+- `freeusage`: last nonprofit submission timestamp per account for the fixed 60-second cooldown
 
 ## Actions
+
+### `verification`
+
+- `record(name submitter, checksum256 object_hash, string canonicalization_profile, string client_reference)`
+
+### `managementel`
 
 - `addwhuser(name account, string note)`
 - `rmwhuser(name account)`
 - `addnporg(name account, string note)`
 - `rmnporg(name account)`
-- `setpaytoken(name token_contract, asset retail_price, asset wholesale_price, asset storage_price)`
+- `setpaytoken(name token_contract, asset retail_price, asset wholesale_price)`
 - `rmpaytoken(name token_contract, symbol token_symbol)`
 - `submitfree(name submitter, string object_hash, string hash_algorithm, string canonicalization_profile, string client_reference)`
 - `setfreecfg(bool enabled, uint32_t daily_free_limit)`
 - `withdraw(name token_contract, name to, asset quantity, string memo)`
 
-## Internal helpers
+Internal helpers such as `quote(...)`, `iswhuser(...)`, and `isnporg(...)` remain C++ helpers only.
 
-- `quote(...)`, `iswhuser(...)`, `isnporg(...)` remain available as C++ contract helpers, but are not exposed as ABI actions because CDT 4.1.1 dispatcher support is limited to `void` actions.
+## Request model
+
+Paid memo format:
+
+```text
+<64-char hex hash>|SHA-256|<canonicalization>|<client_reference>
+```
+
+Rules:
+
+- `client_reference` is required and acts as the idempotency key per `submitter`
+- the same `object_hash` may be submitted multiple times if `client_reference` is new
+- `canonicalization_profile` must be non-empty printable ASCII up to 32 characters
+- `client_reference` must be printable ASCII, max 128 chars, and cannot contain `|`
+- only `SHA-256` is currently accepted
 
 ## Example flow
 
 ```bash
-cleos push action verification setpaytoken '["eosio.token", "1.0000 GFT", "0.1000 GFT", "0.0100 GFT"]' -p verification
-cleos push action verification setfreecfg '[true, 100]' -p verification
-cleos push action verification addwhuser '["studio.partner", "B2B wholesale client"]' -p verification
-cleos push action verification addnporg '["charity.acc", "nonprofit organization"]' -p verification
+cleos push action managementel setpaytoken '["eosio.token", "1.0000 GFT", "0.1000 GFT"]' -p managementel
+cleos push action managementel setfreecfg '[true, 100]' -p managementel
+cleos push action managementel addwhuser '["studio.partner", "B2B wholesale client"]' -p managementel
+cleos push action managementel addnporg '["charity.acc", "nonprofit organization"]' -p managementel
+
 cleos push action eosio.token transfer '[
   "retail.user",
-  "verification",
+  "managementel",
   "1.0000 GFT",
   "1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|SHA-256|none|retail-0001"
 ]' -p retail.user
 
 cleos push action eosio.token transfer '[
   "studio.partner",
-  "verification",
+  "managementel",
   "0.1000 GFT",
   "2123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|SHA-256|none|batch-2026-0001"
 ]' -p studio.partner
 
-cleos push action verification submitfree '[
+cleos push action managementel submitfree '[
   "charity.acc",
   "3123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   "SHA-256",
   "none",
   "charity-0001"
 ]' -p charity.acc
+
+cleos get table verification verification proofs
 ```
 
 ## Notes
 
-- Contract listens to `*::transfer`, but only accepts tokens configured in `paytokens`.
-- Retail and wholesale prices drive on-chain proof pricing. `storage_price` is stored in `paytokens` for external storage integration and does not change the on-chain proof price; nonprofit submissions are stored as `0.0000 FREE`.
-- `proofs.object_hash` is stored on-chain as compact `checksum256`, not as a 64-character text string.
-- The contract currently accepts only `SHA-256`, so `hash_algorithm` is validated on input but is not redundantly stored in each proof row.
-- `setpaytoken` validates the configured symbol precision against the token contract `stat` table, so invalid token precision is rejected before users attempt paid transfers.
-- `submitfree` is gated by `freepolicy`; nonprofit accounts can submit at most once every 60 seconds, and all nonprofit submissions share one contract-wide 24-hour sponsored limit.
-- The 60-second cooldown applies only to `nonprofit` accounts using `submitfree`; paid retail and wholesale submissions have no time-based cooldown in the contract.
-- `canonicalization_profile` must be non-empty printable ASCII up to 32 characters. The examples use `none`.
-- `client_reference` is required on both paid and free flows, acts as an idempotency key per submitter, and must use printable ASCII without `|`.
-- `object_hash` is not globally unique; the same document hash can be notarized multiple times as long as each request uses a new `client_reference`.
-- New `proofs` rows are stored with `get_self()` as RAM payer, so storage is paid by the contract account.
-- `withdraw` can transfer tokens already held by the contract account even if the corresponding `paytokens` config entry was later removed.
-- CPU/NET of the user-signed transfer transaction are still paid by the signer unless you add an external sponsorship layer.
-- The contract is intentionally small so it can be extended later with batching, Merkle roots, anchoring, and richer receipts.
+- `verification` is the proof source of truth; `managementel` is the policy and treasury layer.
+- `verification.writer` makes the writing path explicit on-chain and should always show `managementel`.
+- `setpaytoken` validates the configured symbol precision against the token contract `stat` table.
+- nonprofit submissions are limited to one submission every 60 seconds per account and share one contract-wide 24-hour limit.
+- the 60-second cooldown applies only to nonprofit accounts using `submitfree`; paid retail and wholesale transfers are not rate-limited by time.
+- `verification` pays RAM for stored proof rows.
+- `managementel` can withdraw tokens already held by the contract even if the corresponding `paytokens` row was later removed.
 
-## Testnet
+## Build and deploy
 
-- Build scripts: `scripts/build-testnet.sh`, `scripts/build-testnet.ps1`
-- Smoke test: `scripts/smoke-test.sh`
-- Deploy guide: `docs/testnet-deploy.md`
-
-## Mainnet
-
+- Testnet build scripts: `scripts/build-testnet.sh`, `scripts/build-testnet.ps1`
 - Release build scripts: `scripts/build-release.sh`, `scripts/build-release.ps1`
-- Deploy guide: `docs/mainnet-deploy.md`
+- Smoke test: `scripts/smoke-test.sh`
+- Testnet guide: `docs/testnet-deploy.md`
+- Mainnet guide: `docs/mainnet-deploy.md`
 
 ## Desktop App
 

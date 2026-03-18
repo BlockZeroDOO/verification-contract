@@ -1,14 +1,11 @@
 param(
-    [string]$ContractName = "verification"
+    [string[]]$ContractName = @("verification", "managementel")
 )
 
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$sourceFile = Join-Path $projectRoot "src\verification.cpp"
 $includeDir = Join-Path $projectRoot "include"
-$distDir = Join-Path $projectRoot "dist\$ContractName"
-$wasmFile = Join-Path $distDir "$ContractName.wasm"
 
 $compiler = Get-Command cdt-cpp -ErrorAction SilentlyContinue
 if (-not $compiler) {
@@ -19,21 +16,32 @@ if (-not $compiler) {
     throw "Neither cdt-cpp nor eosio-cpp is installed or available in PATH."
 }
 
-New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+foreach ($name in $ContractName) {
+    $sourceFile = Join-Path $projectRoot "src\$name.cpp"
+    if (-not (Test-Path $sourceFile)) {
+        throw "Source file not found for contract '$name': $sourceFile"
+    }
 
-Push-Location $projectRoot
-try {
-    & $compiler.Source `
-        -I $includeDir `
-        -O3 `
-        --abigen `
-        "src/verification.cpp" `
-        -o $wasmFile
-}
-finally {
-    Pop-Location
-}
+    $distDir = Join-Path $projectRoot "dist\$name"
+    $wasmFile = Join-Path $distDir "$name.wasm"
 
-Write-Host "Build completed:"
-Write-Host "  WASM: $wasmFile"
-Write-Host "  ABI : $(Join-Path $distDir "$ContractName.abi")"
+    New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+
+    Push-Location $projectRoot
+    try {
+        & $compiler.Source `
+            -I $includeDir `
+            -O3 `
+            --abigen `
+            "src/$name.cpp" `
+            -o $wasmFile
+    }
+    finally {
+        Pop-Location
+    }
+
+    Write-Host "Build completed:"
+    Write-Host "  Contract: $name"
+    Write-Host "  WASM: $wasmFile"
+    Write-Host "  ABI : $(Join-Path $distDir "$name.abi")"
+}

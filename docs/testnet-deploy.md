@@ -1,13 +1,18 @@
 # Testnet Deploy
 
-This contract targets GlobalForce testnet and accepts payment tokens configured in the `paytokens` table.
+This repository deploys two contracts:
+
+- `verification`: append-only proof registry
+- `managementel`: pricing, nonprofit policy, role management, and treasury
+
+All user traffic goes through `managementel`. Proof rows are then written into `verification`.
 
 ## Prerequisites
 
-- deployed account for the contract, for example `verification`
+- deployed testnet accounts `verification` and `managementel`
 - `cleos`
 - `cdt-cpp` or `eosio-cpp`
-- contract account keys imported into the wallet
+- imported keys for both contract accounts and test users
 
 ## Build
 
@@ -27,58 +32,74 @@ Expected artifacts:
 
 - `dist/verification/verification.wasm`
 - `dist/verification/verification.abi`
+- `dist/managementel/managementel.wasm`
+- `dist/managementel/managementel.abi`
 
 ## Deploy
+
+Deploy `verification` first:
 
 ```powershell
 cleos -u https://dev-history.globalforce.io set contract verification ./dist/verification -p verification@active
 ```
 
+Then deploy `managementel`:
+
+```powershell
+cleos -u https://dev-history.globalforce.io set contract managementel ./dist/managementel -p managementel@active
+```
+
 ## Add `eosio.code`
 
-`withdraw` sends an inline `eosio.token::transfer`, so the contract account must allow `eosio.code`.
+`managementel` sends inline actions to `verification` and inline token transfers during `withdraw`,
+so it must allow `eosio.code` on `active`.
 
 ```powershell
-cleos -u https://dev-history.globalforce.io set account permission verification active --add-code -p verification@active
+cleos -u https://dev-history.globalforce.io set account permission managementel active --add-code -p managementel@active
 ```
 
-## Wholesale management
+`verification` does not need `eosio.code` for this design.
+
+## Wholesale and nonprofit management
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action verification addwhuser '["studio.partner","B2B partner"]' -p verification@active
-cleos -u https://dev-history.globalforce.io push action verification rmwhuser '["studio.partner"]' -p verification@active
-```
-
-## Nonprofit management
-
-```powershell
-cleos -u https://dev-history.globalforce.io push action verification addnporg '["charity.acc","Non-commercial organization"]' -p verification@active
-cleos -u https://dev-history.globalforce.io push action verification rmnporg '["charity.acc"]' -p verification@active
+cleos -u https://dev-history.globalforce.io push action managementel addwhuser '["studio.partner","B2B partner"]' -p managementel@active
+cleos -u https://dev-history.globalforce.io push action managementel rmwhuser '["studio.partner"]' -p managementel@active
+cleos -u https://dev-history.globalforce.io push action managementel addnporg '["charity.acc","Non-commercial organization"]' -p managementel@active
+cleos -u https://dev-history.globalforce.io push action managementel rmnporg '["charity.acc"]' -p managementel@active
 ```
 
 ## Payment token configuration
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action verification setpaytoken '[
+cleos -u https://dev-history.globalforce.io push action managementel setpaytoken '[
   "eosio.token",
   "1.0000 GFT",
-  "0.1000 GFT",
-  "0.0100 GFT"
-]' -p verification@active
+  "0.1000 GFT"
+]' -p managementel@active
 ```
 
 `setpaytoken` validates the configured symbol precision against the token contract `stat` table.
 If the token contract uses `4,GFT`, a config like `1.00000000 GFT` is rejected immediately.
+
+Remove a payment token:
+
+```powershell
+cleos -u https://dev-history.globalforce.io push action managementel rmpaytoken '[
+  "eosio.token",
+  "4,GFT"
+]' -p managementel@active
+```
 
 ## Free submission limits
 
 `submitfree` is disabled until a free-submission policy is configured.
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action verification setfreecfg '[
+cleos -u https://dev-history.globalforce.io push action managementel setfreecfg '[
   true,
   100
-]' -p verification@active
+]' -p managementel@active
 ```
 
 Parameters:
@@ -86,49 +107,28 @@ Parameters:
 - `enabled`: enables or disables `submitfree`
 - `daily_free_limit`: max free submissions across all nonprofit accounts during the current 24-hour UTC window
 
-The nonprofit cooldown is fixed in the contract at 60 seconds per account.
+The nonprofit cooldown is fixed at 60 seconds per account.
 This cooldown applies only to `submitfree`; paid retail and wholesale transfers are not rate-limited by time.
-
-Remove a payment token:
-
-```powershell
-cleos -u https://dev-history.globalforce.io push action verification rmpaytoken '[
-  "eosio.token",
-  "4,GFT"
-]' -p verification@active
-```
-
-Applicable price is determined by:
-
-- membership in the `nonprofit` and `wholesale` tables
-- the selected token configuration in `paytokens`
-- `storage_price` is stored for external storage integration and does not affect the on-chain proof price
-
-Note:
-
-- `quote`, `iswhuser`, and `isnporg` are not exposed as callable ABI actions in the current build because CDT 4.1.1 dispatcher support is limited to `void` actions.
-- `proofs.object_hash` is stored as compact `checksum256`; `hash_algorithm` is validated on input and currently fixed to `SHA-256`, so it is not redundantly stored in the row.
 
 ## Record creation by payment
 
-Memo format:
+Paid memo format:
 
 ```text
-<64-char hex hash>|SHA-256|<canonicalization>|<client_reference required>
+<64-char hex hash>|SHA-256|<canonicalization>|<client_reference>
 ```
 
-`client_reference` is the idempotency key for that submitter. Reusing the same `client_reference`
-from the same account rejects the request and prevents duplicate charging. Reusing the same
-`object_hash` with a new `client_reference` is allowed. `client_reference` must use printable
-ASCII characters and cannot contain `|`. `canonicalization_profile` must be non-empty printable
-ASCII up to 32 characters.
+`client_reference` is the idempotency key per submitter. Reusing the same `client_reference`
+from the same account is rejected. Reusing the same `object_hash` with a new `client_reference`
+is allowed. `client_reference` must use printable ASCII and cannot contain `|`.
+`canonicalization_profile` must be non-empty printable ASCII up to 32 characters.
 
 Retail example:
 
 ```powershell
 cleos -u https://dev-history.globalforce.io push action eosio.token transfer '[
   "retail.user",
-  "verification",
+  "managementel",
   "1.0000 GFT",
   "1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|SHA-256|none|retail-0001"
 ]' -p retail.user@active
@@ -139,7 +139,7 @@ Wholesale example:
 ```powershell
 cleos -u https://dev-history.globalforce.io push action eosio.token transfer '[
   "studio.partner",
-  "verification",
+  "managementel",
   "0.1000 GFT",
   "2123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|SHA-256|none|batch-2026-0001"
 ]' -p studio.partner@active
@@ -148,7 +148,7 @@ cleos -u https://dev-history.globalforce.io push action eosio.token transfer '[
 Nonprofit example:
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action verification submitfree '[
+cleos -u https://dev-history.globalforce.io push action managementel submitfree '[
   "charity.acc",
   "3123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   "SHA-256",
@@ -157,40 +157,39 @@ cleos -u https://dev-history.globalforce.io push action verification submitfree 
 ]' -p charity.acc@active
 ```
 
-## Idempotent request protection
-
-Proof creation is deduplicated by `submitter + client_reference`.
-
-Rules:
-
-- same `object_hash` with a new `client_reference` is allowed
-- same `client_reference` for the same submitter is rejected
-- same `client_reference` used by a different submitter is allowed
-
 ## Read tables
 
 ```powershell
-cleos -u https://dev-history.globalforce.io get table verification verification paytokens
-cleos -u https://dev-history.globalforce.io get table verification verification wholesale
-cleos -u https://dev-history.globalforce.io get table verification verification nonprofit
-cleos -u https://dev-history.globalforce.io get table verification verification freepolicy
-cleos -u https://dev-history.globalforce.io get table verification verification freeusage
+cleos -u https://dev-history.globalforce.io get table managementel managementel paytokens
+cleos -u https://dev-history.globalforce.io get table managementel managementel wholesale
+cleos -u https://dev-history.globalforce.io get table managementel managementel nonprofit
+cleos -u https://dev-history.globalforce.io get table managementel managementel freepolicy
+cleos -u https://dev-history.globalforce.io get table managementel managementel freeusage
 cleos -u https://dev-history.globalforce.io get table verification verification proofs
 ```
+
+`verification.proofs` should show:
+
+- `writer = managementel`
+- `submitter = end-user account`
+- the client-calculated `object_hash`
+- the submitted `canonicalization_profile`
+- the submitted `client_reference`
 
 ## Smoke test
 
 Linux / WSL:
 
 ```bash
-export OWNER_ACCOUNT=verification
+export OWNER_ACCOUNT=managementel
+export MANAGEMENT_ACCOUNT=managementel
+export VERIFICATION_ACCOUNT=verification
 export RETAIL_ACCOUNT=yourretailacc
 export WHOLESALE_ACCOUNT=yourwholesale
 export NONPROFIT_ACCOUNT=yournonprofit
 export PAYMENT_TOKEN_CONTRACT=eosio.token
 export RETAIL_PRICE="1.0000 GFT"
 export WHOLESALE_PRICE="0.1000 GFT"
-export STORAGE_PRICE="0.0100 GFT"
 export FREE_ENABLED=true
 export FREE_DAILY_LIMIT=100
 ./scripts/smoke-test.sh
@@ -198,47 +197,33 @@ export FREE_DAILY_LIMIT=100
 
 The script verifies:
 
-- wholesale account can be added and removed
-- payment token configuration can be created or updated, including `storage_price`
-- free submission config can be applied before nonprofit usage
-- nonprofit usage increments the global 24-hour sponsored counter in `freepolicy`
-- the same `object_hash` can be submitted by different accounts with different `client_reference` values
-- wholesale payment of `0.1000 GFT` creates a proof with `wholesale_pricing=true`
-- retail payment of `1.0000 GFT` creates a proof with `wholesale_pricing=false`
+- `managementel` pricing config can be created and updated
+- token precision mismatches are rejected by `setpaytoken`
+- wholesale and nonprofit role management works
+- wholesale and retail paid flows create rows in `verification.proofs`
 - the same retail account can submit two paid proofs back-to-back without a cooldown delay
-- invalid paid `client_reference` is rejected
-- nonprofit account can be added and submit a free proof
-- invalid nonprofit `client_reference` is rejected
-- nonprofit cooldown rejects an immediate second `submitfree`
-- lowering `daily_free_limit` to the current usage blocks new nonprofit submissions on the same UTC day
-- `setfreecfg(false, ...)` disables free submissions immediately
-- re-enabling `setfreecfg(true, ...)` on the same UTC day does not reset `used_in_window`
+- nonprofit free flow creates rows in `verification.proofs`
+- nonprofit cooldown and daily limit are enforced
+- disabling and re-enabling free submissions keeps same-day usage intact
 - duplicate `client_reference` for the same submitter is rejected
-- total row count in `proofs` increases by 4
-
-Requirements:
-
-- `cleos`
-- `jq`
-- imported keys for `OWNER_ACCOUNT`, `RETAIL_ACCOUNT`, `WHOLESALE_ACCOUNT`, and `NONPROFIT_ACCOUNT`
-- enough balance in the configured payment token on both payer accounts
+- every created proof row shows `writer = managementel`
 
 ## Withdraw collected payments
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action verification withdraw '[
+cleos -u https://dev-history.globalforce.io push action managementel withdraw '[
   "eosio.token",
   "owneraccount",
   "10.0000 GFT",
   "withdraw testnet revenue"
-]' -p verification@active
+]' -p managementel@active
 ```
 
-`withdraw` is not gated by the `paytokens` table, so it can recover tokens already held by the
-contract even after `rmpaytoken`.
+`withdraw` is not gated by the `paytokens` table, so it can recover tokens already held by
+`managementel` even after `rmpaytoken`.
 
 ## Resource note
 
-The contract pays RAM for stored rows because `proofs.emplace` uses `get_self()` as payer in the `proofs` table.
-CPU/NET for the incoming transfer transaction are still paid by the signing user unless you add
-an external sponsorship layer.
+`verification` pays RAM for stored proof rows because `proofs.emplace` uses `get_self()` as payer.
+CPU/NET for incoming user-signed transactions are still paid by the signer unless you add an
+external sponsorship layer.

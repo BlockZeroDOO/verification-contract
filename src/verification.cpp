@@ -18,11 +18,21 @@ void verification::record(
     const auto request_key = verification_common::compute_request_key(submitter, client_reference);
     check(by_request.find(request_key) == by_request.end(), "duplicate client_reference for submitter");
 
-    uint64_t next_id = proofs.available_primary_key();
-    if (next_id == 0) {
-        next_id = 1;
+    config_singleton config_store(get_self(), get_self().value);
+    config_row config;
+    if (config_store.exists()) {
+        config = config_store.get();
+    } else {
+        auto proof = proofs.begin();
+        while (proof != proofs.end()) {
+            if (proof->proof_id >= config.next_proof_id) {
+                config.next_proof_id = proof->proof_id + 1;
+            }
+            ++proof;
+        }
     }
 
+    const uint64_t next_id = config.next_proof_id;
     proofs.emplace(get_self(), [&](auto& row) {
         row.proof_id = next_id;
         row.writer = authorized_writer;
@@ -32,6 +42,9 @@ void verification::record(
         row.client_reference = client_reference;
         row.submitted_at = time_point_sec(current_time_point());
     });
+
+    config.next_proof_id = next_id + 1;
+    config_store.set(config, get_self());
 }
 
 void verification::validate_client_reference(const string& client_reference) const {

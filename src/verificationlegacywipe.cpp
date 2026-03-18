@@ -29,6 +29,13 @@ void verificationlegacywipe::wipeall(uint32_t max_rows) {
             policy.remove();
         }
     }
+
+    if (remaining > 0) {
+        legacy_config_singleton config(get_self(), get_self().value);
+        if (config.exists()) {
+            config.remove();
+        }
+    }
 }
 
 template <typename Table>

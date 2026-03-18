@@ -68,6 +68,10 @@ private:
         time_point_sec updated_at;
     };
 
+    struct [[eosio::table("config")]] legacy_config_row {
+        uint64_t next_proof_id = 1;
+    };
+
     struct [[eosio::table("freeusage")]] free_usage_row {
         name account;
         time_point_sec last_submit_at;
@@ -81,6 +85,7 @@ private:
     using proof_table = multi_index<"proofs"_n, proof_row>;
     using free_usage_table = multi_index<"freeusage"_n, free_usage_row>;
     using free_policy_singleton = singleton<"freepolicy"_n, free_policy>;
+    using legacy_config_singleton = singleton<"config"_n, legacy_config_row>;
 
     template <typename Table>
     uint32_t erase_rows(Table& table, uint32_t remaining);

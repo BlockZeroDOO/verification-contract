@@ -11,6 +11,7 @@ Legacy tables removed by the cleaner:
 - `nonprofit`
 - `freeusage`
 - `freepolicy`
+- `config`
 
 ## Build only the cleaner
 

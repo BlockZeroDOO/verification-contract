@@ -1,9 +1,10 @@
 # Verification Contracts for GlobalForce
 
-This repository contains two Antelope-compatible smart contracts:
+This repository currently contains three Antelope-compatible smart contracts:
 
 - `verification`: immutable proof registry
 - `managementel`: pricing, access policy, nonprofit limits, and treasury
+- `dfs`: work-in-progress DFS registry, stake, pricing, and settlement contract scaffold
 
 The split keeps the proof ledger small and append-only while allowing pricing and operations
 to evolve independently.
@@ -39,6 +40,27 @@ through `managementel`, and then verify the stored row directly on-chain.
 
 Commercial history is intentionally not stored on-chain. File storage is fully decoupled from
 these contracts, and `storage_price` is no longer part of `paytokens`.
+
+### `dfs`
+
+`dfs` is the early scaffold for the separate DFS economic and trust layer:
+
+- node registry
+- stake policy and stake custody
+- storage price offers
+- accepted token configuration
+- revenue balances and settlements
+
+It is intentionally separate from `managementel` and `verification`, because DFS storage must
+not depend on the HASH/notary contracts for payment custody or node-trust decisions.
+
+The current hardening and security backlog for `dfs` is tracked in
+`docs/dfs-hardening-plan.md`.
+
+Bootstrap and validation guides for `dfs`:
+
+- `docs/dfs-testnet-bootstrap.md`
+- `docs/dfs-test-matrix.md`
 
 ## Tables
 

@@ -2,7 +2,6 @@
 
 #include <eosio/crypto.hpp>
 #include <eosio/eosio.hpp>
-#include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
 
@@ -26,10 +25,6 @@ public:
     );
 
 private:
-    struct [[eosio::table("proofcfg")]] config_row {
-        uint64_t next_proof_id = 1;
-    };
-
     struct [[eosio::table("proofs")]] proof_row {
         uint64_t proof_id;
         name writer;
@@ -50,7 +45,6 @@ private:
         indexed_by<"bysubmitter"_n, const_mem_fun<proof_row, uint64_t, &proof_row::by_submitter>>,
         indexed_by<"byrequest"_n, const_mem_fun<proof_row, checksum256, &proof_row::by_request>>
     >;
-    using config_singleton = singleton<"proofcfg"_n, config_row>;
 
     static constexpr name authorized_writer = "managementel"_n;
 

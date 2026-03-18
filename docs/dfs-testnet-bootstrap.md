@@ -269,8 +269,8 @@ cleos -u https://dev-history.globalforce.io push action dfs claimrevenue '[
 ## Verify on-chain state
 
 ```powershell
-cleos -u https://dev-history.globalforce.io get table dfs dfs pricingpolicy
-cleos -u https://dev-history.globalforce.io get table dfs dfs acceptedtokens
+cleos -u https://dev-history.globalforce.io get table dfs dfs pricepolicy
+cleos -u https://dev-history.globalforce.io get table dfs dfs acpttokens
 cleos -u https://dev-history.globalforce.io get table dfs dfs nodes
 cleos -u https://dev-history.globalforce.io get table dfs dfs stakes
 cleos -u https://dev-history.globalforce.io get table dfs dfs priceoffers

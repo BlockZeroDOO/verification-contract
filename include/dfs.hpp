@@ -174,7 +174,7 @@ private:
         uint64_t by_owner() const { return owner_account.value; }
     };
 
-    struct [[eosio::table("acceptedtokens")]] accepted_token_row {
+    struct [[eosio::table("acpttokens")]] accepted_token_row {
         uint64_t config_id;
         name token_contract;
         symbol token_symbol;
@@ -239,7 +239,7 @@ private:
         checksum256 by_paytxid() const { return compute_text_key(payment_txid); }
     };
 
-    struct [[eosio::table("pricingpolicy")]] pricing_policy {
+    struct [[eosio::table("pricepolicy")]] pricing_policy {
         name stake_token_contract;
         asset stake_minimum;
         name consensus_algorithm;
@@ -270,7 +270,7 @@ private:
         indexed_by<"byowner"_n, const_mem_fun<price_offer_row, uint64_t, &price_offer_row::by_owner>>
     >;
     using accepted_token_table = multi_index<
-        "acceptedtokens"_n,
+        "acpttokens"_n,
         accepted_token_row,
         indexed_by<"bytokensym"_n, const_mem_fun<accepted_token_row, uint128_t, &accepted_token_row::by_tokensym>>
     >;
@@ -291,7 +291,7 @@ private:
         indexed_by<"bysettleid"_n, const_mem_fun<settlement_row, checksum256, &settlement_row::by_settleid>>,
         indexed_by<"bypaytxid"_n, const_mem_fun<settlement_row, checksum256, &settlement_row::by_paytxid>>
     >;
-    using pricing_policy_singleton = singleton<"pricingpolicy"_n, pricing_policy>;
+    using pricing_policy_singleton = singleton<"pricepolicy"_n, pricing_policy>;
 
     static constexpr name role_metadata = "metadata"_n;
     static constexpr name role_storage = "storage"_n;

@@ -138,11 +138,11 @@ The following shapes must be readable and stable from chain tables:
   - unit price
   - pricing unit
   - effective time
-- `acceptedtokens`
+- `acpttokens`
   - token contract
   - symbol
   - enabled
-- `pricingpolicy`
+- `pricepolicy`
   - stake minimum
   - settlement authority
   - algorithm

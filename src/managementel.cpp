@@ -15,6 +15,27 @@ struct token_stat_row {
 
 using token_stat_table = eosio::multi_index<"stat"_n, token_stat_row>;
 
+struct verification_proof_row {
+    uint64_t proof_id;
+    eosio::name writer;
+    eosio::name submitter;
+    eosio::checksum256 object_hash;
+    std::string canonicalization_profile;
+    std::string client_reference;
+    eosio::time_point_sec submitted_at;
+
+    uint64_t primary_key() const { return proof_id; }
+    eosio::checksum256 by_request() const {
+        return verification_common::compute_request_key(submitter, client_reference);
+    }
+};
+
+using verification_proof_table = eosio::multi_index<
+    "proofs"_n,
+    verification_proof_row,
+    eosio::indexed_by<"byrequest"_n, eosio::const_mem_fun<verification_proof_row, eosio::checksum256, &verification_proof_row::by_request>>
+>;
+
 void validate_token_contract_stat(const eosio::name& token_contract, const eosio::symbol& token_symbol) {
     token_stat_table token_stats(token_contract, token_symbol.code().raw());
     auto token_stat = token_stats.find(token_symbol.code().raw());

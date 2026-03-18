@@ -128,21 +128,6 @@ private:
         uint64_t primary_key() const { return account.value; }
     };
 
-    struct verification_proof_row {
-        uint64_t proof_id;
-        name writer;
-        name submitter;
-        checksum256 object_hash;
-        string canonicalization_profile;
-        string client_reference;
-        time_point_sec submitted_at;
-
-        uint64_t primary_key() const { return proof_id; }
-        checksum256 by_request() const {
-            return verification_common::compute_request_key(submitter, client_reference);
-        }
-    };
-
     using wholesale_table = multi_index<"wholesale"_n, wholesale_user>;
     using nonprofit_table = multi_index<"nonprofit"_n, nonprofit_org>;
     using payment_token_table = multi_index<
@@ -152,11 +137,6 @@ private:
     >;
     using free_usage_table = multi_index<"freeusage"_n, free_usage_row>;
     using free_policy_singleton = singleton<"freepolicy"_n, free_policy>;
-    using verification_proof_table = multi_index<
-        "proofs"_n,
-        verification_proof_row,
-        indexed_by<"byrequest"_n, const_mem_fun<verification_proof_row, checksum256, &verification_proof_row::by_request>>
-    >;
 
     static constexpr uint8_t hash_size = 32;
     static constexpr uint32_t seconds_per_day = 24 * 60 * 60;

@@ -820,18 +820,32 @@ void dfs::upsert_stake_after_deposit(
     });
 }
 
-EOSIO_DISPATCH(
-    dfs,
-    (regnode)
-    (updatenode)
-    (suspendnode)
-    (retirenode)
-    (requestunstk)
-    (withdrawstk)
-    (setprice)
-    (settoken)
-    (rmtoken)
-    (setpolicy)
-    (claimrevenue)
-    (settle)
-)
+extern "C" {
+    [[eosio::wasm_entry]]
+    void apply(uint64_t receiver, uint64_t code, uint64_t action) {
+        if (code == receiver) {
+            switch (action) {
+                EOSIO_DISPATCH_HELPER(
+                    dfs,
+                    (regnode)
+                    (updatenode)
+                    (suspendnode)
+                    (retirenode)
+                    (requestunstk)
+                    (withdrawstk)
+                    (setprice)
+                    (settoken)
+                    (rmtoken)
+                    (setpolicy)
+                    (claimrevenue)
+                    (settle)
+                )
+            }
+            return;
+        }
+
+        if (action == "transfer"_n.value) {
+            eosio::execute_action(name(receiver), name(code), &dfs::ontransfer);
+        }
+    }
+}

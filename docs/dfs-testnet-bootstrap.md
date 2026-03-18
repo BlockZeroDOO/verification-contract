@@ -155,7 +155,7 @@ cleos -u https://dev-history.globalforce.io push action dfs regnode '[
   100,
   "https://metadata-node-1.example",
   "https://storage-node-1.example",
-  "PUB_K1_examplePublicKey"
+  "-----BEGIN PUBLIC KEY-----\nREPLACE_WITH_NODE_PUBLIC_KEY_PEM\n-----END PUBLIC KEY-----\n"
 ]' -p nodeowner1111@active
 ```
 
@@ -163,7 +163,9 @@ Validation notes:
 
 - `metadata` or `both` roles require `metadata_endpoint`
 - `storage` or `both` roles require `storage_endpoint`
-- public key must use a supported prefix
+- `node_public_key` can now be either:
+  - an Antelope-style public key (`PUB_K1_`, `PUB_R1_`, `EOS`)
+  - or a PEM `BEGIN/END PUBLIC KEY` block from the current storage-node runtime
 
 ## Fund stake
 

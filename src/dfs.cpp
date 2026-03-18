@@ -716,14 +716,37 @@ void dfs::validate_endpoint(const string& value, const char* field_name, bool re
 }
 
 void dfs::validate_node_public_key(const string& node_public_key) const {
-    validate_printable_ascii_text(node_public_key, 256, "node_public_key", false);
-    check(
+    validate_text(node_public_key, 2048, "node_public_key", false);
+
+    const bool is_antelope_public_key =
         node_public_key.rfind("PUB_K1_", 0) == 0 ||
         node_public_key.rfind("PUB_R1_", 0) == 0 ||
-        node_public_key.rfind("EOS", 0) == 0,
-        "node_public_key must use a supported public-key prefix"
+        node_public_key.rfind("EOS", 0) == 0;
+
+    if (is_antelope_public_key) {
+        validate_printable_ascii_text(node_public_key, 256, "node_public_key", false);
+        check(node_public_key.size() >= 10, "node_public_key is too short");
+        return;
+    }
+
+    const bool has_pem_header = node_public_key.find("-----BEGIN PUBLIC KEY-----") != string::npos;
+    const bool has_pem_footer = node_public_key.find("-----END PUBLIC KEY-----") != string::npos;
+    check(
+        has_pem_header && has_pem_footer,
+        "node_public_key must be an Antelope public key or PEM BEGIN/END PUBLIC KEY block"
     );
-    check(node_public_key.size() >= 10, "node_public_key is too short");
+
+    for (char ch : node_public_key) {
+        const unsigned char code = static_cast<unsigned char>(ch);
+        const bool is_pem_whitespace = code == '\n' || code == '\r';
+        const bool is_printable_ascii = code >= 32 && code <= 126;
+        check(
+            is_pem_whitespace || is_printable_ascii,
+            "node_public_key PEM must use printable ASCII characters"
+        );
+    }
+
+    check(node_public_key.size() >= 64, "node_public_key PEM is too short");
 }
 
 void dfs::validate_text(

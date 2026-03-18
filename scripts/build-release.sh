@@ -18,7 +18,7 @@ fi
 if [[ $# -gt 0 ]]; then
     contracts=("$@")
 else
-    contracts=("verification" "managementel")
+    contracts=("verification" "managementel" "dfs")
 fi
 
 build_contract() {

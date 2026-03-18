@@ -1,10 +1,11 @@
 # Mainnet Deploy
 
-This runbook prepares the two-contract architecture for GlobalForce mainnet at
+This runbook prepares the three-contract architecture for GlobalForce mainnet at
 `https://history.globalforce.io`:
 
 - `verification`: immutable proof registry
 - `managementel`: pricing, nonprofit policy, role management, and treasury
+- `dfs`: DFS registry, stake, pricing, and settlement layer
 
 ## Mainnet assumptions
 
@@ -51,6 +52,10 @@ Expected artifacts:
 - `dist/managementel/managementel.abi`
 - `dist/managementel/managementel.wasm.sha256`
 - `dist/managementel/managementel.abi.sha256`
+- `dist/dfs/dfs.wasm`
+- `dist/dfs/dfs.abi`
+- `dist/dfs/dfs.wasm.sha256`
+- `dist/dfs/dfs.abi.sha256`
 
 ## Deploy to mainnet
 

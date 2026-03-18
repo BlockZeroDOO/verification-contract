@@ -1,9 +1,10 @@
 # Testnet Deploy
 
-This repository deploys two contracts:
+This repository deploys three contracts:
 
 - `verification`: append-only proof registry
 - `managementel`: pricing, nonprofit policy, role management, and treasury
+- `dfs`: DFS registry, stake, pricing, and settlement layer
 
 All user traffic goes through `managementel`. Proof rows are then written into `verification`.
 
@@ -34,6 +35,8 @@ Expected artifacts:
 - `dist/verification/verification.abi`
 - `dist/managementel/managementel.wasm`
 - `dist/managementel/managementel.abi`
+- `dist/dfs/dfs.wasm`
+- `dist/dfs/dfs.abi`
 
 ## Deploy
 

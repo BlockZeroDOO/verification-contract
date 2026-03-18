@@ -792,7 +792,7 @@ void dfs::upsert_stake_after_deposit(
     const time_point_sec now = time_point_sec(current_time_point());
 
     if (stake_itr == by_node.end()) {
-        stakes.emplace(owner_account, [&](auto& row) {
+        stakes.emplace(get_self(), [&](auto& row) {
             row.row_id = stakes.available_primary_key();
             if (row.row_id == 0) {
                 row.row_id = 1;
@@ -812,7 +812,7 @@ void dfs::upsert_stake_after_deposit(
     check(stake_itr->quantity.symbol == quantity.symbol, "stake symbol cannot change for an existing node stake");
     check(stake_itr->status != stake_pending_unstake, "cannot top up stake while unstake is pending");
 
-    by_node.modify(stake_itr, owner_account, [&](auto& row) {
+    by_node.modify(stake_itr, same_payer, [&](auto& row) {
         row.quantity += quantity;
         row.status = node_is_suspended ? status_suspended : status_active;
         row.cooldown_ends_at = time_point_sec();

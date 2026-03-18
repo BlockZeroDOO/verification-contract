@@ -283,7 +283,8 @@ cleos -u https://dev-history.globalforce.io get table dfs dfs balances
 
 ## Resource notes
 
-- node, stake, and price-offer rows are intended to be owner-funded
+- node and price-offer rows are owner-funded
+- stake rows are currently contract-funded because Antelope transfer notify handlers cannot increase another account's RAM usage
 - `balances`, `receipts`, and `settlements` remain contract-funded in the current scaffold
 - storage payment traffic can therefore still grow contract RAM through receipt retention
 - before public rollout, define a retention/reconciliation policy for `receipts` and `settlements`

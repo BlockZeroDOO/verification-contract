@@ -16,6 +16,13 @@ if (-not $compiler) {
     throw "Neither cdt-cpp nor eosio-cpp is installed or available in PATH."
 }
 
+Write-Host "Using compiler: $($compiler.Source)"
+try {
+    & $compiler.Source --version
+}
+catch {
+}
+
 foreach ($name in $ContractName) {
     $sourceFile = Join-Path $projectRoot "src\$name.cpp"
     if (-not (Test-Path $sourceFile)) {
@@ -24,8 +31,11 @@ foreach ($name in $ContractName) {
 
     $distDir = Join-Path $projectRoot "dist\$name"
     $wasmFile = Join-Path $distDir "$name.wasm"
+    $abiFile = Join-Path $distDir "$name.abi"
 
     New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+
+    Write-Host "Building contract: $name"
 
     Push-Location $projectRoot
     try {
@@ -33,6 +43,7 @@ foreach ($name in $ContractName) {
             -I $includeDir `
             -O3 `
             --abigen `
+            --abigen_output $abiFile `
             "src/$name.cpp" `
             -o $wasmFile
     }
@@ -40,8 +51,16 @@ foreach ($name in $ContractName) {
         Pop-Location
     }
 
+    if (-not (Test-Path $wasmFile)) {
+        throw "Expected WASM artifact was not generated: $wasmFile"
+    }
+
+    if (-not (Test-Path $abiFile)) {
+        throw "Expected ABI artifact was not generated: $abiFile"
+    }
+
     Write-Host "Build completed:"
     Write-Host "  Contract: $name"
     Write-Host "  WASM: $wasmFile"
-    Write-Host "  ABI : $(Join-Path $distDir "$name.abi")"
+    Write-Host "  ABI : $abiFile"
 }

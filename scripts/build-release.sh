@@ -21,6 +21,9 @@ else
     contracts=("verification" "managementel" "dfs")
 fi
 
+echo "Using compiler: ${compiler}"
+"${compiler}" --version || true
+
 build_contract() {
     local contract_name="$1"
     local source_file="src/${contract_name}.cpp"
@@ -36,14 +39,27 @@ build_contract() {
 
     mkdir -p "${dist_dir}"
 
+    echo "Building contract: ${contract_name}"
+
     pushd "${project_root}" >/dev/null
     "${compiler}" \
         -I "${include_dir}" \
         -O3 \
         --abigen \
+        --abigen_output "${abi_file}" \
         "${source_file}" \
         -o "${wasm_file}"
     popd >/dev/null
+
+    if [[ ! -f "${wasm_file}" ]]; then
+        echo "Expected WASM artifact was not generated: ${wasm_file}" >&2
+        exit 1
+    fi
+
+    if [[ ! -f "${abi_file}" ]]; then
+        echo "Expected ABI artifact was not generated: ${abi_file}" >&2
+        exit 1
+    fi
 
     if command -v sha256sum >/dev/null 2>&1; then
         sha256sum "${wasm_file}" > "${wasm_file}.sha256"

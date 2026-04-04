@@ -160,8 +160,12 @@ cleos get table verification verification proofs
 
 - Testnet build scripts: `scripts/build-testnet.sh`, `scripts/build-testnet.ps1`
 - Release build scripts: `scripts/build-release.sh`, `scripts/build-release.ps1`
+- Linux bootstrap: `scripts/bootstrap-linux-antelope.sh`
+- Jungle4 deploy script: `scripts/deploy-jungle4.sh`
+- Jungle4 smoke test wrapper: `scripts/smoke-test-jungle4.sh`
 - Smoke test: `scripts/smoke-test.sh`
 - Testnet guide: `docs/testnet-deploy.md`
+- Jungle4 guide: `docs/jungle4-deploy.md`
 - Mainnet guide: `docs/mainnet-deploy.md`
 
 ## Desktop App

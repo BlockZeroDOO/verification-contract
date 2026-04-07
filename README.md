@@ -1,5 +1,4 @@
-# Verification Contracts for GlobalForce
-
+# Verification Contracts for DeNotary.io
 This repository currently contains three Antelope-compatible smart contracts:
 
 - `verification`: immutable proof registry

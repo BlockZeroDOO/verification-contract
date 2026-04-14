@@ -99,6 +99,9 @@ def build_audit_record(payload: Dict[str, Any]) -> Dict[str, Any]:
         "registered_at": payload.get("registered_at"),
         "updated_at": payload.get("updated_at"),
         "finalized_at": payload.get("finalized_at"),
+        "failed_at": payload.get("failed_at"),
+        "failure_reason": payload.get("failure_reason"),
+        "failure_details": payload.get("failure_details"),
         "anchor": anchor,
         "chain_state": payload.get("chain_state", {}),
     }

@@ -176,6 +176,8 @@ Already added in the current pass:
 - safer ingress defaults without raw canonical material
 - watcher conflict protection for request re-registration
 - watcher protection against conflicting `tx_id`, `block_num`, and anchor-ID rewrites
+- optional watcher mutation auth token
+- explicit failed-request tracking for dropped or rejected tx paths
 
 ## Epic 9. Testnet rollout
 
@@ -198,6 +200,7 @@ Already added in the current pass:
 - end-to-end single and batch off-chain pipeline coverage
 - live-chain integration runner for real `verification` broadcasts
 - receipt and audit verification against live `tx_id`, `commitment_id`, and `batch_id`
+- rollout dry-run runner that can combine build, local integration, live-chain integration, and smoke gates
 
 ## Epic 10. Optional proof layer
 

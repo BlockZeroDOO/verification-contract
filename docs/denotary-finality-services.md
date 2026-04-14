@@ -52,6 +52,9 @@ The file currently tracks:
 - `registered_at`
 - `updated_at`
 - `finalized_at`
+- `failed_at`
+- `failure_reason`
+- `failure_details`
 - `chain_state`
 - `anchor` metadata
 
@@ -133,6 +136,21 @@ Rules:
 
 Forces a one-request finality poll.
 
+### `POST /v1/watch/<request_id>/failed`
+
+Marks a request as failed when broadcasting or reconciliation determines that it will not finalize.
+
+Example:
+
+```json
+{
+  "reason": "tx_dropped",
+  "details": {
+    "stage": "broadcast"
+  }
+}
+```
+
 ### `POST /v1/watch/poll`
 
 Forces polling for all registered requests.
@@ -194,9 +212,11 @@ The current watcher baseline now enforces:
 - strict `request_id` validation as 64-char hex
 - strict `tx_id` validation as 64-char hex
 - Antelope account-name validation for `submitter` and `contract`
+- optional shared-token auth for watcher mutation endpoints
 - idempotent `register` behavior for matching requests
 - rejection of conflicting re-use of an existing `request_id`
 - rejection of `tx_id` and `block_num` rewrites once recorded
+- explicit `failed` state for dropped or rejected requests
 - no regression from `finalized` back to `included`
 
 ## Run
@@ -205,6 +225,12 @@ Watcher:
 
 ```bash
 scripts/run-finality-watcher.sh --rpc-url https://history.denotary.io
+```
+
+With mutation auth:
+
+```bash
+scripts/run-finality-watcher.sh --rpc-url https://history.denotary.io --auth-token your-shared-token
 ```
 
 Receipt service:

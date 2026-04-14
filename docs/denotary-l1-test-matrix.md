@@ -119,6 +119,7 @@ Current baseline artifact:
 - watcher rejects conflicting re-registration of the same `request_id`
 - watcher rejects rewriting `tx_id` or `block_num` after they are recorded
 - watcher rejects conflicting `commitment_id` or `batch_id` anchor rewrites
+- watcher can require shared-token auth on mutation endpoints
 
 ### Service integration baseline
 
@@ -126,6 +127,7 @@ Current baseline artifact:
 - single request can move from ingress prepare to receipt and audit lookup
 - batch request can move from ingress prepare to receipt and audit lookup
 - audit API can resolve by `commitment_id` and `batch_id` after watcher anchor updates
+- failed request is reflected correctly in receipt and audit paths
 
 ### Live-chain integration baseline
 

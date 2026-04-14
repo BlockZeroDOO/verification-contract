@@ -9,7 +9,13 @@ if (Test-Path $venvPython) {
     $python = $venvPython
 }
 else {
-    $python = (Get-Command python -ErrorAction SilentlyContinue)?.Source
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if ($pythonCommand) {
+        $python = $pythonCommand.Source
+    }
+    else {
+        $python = $null
+    }
 }
 
 if (-not $python) {

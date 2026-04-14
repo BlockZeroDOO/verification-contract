@@ -1,5 +1,5 @@
 param(
-    [string]$Host = "127.0.0.1",
+    [string]$ListenHost = "127.0.0.1",
     [int]$Port = 8080,
     [string]$ContractAccount = "verification"
 )
@@ -13,7 +13,13 @@ if (Test-Path $venvPython) {
     $python = $venvPython
 }
 else {
-    $python = (Get-Command python -ErrorAction SilentlyContinue)?.Source
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if ($pythonCommand) {
+        $python = $pythonCommand.Source
+    }
+    else {
+        $python = $null
+    }
 }
 
 if (-not $python) {
@@ -21,6 +27,6 @@ if (-not $python) {
 }
 
 & $python (Join-Path $projectRoot "services\\ingress_api.py") `
-    --host $Host `
+    --host $ListenHost `
     --port $Port `
     --contract-account $ContractAccount

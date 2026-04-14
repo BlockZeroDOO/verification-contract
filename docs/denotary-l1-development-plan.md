@@ -204,6 +204,8 @@ Current baseline already added:
 - safer default ingress responses without raw canonical material
 - watcher-side conflict protection for request re-registration and anchor mutation
 - strict request and transaction identifier validation
+- optional auth token for watcher mutation endpoints
+- explicit failed-request handling for dropped or rejected transactions
 
 ### Stage 10. Optional proof layer and ZKP
 
@@ -231,11 +233,13 @@ Current baseline already added:
 - end-to-end single and batch off-chain verification paths
 - live-chain integration runner for real `cleos` broadcasts and irreversible-finality checks
 - receipt and audit assertions against real `tx_id`, `commitment_id`, `batch_id`, and `external_ref_hash`
+- rollout dry-run runner for build, local integration, live-chain integration, and smoke gates
 
 Artifact:
 
 - [docs/denotary-integration-tests.md](/c:/projects/verification-contract/docs/denotary-integration-tests.md:1)
 - [docs/denotary-live-chain-integration.md](/c:/projects/verification-contract/docs/denotary-live-chain-integration.md:1)
+- [docs/denotary-rollout-dry-run.md](/c:/projects/verification-contract/docs/denotary-rollout-dry-run.md:1)
 
 ## Recommended implementation order
 

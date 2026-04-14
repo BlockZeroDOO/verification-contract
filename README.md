@@ -118,6 +118,8 @@ Capabilities:
 - register a request for watching
 - attach `tx_id` and `block_num` after inclusion
 - attach `commitment_id` or `batch_id` into anchor metadata
+- optionally require a shared auth token on mutation endpoints
+- explicitly mark requests as failed when broadcasting or reconciliation fails
 - poll chain finality until irreversible
 
 ### Receipt Service
@@ -130,6 +132,7 @@ Capabilities:
 - issue finalized single receipts
 - issue finalized batch receipts
 - reject receipt reads before finality
+- surface failure metadata for explicitly failed requests
 
 ### Audit API
 
@@ -210,6 +213,13 @@ Live-chain integration baseline:
 - [tests/live_chain_integration.py](/c:/projects/verification-contract/tests/live_chain_integration.py:1)
 - [scripts/run-live-chain-integration.sh](/c:/projects/verification-contract/scripts/run-live-chain-integration.sh:1)
 - [scripts/run-live-chain-integration.ps1](/c:/projects/verification-contract/scripts/run-live-chain-integration.ps1:1)
+- [docs/denotary-live-chain-integration.md](/c:/projects/verification-contract/docs/denotary-live-chain-integration.md:1)
+
+Rollout dry-run baseline:
+
+- [scripts/run-rollout-dry-run.sh](/c:/projects/verification-contract/scripts/run-rollout-dry-run.sh:1)
+- [scripts/run-rollout-dry-run.ps1](/c:/projects/verification-contract/scripts/run-rollout-dry-run.ps1:1)
+- [docs/denotary-rollout-dry-run.md](/c:/projects/verification-contract/docs/denotary-rollout-dry-run.md:1)
 
 Typical `deNotary.io` run:
 
@@ -259,6 +269,7 @@ Service docs:
 - [docs/denotary-audit-api.md](/c:/projects/verification-contract/docs/denotary-audit-api.md:1)
 - [docs/denotary-integration-tests.md](/c:/projects/verification-contract/docs/denotary-integration-tests.md:1)
 - [docs/denotary-live-chain-integration.md](/c:/projects/verification-contract/docs/denotary-live-chain-integration.md:1)
+- [docs/denotary-rollout-dry-run.md](/c:/projects/verification-contract/docs/denotary-rollout-dry-run.md:1)
 - [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1)
 - [docs/denotary-security-hardening.md](/c:/projects/verification-contract/docs/denotary-security-hardening.md:1)
 

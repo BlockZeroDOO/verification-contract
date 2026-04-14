@@ -37,14 +37,19 @@ def find_free_port() -> int:
         return int(handle.getsockname()[1])
 
 
-def request_json(url: str, method: str = "GET", payload: Optional[Dict[str, Any]] = None) -> Tuple[int, Dict[str, Any]]:
+def request_json(
+    url: str,
+    method: str = "GET",
+    payload: Optional[Dict[str, Any]] = None,
+    headers: Optional[Dict[str, str]] = None,
+) -> Tuple[int, Dict[str, Any]]:
     data = None
-    headers: Dict[str, str] = {}
+    request_headers: Dict[str, str] = dict(headers or {})
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
-        headers["Content-Type"] = "application/json"
+        request_headers["Content-Type"] = "application/json"
 
-    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    request = urllib.request.Request(url, data=data, headers=request_headers, method=method)
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             body = response.read().decode("utf-8")
@@ -164,6 +169,7 @@ def wait_for_finalized(
     request_id: str,
     timeout_sec: int,
     interval_sec: float,
+    headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     deadline = time.time() + timeout_sec
     last_status = "submitted"
@@ -172,6 +178,7 @@ def wait_for_finalized(
             f"{watcher_base_url}/v1/watch/{request_id}/poll",
             method="POST",
             payload={},
+            headers=headers,
         )
         if status_code != 200:
             raise RuntimeError(f"watcher poll failed for {request_id}: {payload}")
@@ -196,9 +203,10 @@ def assert_equal(actual: Any, expected: Any, context: str) -> None:
 
 
 class LocalServiceStack:
-    def __init__(self, rpc_url: str, contract_account: str):
+    def __init__(self, rpc_url: str, contract_account: str, watcher_auth_token: str = ""):
         self.rpc_url = rpc_url
         self.contract_account = contract_account
+        self.watcher_auth_token = watcher_auth_token
         self.temp_dir = tempfile.TemporaryDirectory()
         self.state_file = str(Path(self.temp_dir.name) / "finality-state.json")
         self.threads: List[threading.Thread] = []
@@ -242,6 +250,7 @@ class LocalServiceStack:
                 store,
                 self.rpc_url,
                 3600,
+                self.watcher_auth_token,
             )
         )
         self._start_server(
@@ -289,6 +298,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--kyc-jurisdiction", default="EU")
     parser.add_argument("--kyc-level", type=int, default=2)
     parser.add_argument("--kyc-expires-at", default="2030-01-01T00:00:00")
+    parser.add_argument("--watcher-auth-token", default="")
     parser.add_argument("--wait-timeout-sec", type=int, default=180)
     parser.add_argument("--poll-interval-sec", type=float, default=3.0)
     return parser.parse_args()
@@ -402,6 +412,12 @@ def prepare_batch_payload(schema_id: int, policy_id: int, submitter: str, extern
     }
 
 
+def watcher_headers(args: argparse.Namespace) -> Dict[str, str]:
+    if not args.watcher_auth_token:
+        return {}
+    return {"X-DeNotary-Token": args.watcher_auth_token}
+
+
 def run_single_flow(args: argparse.Namespace, services: LocalServiceStack, schema_id: int, policy_id: int, suffix: str) -> None:
     external_ref = f"live-single-{suffix}"
     permission = f"{args.submitter_account}@active"
@@ -440,6 +456,7 @@ def run_single_flow(args: argparse.Namespace, services: LocalServiceStack, schem
             },
             "rpc_url": args.rpc_url,
         },
+        headers=watcher_headers(args),
     )
     assert_status(status_code, 200, "single watcher register")
     assert_equal(registered["status"], "submitted", "single watcher status after register")
@@ -483,6 +500,7 @@ def run_single_flow(args: argparse.Namespace, services: LocalServiceStack, schem
         f"{services.watcher_base_url}/v1/watch/{request_id}/anchor",
         method="POST",
         payload={"anchor": {"commitment_id": commitment_id}},
+        headers=watcher_headers(args),
     )
     assert_status(status_code, 200, "single watcher anchor update")
     assert_equal(anchored["anchor"]["commitment_id"], commitment_id, "single watcher commitment_id")
@@ -491,6 +509,7 @@ def run_single_flow(args: argparse.Namespace, services: LocalServiceStack, schem
         f"{services.watcher_base_url}/v1/watch/{request_id}/included",
         method="POST",
         payload={"tx_id": tx_id, "block_num": block_num},
+        headers=watcher_headers(args),
     )
     assert_status(status_code, 200, "single watcher inclusion update")
     assert_equal(included["status"], "included", "single watcher status after inclusion")
@@ -501,6 +520,7 @@ def run_single_flow(args: argparse.Namespace, services: LocalServiceStack, schem
         request_id,
         args.wait_timeout_sec,
         args.poll_interval_sec,
+        watcher_headers(args),
     )
     assert_equal(finalized["status"], "finalized", "single watcher final status")
 
@@ -563,6 +583,7 @@ def run_batch_flow(args: argparse.Namespace, services: LocalServiceStack, schema
             },
             "rpc_url": args.rpc_url,
         },
+        headers=watcher_headers(args),
     )
     assert_status(status_code, 200, "batch watcher register")
     assert_equal(registered["status"], "submitted", "batch watcher status after register")
@@ -647,6 +668,7 @@ def run_batch_flow(args: argparse.Namespace, services: LocalServiceStack, schema
         f"{services.watcher_base_url}/v1/watch/{request_id}/anchor",
         method="POST",
         payload={"anchor": {"batch_id": batch_id}},
+        headers=watcher_headers(args),
     )
     assert_status(status_code, 200, "batch watcher anchor update")
     assert_equal(anchored["anchor"]["batch_id"], batch_id, "batch watcher batch_id")
@@ -655,6 +677,7 @@ def run_batch_flow(args: argparse.Namespace, services: LocalServiceStack, schema
         f"{services.watcher_base_url}/v1/watch/{request_id}/included",
         method="POST",
         payload={"tx_id": closebatch_tx_id, "block_num": closebatch_block_num},
+        headers=watcher_headers(args),
     )
     assert_status(status_code, 200, "batch watcher inclusion update")
     assert_equal(included["status"], "included", "batch watcher status after inclusion")
@@ -665,6 +688,7 @@ def run_batch_flow(args: argparse.Namespace, services: LocalServiceStack, schema
         request_id,
         args.wait_timeout_sec,
         args.poll_interval_sec,
+        watcher_headers(args),
     )
     assert_equal(finalized["status"], "finalized", "batch watcher final status")
 
@@ -703,7 +727,7 @@ def main() -> int:
     policy_single_id = schema_id + 1000
     policy_batch_id = schema_id + 1001
 
-    with LocalServiceStack(args.rpc_url, args.verification_account) as services:
+    with LocalServiceStack(args.rpc_url, args.verification_account, args.watcher_auth_token) as services:
         ensure_kyc_state(args, args.submitter_account)
 
         log("Creating live schema and policies")

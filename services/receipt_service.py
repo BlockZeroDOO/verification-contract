@@ -76,14 +76,22 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
                 return
 
             if payload.get("status") != "finalized":
-                self.write_json(
-                    HTTPStatus.CONFLICT,
-                    {
-                        "error": "receipt is not available before finality",
-                        "request_id": request_id,
-                        "status": payload.get("status"),
-                    },
-                )
+                response = {
+                    "request_id": request_id,
+                    "status": payload.get("status"),
+                }
+                if payload.get("status") == "failed":
+                    response.update(
+                        {
+                            "error": "receipt is not available for failed request",
+                            "failed_at": payload.get("failed_at"),
+                            "failure_reason": payload.get("failure_reason"),
+                        }
+                    )
+                else:
+                    response["error"] = "receipt is not available before finality"
+
+                self.write_json(HTTPStatus.CONFLICT, response)
                 return
 
             mode = payload.get("mode")

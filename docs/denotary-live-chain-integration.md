@@ -98,6 +98,7 @@ Available options:
 - `--verification-account`
 - `--owner-account`
 - `--submitter-account`
+- `--watcher-auth-token`
 - `--wait-timeout-sec`
 - `--poll-interval-sec`
 
@@ -107,3 +108,4 @@ Available options:
 - `smoke-test-onchain.sh` focuses on contract actions and lifecycle guards
 - `live_chain_integration.py` focuses on real end-to-end reconciliation between chain state, finality, receipts, and audit reads
 - current batch receipts are finalized against the `closebatch` transaction, not the earlier `submitroot` transaction
+- if `--watcher-auth-token` is provided, the local watcher requires that token for its mutation endpoints during the run

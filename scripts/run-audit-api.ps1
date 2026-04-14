@@ -1,5 +1,5 @@
 param(
-    [string]$Host = "127.0.0.1",
+    [string]$ListenHost = "127.0.0.1",
     [int]$Port = 8083,
     [string]$StateFile = "runtime/finality-state.json"
 )
@@ -13,7 +13,13 @@ if (Test-Path $venvPython) {
     $python = $venvPython
 }
 else {
-    $python = (Get-Command python -ErrorAction SilentlyContinue)?.Source
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if ($pythonCommand) {
+        $python = $pythonCommand.Source
+    }
+    else {
+        $python = $null
+    }
 }
 
 if (-not $python) {
@@ -21,6 +27,6 @@ if (-not $python) {
 }
 
 & $python (Join-Path $projectRoot "services\\audit_api.py") `
-    --host $Host `
+    --host $ListenHost `
     --port $Port `
     --state-file $StateFile

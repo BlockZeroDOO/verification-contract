@@ -31,14 +31,19 @@ def find_free_port() -> int:
         return int(handle.getsockname()[1])
 
 
-def request_json(url: str, method: str = "GET", payload: Optional[Dict[str, Any]] = None) -> tuple[int, Dict[str, Any]]:
+def request_json(
+    url: str,
+    method: str = "GET",
+    payload: Optional[Dict[str, Any]] = None,
+    headers: Optional[Dict[str, str]] = None,
+) -> tuple[int, Dict[str, Any]]:
     data = None
-    headers: Dict[str, str] = {}
+    request_headers: Dict[str, str] = dict(headers or {})
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
-        headers["Content-Type"] = "application/json"
+        request_headers["Content-Type"] = "application/json"
 
-    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    request = urllib.request.Request(url, data=data, headers=request_headers, method=method)
     try:
         with urllib.request.urlopen(request, timeout=5) as response:
             body = response.read().decode("utf-8")
@@ -77,6 +82,8 @@ class MockChainServer(ThreadingHTTPServer):
 
 
 class ServiceIntegrationTest(unittest.TestCase):
+    WATCHER_AUTH_TOKEN = "integration-shared-token"
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.temp_dir = tempfile.TemporaryDirectory()
@@ -104,6 +111,7 @@ class ServiceIntegrationTest(unittest.TestCase):
             finality_watcher.FinalityStore(cls.state_file),
             cls.mock_chain_url,
             3600,
+            cls.WATCHER_AUTH_TOKEN,
         )
         cls._start_server(cls.watcher_server)
 
@@ -189,6 +197,9 @@ class ServiceIntegrationTest(unittest.TestCase):
             ],
         }
 
+    def _watcher_headers(self) -> Dict[str, str]:
+        return {"X-DeNotary-Token": self.WATCHER_AUTH_TOKEN}
+
     def test_ingress_redacts_debug_material_by_default(self) -> None:
         status, response = request_json(
             f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
@@ -235,6 +246,7 @@ class ServiceIntegrationTest(unittest.TestCase):
                 },
                 "rpc_url": self.mock_chain_url,
             },
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
         self.assertEqual(registered["status"], "submitted")
@@ -249,6 +261,7 @@ class ServiceIntegrationTest(unittest.TestCase):
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/anchor",
             method="POST",
             payload={"anchor": {"commitment_id": 42}},
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
         self.assertEqual(anchored["anchor"]["commitment_id"], 42)
@@ -257,6 +270,7 @@ class ServiceIntegrationTest(unittest.TestCase):
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/included",
             method="POST",
             payload={"tx_id": tx_id, "block_num": block_num},
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
         self.assertEqual(included["status"], "included")
@@ -269,6 +283,7 @@ class ServiceIntegrationTest(unittest.TestCase):
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/poll",
             method="POST",
             payload={},
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
         self.assertEqual(polled["status"], "included")
@@ -281,6 +296,7 @@ class ServiceIntegrationTest(unittest.TestCase):
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/poll",
             method="POST",
             payload={},
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
         self.assertEqual(polled["status"], "finalized")
@@ -331,6 +347,7 @@ class ServiceIntegrationTest(unittest.TestCase):
                 },
                 "rpc_url": self.mock_chain_url,
             },
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
         self.assertEqual(registered["status"], "submitted")
@@ -339,6 +356,7 @@ class ServiceIntegrationTest(unittest.TestCase):
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/anchor",
             method="POST",
             payload={"anchor": {"batch_id": 7}},
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
         self.assertEqual(anchored["anchor"]["batch_id"], 7)
@@ -347,6 +365,7 @@ class ServiceIntegrationTest(unittest.TestCase):
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/included",
             method="POST",
             payload={"tx_id": tx_id, "block_num": block_num},
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
         self.assertEqual(included["status"], "included")
@@ -359,6 +378,7 @@ class ServiceIntegrationTest(unittest.TestCase):
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/poll",
             method="POST",
             payload={},
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
         self.assertEqual(finalized["status"], "finalized")
@@ -396,6 +416,7 @@ class ServiceIntegrationTest(unittest.TestCase):
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/register",
             method="POST",
             payload=payload,
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
 
@@ -403,9 +424,93 @@ class ServiceIntegrationTest(unittest.TestCase):
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/register",
             method="POST",
             payload={**payload, "trace_id": "conflict-trace"},
+            headers=self._watcher_headers(),
         )
         self.assertEqual(status, 400)
         self.assertIn("trace_id", response["error"])
+
+    def test_watcher_rejects_unauthorized_mutation(self) -> None:
+        status, prepared = request_json(
+            f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
+            method="POST",
+            payload=self._single_prepare_payload("single-unauthorized"),
+        )
+        self.assertEqual(status, 200)
+
+        status, response = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/register",
+            method="POST",
+            payload={
+                "request_id": prepared["request_id"],
+                "trace_id": prepared["trace_id"],
+                "mode": "single",
+                "submitter": "alice",
+                "contract": "verification",
+                "anchor": {
+                    "object_hash": prepared["object_hash"],
+                    "external_ref_hash": prepared["external_ref_hash"],
+                },
+                "rpc_url": self.mock_chain_url,
+            },
+        )
+        self.assertEqual(status, 401)
+        self.assertIn("auth token", response["error"])
+
+    def test_failed_request_blocks_receipt_and_is_visible_in_audit(self) -> None:
+        status, prepared = request_json(
+            f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
+            method="POST",
+            payload=self._single_prepare_payload("single-failed"),
+        )
+        self.assertEqual(status, 200)
+
+        request_id = prepared["request_id"]
+        trace_id = prepared["trace_id"]
+
+        status, registered = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/register",
+            method="POST",
+            payload={
+                "request_id": request_id,
+                "trace_id": trace_id,
+                "mode": "single",
+                "submitter": "alice",
+                "contract": "verification",
+                "anchor": {
+                    "object_hash": prepared["object_hash"],
+                    "external_ref_hash": prepared["external_ref_hash"],
+                },
+                "rpc_url": self.mock_chain_url,
+            },
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(registered["status"], "submitted")
+
+        status, failed = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/failed",
+            method="POST",
+            payload={"reason": "tx_dropped", "details": {"stage": "broadcast"}},
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(failed["status"], "failed")
+        self.assertEqual(failed["failure_reason"], "tx_dropped")
+
+        status, receipt = request_json(
+            f"http://127.0.0.1:{self.receipt_port}/v1/receipts/{request_id}",
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(receipt["status"], "failed")
+        self.assertEqual(receipt["failure_reason"], "tx_dropped")
+
+        status, audit_chain = request_json(
+            f"http://127.0.0.1:{self.audit_port}/v1/audit/chain/{request_id}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(audit_chain["record"]["status"], "failed")
+        self.assertEqual(audit_chain["record"]["failure_reason"], "tx_dropped")
+        self.assertIsNone(audit_chain["receipt"])
 
 
 if __name__ == "__main__":

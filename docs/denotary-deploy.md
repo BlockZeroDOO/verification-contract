@@ -110,6 +110,20 @@ export SUBMITTER_ACCOUNT=youruser
 ./scripts/run-live-chain-integration.sh --owner-account "${OWNER_ACCOUNT}" --submitter-account "${SUBMITTER_ACCOUNT}"
 ```
 
+Rollout dry-run:
+
+```bash
+./scripts/run-rollout-dry-run.sh
+```
+
+To include live-chain and smoke validation in the dry-run:
+
+```bash
+export OWNER_ACCOUNT=verification
+export SUBMITTER_ACCOUNT=youruser
+RUN_LIVE_CHAIN_INTEGRATION=true RUN_ONCHAIN_SMOKE=true ./scripts/run-rollout-dry-run.sh
+```
+
 Legacy paid-proof smoke wrapper, if still needed for the old proof flow:
 
 ```bash

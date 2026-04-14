@@ -102,3 +102,8 @@ The live-chain suite:
 - broadcasts real `verification` actions with `cleos`
 - waits for irreversible finality against the target RPC
 - verifies `Receipt Service` and `Audit API` against actual `tx_id`, `commitment_id`, and `batch_id`
+
+Current hardening coverage in integration tests also includes:
+
+- watcher mutation auth when a shared token is configured
+- explicit failed-request handling in receipt and audit reads

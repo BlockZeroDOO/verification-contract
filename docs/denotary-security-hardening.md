@@ -55,6 +55,7 @@ Implemented in [services/finality_watcher.py](/c:/projects/verification-contract
 - Antelope account-name validation for `submitter` and `contract`
 - shape validation for anchor metadata
 - positive integer enforcement for `block_num`, `commitment_id`, `batch_id`, `leaf_count`
+- optional shared-token auth for watcher mutation endpoints through `X-DeNotary-Token` or `Authorization: Bearer ...`
 
 Conflict-prevention rules:
 
@@ -64,6 +65,14 @@ Conflict-prevention rules:
 - `included` rejects attempts to change an already recorded `block_num`
 - `anchor` rejects attempts to overwrite existing anchor IDs or hashes with different values
 - finalized requests do not regress back to `included`
+- terminal `failed` and `finalized` requests reject new anchor mutations
+
+Failure handling:
+
+- watcher can explicitly mark a request as `failed`
+- failed requests store `failed_at`, `failure_reason`, and optional `failure_details`
+- failed requests cannot later move into `included`
+- receipt service returns failure metadata instead of pretending the request is only pending
 
 ### Audit API controls
 
@@ -79,11 +88,9 @@ The Audit API currently returns hashes and anchor metadata only. It does not exp
 
 Still recommended before rollout:
 
-- add service-level auth or trusted network boundary for watcher mutation endpoints
 - integrate direct indexed reads from on-chain tables instead of file-only state
 - add negative integration tests for all hardening constraints
 - review whether `external_ref` should support optional salted or HMAC-derived modes
-- add explicit failure-state handling for rejected or dropped transactions
 - add operational alerting for stuck requests and finality lag
 
 ## Related documents

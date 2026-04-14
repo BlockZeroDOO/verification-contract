@@ -97,6 +97,19 @@ export SUBMITTER_ACCOUNT=youruser
   --submitter-account "${SUBMITTER_ACCOUNT}"
 ```
 
+## Rollout dry-run
+
+```bash
+export OWNER_ACCOUNT=verification
+export SUBMITTER_ACCOUNT=youruser
+RPC_URL=https://jungle4.api.eosnation.io \
+EXPECTED_CHAIN_ID=73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d \
+NETWORK_LABEL=Jungle4 \
+RUN_LIVE_CHAIN_INTEGRATION=true \
+RUN_ONCHAIN_SMOKE=true \
+./scripts/run-rollout-dry-run.sh
+```
+
 ## Verify on-chain state
 
 ```bash

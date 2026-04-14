@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
 import re
 import threading
@@ -51,6 +52,17 @@ def require_mapping(mapping: Dict[str, Any], field_name: str) -> Dict[str, Any]:
     value = mapping.get(field_name)
     if not isinstance(value, dict):
         raise ValueError(f"{field_name} must be object")
+    return value
+
+
+def require_optional_reason(mapping: Dict[str, Any], field_name: str) -> Optional[str]:
+    value = mapping.get(field_name)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{field_name} must be non-empty string when provided")
+    if len(value) > 256:
+        raise ValueError(f"{field_name} is too long")
     return value
 
 
@@ -133,6 +145,28 @@ def read_json_body(handler: BaseHTTPRequestHandler) -> Dict[str, Any]:
         raise ValueError("request body must be valid JSON") from exc
 
 
+def get_request_auth_token(handler: BaseHTTPRequestHandler) -> str:
+    direct = handler.headers.get("X-DeNotary-Token")
+    if direct:
+        return direct
+
+    authorization = handler.headers.get("Authorization", "")
+    if authorization.lower().startswith("bearer "):
+        return authorization[7:].strip()
+
+    return ""
+
+
+def require_mutation_auth(handler: BaseHTTPRequestHandler) -> None:
+    configured_token = getattr(handler.server, "auth_token", "") or ""
+    if not configured_token:
+        return
+
+    presented_token = get_request_auth_token(handler)
+    if not presented_token or not hmac.compare_digest(presented_token, configured_token):
+        raise PermissionError("watcher mutation endpoint requires valid auth token")
+
+
 def rpc_post_json(url: str, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     request = urllib.request.Request(
         f"{url.rstrip('/')}{path}",
@@ -190,8 +224,12 @@ def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[
         "block_num": block_num,
         "status": status,
         "registered_at": timestamp,
+        "included_at": timestamp if status == "included" else None,
         "updated_at": timestamp,
         "finalized_at": None,
+        "failed_at": None,
+        "failure_reason": None,
+        "failure_details": None,
         "chain_state": {
             "head_block_num": None,
             "last_irreversible_block_num": None,
@@ -200,6 +238,9 @@ def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[
 
 
 def update_to_included(existing: Dict[str, Any], body: Dict[str, Any]) -> Dict[str, Any]:
+    if existing.get("status") == "failed":
+        raise ValueError("failed request cannot move to included")
+
     tx_id = require_hex_64(body, "tx_id")
     block_num = require_int(body, "block_num")
     if block_num <= 0:
@@ -216,6 +257,8 @@ def update_to_included(existing: Dict[str, Any], body: Dict[str, Any]) -> Dict[s
     existing["tx_id"] = tx_id
     existing["block_num"] = block_num
     existing["rpc_url"] = rpc_url
+    if not existing.get("included_at"):
+        existing["included_at"] = iso_now()
     if existing.get("status") != "finalized":
         existing["status"] = "included"
     existing["updated_at"] = iso_now()
@@ -228,11 +271,39 @@ def update_anchor_metadata(existing: Dict[str, Any], body: Dict[str, Any]) -> Di
     validated_updates = validate_anchor_metadata(anchor_updates, mode)
 
     anchor = dict(existing.get("anchor", {}))
+    if existing.get("status") in {"failed", "finalized"}:
+        for key, value in validated_updates.items():
+            if key not in anchor or anchor[key] != value:
+                raise ValueError("terminal request cannot accept new anchor mutations")
+
     for key, value in validated_updates.items():
         if key in anchor and anchor[key] != value:
             raise ValueError(f"{key} cannot be changed once recorded")
     anchor.update(validated_updates)
     existing["anchor"] = anchor
+    existing["updated_at"] = iso_now()
+    return existing
+
+
+def mark_failed(existing: Dict[str, Any], body: Dict[str, Any]) -> Dict[str, Any]:
+    if existing.get("status") == "finalized":
+        raise ValueError("finalized request cannot be marked failed")
+
+    reason = require_optional_reason(body, "reason")
+    if reason is None:
+        raise ValueError("reason must be provided")
+
+    details = body.get("details")
+    if existing.get("status") == "failed":
+        if existing.get("failure_reason") != reason or existing.get("failure_details") != details:
+            raise ValueError("failed request metadata cannot be changed once recorded")
+        existing["updated_at"] = iso_now()
+        return existing
+
+    existing["status"] = "failed"
+    existing["failed_at"] = iso_now()
+    existing["failure_reason"] = reason
+    existing["failure_details"] = details
     existing["updated_at"] = iso_now()
     return existing
 
@@ -262,6 +333,9 @@ def ensure_registration_compatible(existing: Dict[str, Any], incoming: Dict[str,
 
 
 def poll_request(existing: Dict[str, Any]) -> Dict[str, Any]:
+    if existing.get("status") == "failed":
+        return existing
+
     block_num = existing.get("block_num")
     rpc_url = existing.get("rpc_url")
     if not block_num or not rpc_url:
@@ -315,6 +389,8 @@ class FinalityWatcherHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         try:
+            require_mutation_auth(self)
+
             if self.path == "/v1/watch/register":
                 body = read_json_body(self)
                 payload = normalize_watch_request(body, self.server.default_rpc_url)
@@ -351,6 +427,15 @@ class FinalityWatcherHandler(BaseHTTPRequestHandler):
                 self.write_json(HTTPStatus.OK, updated)
                 return
 
+            if self.path.startswith("/v1/watch/") and self.path.endswith("/failed"):
+                request_id = self.path[len("/v1/watch/"):-len("/failed")]
+                body = read_json_body(self)
+                existing = self.server.store.get_request(request_id)
+                updated = mark_failed(existing, body)
+                self.server.store.upsert_request(request_id, updated)
+                self.write_json(HTTPStatus.OK, updated)
+                return
+
             if self.path.startswith("/v1/watch/") and self.path.endswith("/poll"):
                 request_id = self.path[len("/v1/watch/"):-len("/poll")]
                 existing = self.server.store.get_request(request_id)
@@ -362,6 +447,8 @@ class FinalityWatcherHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
         except KeyError:
             self.send_error(HTTPStatus.NOT_FOUND, "Request not found")
+        except PermissionError as exc:
+            self.write_json(HTTPStatus.UNAUTHORIZED, {"error": str(exc)})
         except ValueError as exc:
             self.write_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
         except urllib.error.URLError as exc:
@@ -387,11 +474,13 @@ class FinalityWatcherServer(ThreadingHTTPServer):
         store: FinalityStore,
         default_rpc_url: str,
         poll_interval_sec: int,
+        auth_token: str = "",
     ):
         super().__init__(server_address, handler)
         self.store = store
         self.default_rpc_url = default_rpc_url
         self.poll_interval_sec = poll_interval_sec
+        self.auth_token = auth_token
         self._stop_event = threading.Event()
         self._poller = threading.Thread(target=self._poll_loop, daemon=True)
 
@@ -424,6 +513,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rpc-url", default="https://history.denotary.io")
     parser.add_argument("--state-file", default="runtime/finality-state.json")
     parser.add_argument("--poll-interval-sec", type=int, default=10)
+    parser.add_argument("--auth-token", default="")
     return parser.parse_args()
 
 
@@ -436,6 +526,7 @@ def main() -> None:
         store,
         args.rpc_url,
         args.poll_interval_sec,
+        args.auth_token,
     )
     server.start_background_polling()
     print(f"Finality watcher listening on http://{args.host}:{args.port}")

@@ -293,3 +293,23 @@ Generated: 2026-04-14
 - irreversible finality polling against a live Antelope RPC
 - receipt verification against real `tx_id` and `block_num`
 - audit verification by `tx_id`, `commitment_id`, `batch_id`, and `external_ref_hash`
+
+18. Security hardening and rollout dry-run
+
+- Added optional shared-token auth for `Finality Watcher` mutation endpoints.
+- Added explicit failed-request handling:
+- `POST /v1/watch/<request_id>/failed`
+- `failed_at`
+- `failure_reason`
+- `failure_details`
+- Updated `Receipt Service` so failed requests return failure metadata instead of generic pending-state responses.
+- Updated `Audit API` to expose failure metadata in audit records.
+- Extended service integration coverage with:
+- watcher auth rejection tests
+- failed-request receipt and audit-path tests
+- Added rollout dry-run runners:
+- `scripts/run-rollout-dry-run.sh`
+- `scripts/run-rollout-dry-run.ps1`
+- Added rollout dry-run runbook:
+- `docs/denotary-rollout-dry-run.md`
+- Fixed PowerShell service runners to avoid unsupported `?.Source` syntax on older PowerShell versions.

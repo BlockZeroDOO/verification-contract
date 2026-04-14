@@ -1,0 +1,148 @@
+services:
+  ingress:
+    build:
+      context: .
+      dockerfile: Dockerfile.offchain
+    container_name: denotary-ingress
+    command:
+      - python
+      - -u
+      - services/ingress_api.py
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --contract-account
+      - ${CONTRACT_ACCOUNT:-verification}
+    environment:
+      CONTRACT_ACCOUNT: ${CONTRACT_ACCOUNT:-verification}
+    ports:
+      - "${INGRESS_BIND:-127.0.0.1}:${INGRESS_PORT:-8080}:8080"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=5).read()"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  finality:
+    build:
+      context: .
+      dockerfile: Dockerfile.offchain
+    container_name: denotary-finality
+    entrypoint:
+      - /bin/sh
+      - -lc
+      - |
+          set -eu
+          if [ -n "${WATCHER_AUTH_TOKEN:-}" ]; then
+            exec python -u services/finality_watcher.py \
+              --host 0.0.0.0 \
+              --port 8081 \
+              --rpc-url "${RPC_URL:-https://history.denotary.io}" \
+              --state-file /data/finality-state.json \
+              --poll-interval-sec "${POLL_INTERVAL_SEC:-10}" \
+              --auth-token "${WATCHER_AUTH_TOKEN}"
+          fi
+          exec python -u services/finality_watcher.py \
+            --host 0.0.0.0 \
+            --port 8081 \
+            --rpc-url "${RPC_URL:-https://history.denotary.io}" \
+            --state-file /data/finality-state.json \
+            --poll-interval-sec "${POLL_INTERVAL_SEC:-10}"
+    command: []
+    environment:
+      RPC_URL: ${RPC_URL:-https://history.denotary.io}
+      POLL_INTERVAL_SEC: ${POLL_INTERVAL_SEC:-10}
+      WATCHER_AUTH_TOKEN: ${WATCHER_AUTH_TOKEN:-}
+    volumes:
+      - denotary-offchain-state:/data
+    ports:
+      - "${FINALITY_BIND:-127.0.0.1}:${FINALITY_PORT:-8081}:8081"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/healthz', timeout=5).read()"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  receipt:
+    build:
+      context: .
+      dockerfile: Dockerfile.offchain
+    container_name: denotary-receipt
+    command:
+      - python
+      - -u
+      - services/receipt_service.py
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8082"
+      - --state-file
+      - /data/finality-state.json
+    volumes:
+      - denotary-offchain-state:/data
+    depends_on:
+      finality:
+        condition: service_healthy
+    ports:
+      - "${RECEIPT_BIND:-127.0.0.1}:${RECEIPT_PORT:-8082}:8082"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8082/healthz', timeout=5).read()"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  audit:
+    build:
+      context: .
+      dockerfile: Dockerfile.offchain
+    container_name: denotary-audit
+    command:
+      - python
+      - -u
+      - services/audit_api.py
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8083"
+      - --state-file
+      - /data/finality-state.json
+    volumes:
+      - denotary-offchain-state:/data
+    depends_on:
+      finality:
+        condition: service_healthy
+    ports:
+      - "${AUDIT_BIND:-127.0.0.1}:${AUDIT_PORT:-8083}:8083"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8083/healthz', timeout=5).read()"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  denotary-offchain-state:

@@ -1,0 +1,15 @@
+[Unit]
+Description=deNotary Ingress API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/denotary/offchain.env
+WorkingDirectory=/
+ExecStart=/usr/bin/env bash -lc 'exec "$PROJECT_ROOT/scripts/run-offchain-service.sh" ingress'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

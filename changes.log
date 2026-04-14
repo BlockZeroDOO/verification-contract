@@ -332,3 +332,39 @@ Generated: 2026-04-14
 
 - Kept Jungle4/testnet token examples on `EOS`, which is the practical network token for the current public test environment.
 - Renamed remaining local legacy reference files in the workspace so the retired branding no longer appears in active filenames.
+
+21. Off-chain deployment pack
+
+- Added a deployable off-chain environment example:
+- `config/offchain.env.example`
+- Added a unified service runner:
+- `scripts/run-offchain-service.sh`
+- Added a local orchestration wrapper for start/stop/status:
+- `scripts/offchain-stack.sh`
+- Added a healthcheck script:
+- `scripts/offchain-healthcheck.sh`
+- Added Linux `systemd` unit files for:
+- `Ingress API`
+- `Finality Watcher`
+- `Receipt Service`
+- `Audit API`
+- Added an off-chain deployment runbook:
+- `docs/denotary-offchain-deploy.md`
+- Updated `README.md` to reference the new deployment assets.
+
+22. Local Docker Compose for off-chain stack
+
+- Added a shared off-chain runtime image:
+- `Dockerfile.offchain`
+- Added local compose orchestration:
+- `docker-compose.offchain.yml`
+- Added compose env example:
+- `config/offchain.compose.env.example`
+- Added Docker build exclusions:
+- `.dockerignore`
+- Added Docker Compose runbook:
+- `docs/denotary-offchain-docker-compose.md`
+- Verified the compose stack end-to-end:
+- `docker compose ... up -d --build`
+- successful `healthz` checks for `Ingress API`, `Finality Watcher`, `Receipt Service`, and `Audit API`
+- clean shutdown with `docker compose ... down -v`

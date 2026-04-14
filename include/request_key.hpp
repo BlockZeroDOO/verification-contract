@@ -3,6 +3,7 @@
 #include <eosio/crypto.hpp>
 #include <eosio/name.hpp>
 
+#include <array>
 #include <string>
 
 namespace verification_common {
@@ -10,6 +11,16 @@ inline eosio::checksum256 compute_request_key(const eosio::name& submitter, cons
     std::string payload = submitter.to_string();
     payload.push_back(':');
     payload += client_reference;
+    return eosio::sha256(payload.data(), static_cast<uint32_t>(payload.size()));
+}
+
+inline eosio::checksum256 compute_request_key(const eosio::name& submitter, const eosio::checksum256& external_ref) {
+    std::string payload = submitter.to_string();
+    payload.push_back(':');
+
+    const auto bytes = external_ref.extract_as_byte_array();
+    payload.append(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+
     return eosio::sha256(payload.data(), static_cast<uint32_t>(payload.size()));
 }
 }  // namespace verification_common

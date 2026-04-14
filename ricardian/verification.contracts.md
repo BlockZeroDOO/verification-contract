@@ -40,6 +40,22 @@ Enables the optional ZK capability flag on a policy.
 
 Disables the optional ZK capability flag on a policy.
 
+## submit
+
+Creates a single anchored commitment after schema, policy, and optional KYC validation.
+
+## supersede
+
+Moves an active commitment into the `superseded` business status.
+
+## revokecmmt
+
+Moves an active commitment into the `revoked` business status.
+
+## expirecmmt
+
+Moves an active commitment into the `expired` business status.
+
 ## record
 
 Appends a proof row to the immutable `verification` registry.

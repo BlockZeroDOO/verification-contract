@@ -239,6 +239,95 @@ void verification::disablezk(uint64_t id) {
     });
 }
 
+void verification::submit(
+    const name& submitter,
+    uint64_t schema_id,
+    uint64_t policy_id,
+    const checksum256& object_hash,
+    const checksum256& external_ref
+) {
+    require_auth(submitter);
+    check(is_account(submitter), "submitter account does not exist");
+
+    const auto schema = require_schema(schema_id);
+    check(schema.active, "schema is inactive");
+
+    const auto policy = require_policy(policy_id);
+    check(policy.active, "policy is inactive");
+    check(policy.allow_single, "policy does not allow single submissions");
+
+    if (policy.require_kyc) {
+        const auto kyc = require_kyc_record(submitter);
+        check(kyc.active, "kyc record is inactive");
+        check(kyc.expires_at > time_point_sec(current_time_point()), "kyc record is expired");
+        check(kyc.level >= policy.min_kyc_level, "kyc level is below policy minimum");
+    }
+
+    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
+    validate_commitment_request_unique(submitter, external_ref);
+
+    commitment_table commitments(get_self(), get_self().value);
+    const auto now = time_point_sec(current_time_point());
+    const auto commitment_id = next_commitment_id();
+    commitments.emplace(get_self(), [&](auto& row) {
+        row.id = commitment_id;
+        row.submitter = submitter;
+        row.schema_id = schema_id;
+        row.policy_id = policy_id;
+        row.object_hash = object_hash;
+        row.external_ref = external_ref;
+        row.request_key = request_key;
+        row.block_num = static_cast<uint32_t>(tapos_block_num());
+        row.created_at = now;
+        row.status = commitment_status_active;
+    });
+}
+
+void verification::supersede(uint64_t id) {
+    validate_registry_id(id, "id");
+
+    commitment_table commitments(get_self(), get_self().value);
+    auto existing = commitments.find(id);
+    check(existing != commitments.end(), "commitment does not exist");
+    check(
+        has_auth(existing->submitter) || has_auth(get_self()),
+        "missing required authority of submitter or contract"
+    );
+    validate_commitment_is_active(*existing);
+
+    commitments.modify(existing, get_self(), [&](auto& row) {
+        row.status = commitment_status_superseded;
+    });
+}
+
+void verification::revokecmmt(uint64_t id) {
+    require_auth(get_self());
+    validate_registry_id(id, "id");
+
+    commitment_table commitments(get_self(), get_self().value);
+    auto existing = commitments.find(id);
+    check(existing != commitments.end(), "commitment does not exist");
+    validate_commitment_is_active(*existing);
+
+    commitments.modify(existing, get_self(), [&](auto& row) {
+        row.status = commitment_status_revoked;
+    });
+}
+
+void verification::expirecmmt(uint64_t id) {
+    require_auth(get_self());
+    validate_registry_id(id, "id");
+
+    commitment_table commitments(get_self(), get_self().value);
+    auto existing = commitments.find(id);
+    check(existing != commitments.end(), "commitment does not exist");
+    validate_commitment_is_active(*existing);
+
+    commitments.modify(existing, get_self(), [&](auto& row) {
+        row.status = commitment_status_expired;
+    });
+}
+
 void verification::record(
     const name& submitter,
     const checksum256& object_hash,
@@ -385,6 +474,20 @@ verification::policy_row verification::require_policy(uint64_t id) const {
     return *existing;
 }
 
+uint64_t verification::next_commitment_id() {
+    counter_singleton counters(get_self(), get_self().value);
+    auto state = counters.exists() ? counters.get() : counter_state{};
+    if (state.next_commitment_id == 0) {
+        state.next_commitment_id = 1;
+    }
+
+    const uint64_t allocated = state.next_commitment_id;
+    ++state.next_commitment_id;
+    counters.set(state, get_self());
+
+    return allocated;
+}
+
 asset verification::resolve_price(const name& token_contract, const symbol& token_symbol) const {
     check(is_account(token_contract), "token_contract does not exist");
     check(token_symbol.is_valid(), "token_symbol is invalid");
@@ -409,6 +512,17 @@ checksum256 verification::parse_hash(const string& hex) const {
     }
 
     return checksum256(bytes);
+}
+
+void verification::validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const {
+    commitment_table commitments(get_self(), get_self().value);
+    auto by_request = commitments.get_index<"byrequest"_n>();
+    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
+    check(by_request.find(request_key) == by_request.end(), "duplicate request for submitter");
+}
+
+void verification::validate_commitment_is_active(const commitment_row& commitment) const {
+    check(commitment.status == commitment_status_active, "commitment is not active");
 }
 
 void verification::validate_future_time(const time_point_sec& value, const char* field_name) const {
@@ -561,6 +675,7 @@ extern "C" {
                     (issuekyc)(renewkyc)(revokekyc)(suspendkyc)
                     (addschema)(updateschema)(deprecate)
                     (setpolicy)(enablezk)(disablezk)
+                    (submit)(supersede)(revokecmmt)(expirecmmt)
                     (record)(setpaytoken)(rmpaytoken)(withdraw)
                 )
             }

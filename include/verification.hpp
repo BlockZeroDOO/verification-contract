@@ -74,6 +74,24 @@ public:
     void disablezk(uint64_t id);
 
     [[eosio::action]]
+    void submit(
+        const name& submitter,
+        uint64_t schema_id,
+        uint64_t policy_id,
+        const checksum256& object_hash,
+        const checksum256& external_ref
+    );
+
+    [[eosio::action]]
+    void supersede(uint64_t id);
+
+    [[eosio::action]]
+    void revokecmmt(uint64_t id);
+
+    [[eosio::action]]
+    void expirecmmt(uint64_t id);
+
+    [[eosio::action]]
     void record(
         const name& submitter,
         const checksum256& object_hash,
@@ -146,6 +164,46 @@ private:
 
     using policy_table = multi_index<"policies"_n, policy_row>;
 
+    struct [[eosio::table("commitments")]] commitment_row {
+        uint64_t id;
+        name submitter;
+        uint64_t schema_id;
+        uint64_t policy_id;
+        checksum256 object_hash;
+        checksum256 external_ref;
+        checksum256 request_key;
+        uint32_t block_num;
+        time_point_sec created_at;
+        uint8_t status;
+
+        uint64_t primary_key() const { return id; }
+        uint64_t by_submitter() const { return submitter.value; }
+        uint64_t by_schema_id() const { return schema_id; }
+        uint64_t by_policy_id() const { return policy_id; }
+        uint64_t by_status() const { return static_cast<uint64_t>(status); }
+        checksum256 by_request() const { return request_key; }
+        checksum256 by_external_ref() const { return external_ref; }
+    };
+
+    using commitment_table = multi_index<
+        "commitments"_n,
+        commitment_row,
+        indexed_by<"bysubmitter"_n, const_mem_fun<commitment_row, uint64_t, &commitment_row::by_submitter>>,
+        indexed_by<"byschemaid"_n, const_mem_fun<commitment_row, uint64_t, &commitment_row::by_schema_id>>,
+        indexed_by<"bypolicyid"_n, const_mem_fun<commitment_row, uint64_t, &commitment_row::by_policy_id>>,
+        indexed_by<"bystatus"_n, const_mem_fun<commitment_row, uint64_t, &commitment_row::by_status>>,
+        indexed_by<"byrequest"_n, const_mem_fun<commitment_row, checksum256, &commitment_row::by_request>>,
+        indexed_by<"byexternal"_n, const_mem_fun<commitment_row, checksum256, &commitment_row::by_external_ref>>
+    >;
+
+    struct [[eosio::table("counters")]] counter_state {
+        uint64_t next_commitment_id = 1;
+        uint64_t next_batch_id = 1;
+        uint64_t next_proof_id = 1;
+    };
+
+    using counter_singleton = singleton<"counters"_n, counter_state>;
+
     struct [[eosio::table("proofs")]] proof_row {
         uint64_t proof_id;
         name writer;
@@ -187,14 +245,21 @@ private:
     >;
 
     static constexpr uint8_t hash_size = 32;
+    static constexpr uint8_t commitment_status_active = 0;
+    static constexpr uint8_t commitment_status_superseded = 1;
+    static constexpr uint8_t commitment_status_revoked = 2;
+    static constexpr uint8_t commitment_status_expired = 3;
 
     uint128_t make_payment_key(const name& token_contract, const symbol_code& token_symbol) const;
     payment_token get_payment_token(const name& token_contract, const symbol_code& token_symbol) const;
     kyc_row require_kyc_record(const name& account) const;
     schema_row require_schema(uint64_t id) const;
     policy_row require_policy(uint64_t id) const;
+    uint64_t next_commitment_id();
     asset resolve_price(const name& token_contract, const symbol& token_symbol) const;
     checksum256 parse_hash(const string& hex) const;
+    void validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const;
+    void validate_commitment_is_active(const commitment_row& commitment) const;
     void validate_future_time(const time_point_sec& value, const char* field_name) const;
     void validate_registry_id(uint64_t id, const char* field_name) const;
     void validate_client_reference(const string& client_reference) const;

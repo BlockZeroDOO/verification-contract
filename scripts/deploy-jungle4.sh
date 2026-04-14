@@ -8,7 +8,6 @@ project_root="$(cd "${script_dir}/.." && pwd)"
 RPC_URL="${RPC_URL:-https://jungle4.api.eosnation.io}"
 JUNGLE4_CHAIN_ID="${JUNGLE4_CHAIN_ID:-73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d}"
 VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
-MANAGEMENT_ACCOUNT="${MANAGEMENT_ACCOUNT:-managementel}"
 DFS_ACCOUNT="${DFS_ACCOUNT:-dfs}"
 DEPLOY_DFS="${DEPLOY_DFS:-true}"
 BUILD_BEFORE_DEPLOY="${BUILD_BEFORE_DEPLOY:-true}"
@@ -38,14 +37,8 @@ require_artifact() {
 
 require_account_name_constraints() {
     if [[ "${VERIFICATION_ACCOUNT}" != "verification" ]]; then
-        echo "This codebase hardcodes verification writes to account 'verification'." >&2
-        echo "Deploy verification to that exact Jungle4 account or patch the contract constants first." >&2
-        exit 1
-    fi
-
-    if [[ "${MANAGEMENT_ACCOUNT}" != "managementel" ]]; then
-        echo "This codebase hardcodes the authorized writer as account 'managementel'." >&2
-        echo "Deploy management to that exact Jungle4 account or patch the contract constants first." >&2
+        echo "This codebase expects the verification contract account to be exactly 'verification'." >&2
+        echo "Deploy to 'verification' or patch the hardcoded contract name first." >&2
         exit 1
     fi
 }
@@ -98,14 +91,13 @@ check_chain
 if [[ "${BUILD_BEFORE_DEPLOY}" == "true" ]]; then
     echo "[deploy-jungle4] Building contract artifacts"
     if [[ "${DEPLOY_DFS}" == "true" ]]; then
-        bash "${project_root}/scripts/build-testnet.sh" verification managementel dfs
+        bash "${project_root}/scripts/build-testnet.sh" verification dfs
     else
-        bash "${project_root}/scripts/build-testnet.sh" verification managementel
+        bash "${project_root}/scripts/build-testnet.sh" verification
     fi
 fi
 
 require_artifact verification
-require_artifact managementel
 
 if [[ "${DEPLOY_DFS}" == "true" ]]; then
     require_artifact dfs
@@ -113,14 +105,12 @@ fi
 
 echo "[deploy-jungle4] Verifying chain accounts"
 require_chain_account "${VERIFICATION_ACCOUNT}"
-require_chain_account "${MANAGEMENT_ACCOUNT}"
 if [[ "${DEPLOY_DFS}" == "true" ]]; then
     require_chain_account "${DFS_ACCOUNT}"
 fi
 
 deploy_contract "${VERIFICATION_ACCOUNT}" verification
-deploy_contract "${MANAGEMENT_ACCOUNT}" managementel
-add_code_permission "${MANAGEMENT_ACCOUNT}"
+add_code_permission "${VERIFICATION_ACCOUNT}"
 
 if [[ "${DEPLOY_DFS}" == "true" ]]; then
     deploy_contract "${DFS_ACCOUNT}" dfs
@@ -133,13 +123,12 @@ Jungle4 deploy completed.
 
 RPC URL: ${RPC_URL}
 verification account: ${VERIFICATION_ACCOUNT}
-management account: ${MANAGEMENT_ACCOUNT}
 dfs account: ${DFS_ACCOUNT}
 dfs deployed: ${DEPLOY_DFS}
 
 Next steps:
-  - Configure management payment tokens and free policy.
+  - Configure verification payment tokens with setpaytoken.
   - Optionally bootstrap dfs policy and accepted tokens.
-  - Verify tables with cleos get table commands from docs/jungle4-deploy.md
+  - Verify tables with cleos get table commands from README.md
 
 EOF

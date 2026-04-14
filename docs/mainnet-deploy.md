@@ -1,5 +1,9 @@
 # Mainnet Deploy
 
+> Legacy note: this guide still describes the old `managementel -> verification` flow.
+> The current codebase accepts paid submissions directly in `verification`; use `README.md`
+> and the updated scripts as the source of truth until this document is rewritten.
+
 This runbook prepares the three-contract architecture for GlobalForce mainnet at
 `https://history.globalforce.io`:
 

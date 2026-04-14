@@ -1,5 +1,5 @@
 param(
-    [string[]]$ContractName = @("verification", "managementel", "dfs")
+    [string[]]$ContractName = @("verification", "dfs")
 )
 
 $ErrorActionPreference = "Stop"

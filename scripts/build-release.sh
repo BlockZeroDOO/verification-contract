@@ -18,7 +18,7 @@ fi
 if [[ $# -gt 0 ]]; then
     contracts=("$@")
 else
-    contracts=("verification" "managementel" "dfs")
+    contracts=("verification" "dfs")
 fi
 
 echo "Using compiler: ${compiler}"

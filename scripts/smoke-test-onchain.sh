@@ -10,6 +10,8 @@ KYC_PROVIDER="${KYC_PROVIDER:-denotary-kyc}"
 KYC_JURISDICTION="${KYC_JURISDICTION:-EU}"
 KYC_LEVEL="${KYC_LEVEL:-2}"
 KYC_EXPIRES_AT="${KYC_EXPIRES_AT:-2030-01-01T00:00:00}"
+WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-30}"
+WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the verification contract authority account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded test account that can sign submits.}"
@@ -51,6 +53,62 @@ get_table_json() {
     cleos -u "${RPC_URL}" get table "${code}" "${scope}" "${table}"
 }
 
+kyc_row_exists() {
+    get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" "kyc" | "${JQ_BIN}" -e \
+        --arg account "${SUBMITTER_ACCOUNT}" \
+        '.rows[] | select(.account == $account)' >/dev/null 2>&1
+}
+
+wait_for_table_match() {
+    local code="$1"
+    local scope="$2"
+    local table="$3"
+    local jq_filter="$4"
+    local description="$5"
+
+    local deadline=$(( $(date -u +%s) + WAIT_TIMEOUT_SEC ))
+    while true; do
+        if get_table_json "${code}" "${scope}" "${table}" | "${JQ_BIN}" -e "${jq_filter}" >/dev/null 2>&1; then
+            return 0
+        fi
+
+        if (( $(date -u +%s) >= deadline )); then
+            echo "Timed out waiting for ${description}." >&2
+            exit 1
+        fi
+
+        sleep "${WAIT_INTERVAL_SEC}"
+    done
+}
+
+wait_for_table_field_eq() {
+    local code="$1"
+    local scope="$2"
+    local table="$3"
+    local row_id="$4"
+    local field_name="$5"
+    local expected="$6"
+    local description="$7"
+
+    local deadline=$(( $(date -u +%s) + WAIT_TIMEOUT_SEC ))
+    while true; do
+        if get_table_json "${code}" "${scope}" "${table}" | "${JQ_BIN}" -e \
+            --argjson id "${row_id}" \
+            --arg field "${field_name}" \
+            --arg expected "${expected}" \
+            '.rows[] | select(.id == $id) | .[$field] | tostring == $expected' >/dev/null 2>&1; then
+            return 0
+        fi
+
+        if (( $(date -u +%s) >= deadline )); then
+            echo "Timed out waiting for ${description}." >&2
+            exit 1
+        fi
+
+        sleep "${WAIT_INTERVAL_SEC}"
+    done
+}
+
 assert_eq() {
     local expected="$1"
     local actual="$2"
@@ -67,6 +125,15 @@ assert_commitment_field() {
     local field_name="$2"
     local expected="$3"
 
+    wait_for_table_field_eq \
+        "${VERIFICATION_ACCOUNT}" \
+        "${VERIFICATION_ACCOUNT}" \
+        "commitments" \
+        "${commitment_id}" \
+        "${field_name}" \
+        "${expected}" \
+        "commitment ${commitment_id} field ${field_name} == ${expected}"
+
     local actual
     actual="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
         --argjson id "${commitment_id}" \
@@ -78,6 +145,13 @@ assert_commitment_field() {
 
 get_commitment_id_by_external_ref() {
     local external_ref="$1"
+    wait_for_table_match \
+        "${VERIFICATION_ACCOUNT}" \
+        "${VERIFICATION_ACCOUNT}" \
+        "commitments" \
+        ".rows[] | select(.external_ref == \"${external_ref}\")" \
+        "commitment with external_ref ${external_ref}"
+
     get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
         --arg external_ref "${external_ref}" \
         '.rows[] | select(.external_ref == $external_ref) | .id' | tail -n 1
@@ -87,6 +161,15 @@ assert_batch_field() {
     local batch_id="$1"
     local field_name="$2"
     local expected="$3"
+
+    wait_for_table_field_eq \
+        "${VERIFICATION_ACCOUNT}" \
+        "${VERIFICATION_ACCOUNT}" \
+        "batches" \
+        "${batch_id}" \
+        "${field_name}" \
+        "${expected}" \
+        "batch ${batch_id} field ${field_name} == ${expected}"
 
     local actual
     actual="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
@@ -99,6 +182,13 @@ assert_batch_field() {
 
 get_batch_id_by_external_ref() {
     local external_ref="$1"
+    wait_for_table_match \
+        "${VERIFICATION_ACCOUNT}" \
+        "${VERIFICATION_ACCOUNT}" \
+        "batches" \
+        ".rows[] | select(.external_ref == \"${external_ref}\")" \
+        "batch with external_ref ${external_ref}"
+
     get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
         --arg external_ref "${external_ref}" \
         '.rows[] | select(.external_ref == $external_ref) | .id' | tail -n 1
@@ -125,10 +215,20 @@ BATCH_EXTREF="$(hash_text "batch-${TIMESTAMP}")"
 ROOT_HASH="$(hash_text "root-${TIMESTAMP}")"
 MANIFEST_HASH="$(hash_text "manifest-${TIMESTAMP}")"
 
-log "Creating KYC row for submitter"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" issuekyc \
-    "[\"${SUBMITTER_ACCOUNT}\",${KYC_LEVEL},\"${KYC_PROVIDER}\",\"${KYC_JURISDICTION}\",\"${KYC_EXPIRES_AT}\"]" \
-    -p "${OWNER_ACCOUNT}@active"
+if kyc_row_exists; then
+    log "KYC row already exists for submitter; skipping issue"
+else
+    log "Creating KYC row for submitter"
+    cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" issuekyc \
+        "[\"${SUBMITTER_ACCOUNT}\",${KYC_LEVEL},\"${KYC_PROVIDER}\",\"${KYC_JURISDICTION}\",\"${KYC_EXPIRES_AT}\"]" \
+        -p "${OWNER_ACCOUNT}@active"
+    wait_for_table_match \
+        "${VERIFICATION_ACCOUNT}" \
+        "${VERIFICATION_ACCOUNT}" \
+        "kyc" \
+        ".rows[] | select(.account == \"${SUBMITTER_ACCOUNT}\")" \
+        "kyc row for ${SUBMITTER_ACCOUNT}"
+fi
 
 log "Renewing KYC row"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" renewkyc \
@@ -139,16 +239,34 @@ log "Creating schema"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" addschema \
     "[${SCHEMA_ID},\"1.0.0\",\"$(hash_text "schema-rules-${TIMESTAMP}")\",\"$(hash_text "hash-policy-${TIMESTAMP}")\"]" \
     -p "${OWNER_ACCOUNT}@active"
+wait_for_table_match \
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "schemas" \
+    ".rows[] | select(.id == ${SCHEMA_ID})" \
+    "schema ${SCHEMA_ID}"
 
 log "Creating single-submit policy"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
     "[${POLICY_SINGLE_ID},true,false,true,${KYC_LEVEL},true]" \
     -p "${OWNER_ACCOUNT}@active"
+wait_for_table_match \
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "policies" \
+    ".rows[] | select(.id == ${POLICY_SINGLE_ID})" \
+    "policy ${POLICY_SINGLE_ID}"
 
 log "Creating batch-submit policy"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
     "[${POLICY_BATCH_ID},false,true,false,0,true]" \
     -p "${OWNER_ACCOUNT}@active"
+wait_for_table_match \
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "policies" \
+    ".rows[] | select(.id == ${POLICY_BATCH_ID})" \
+    "policy ${POLICY_BATCH_ID}"
 
 log "Submitting commitment #1"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \

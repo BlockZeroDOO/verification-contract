@@ -313,3 +313,17 @@ Generated: 2026-04-14
 - Added rollout dry-run runbook:
 - `docs/denotary-rollout-dry-run.md`
 - Fixed PowerShell service runners to avoid unsupported `?.Source` syntax on older PowerShell versions.
+
+19. Jungle4 deployment validation and WSL runtime fixes
+
+- Adjusted Linux/WSL shell launchers to prefer POSIX Python interpreters before Windows `.venv/Scripts/python.exe`.
+- Hardened `scripts/smoke-test-onchain.sh` for public testnet latency:
+- waits for KYC, schema, policy, commitment, and batch visibility before asserting
+- reuses an existing KYC row instead of failing on repeated runs
+- Recorded a successful Jungle4 deployment report:
+- `docs/jungle4-deployment-report.md`
+- Captured successful live-chain validation artifacts for Jungle4 deployment:
+- deploy transaction `77d80180e019d24a580578df6512ced0a9c5c0775d5b8f6b75e10f0cfbb78ab1`
+- code hash `28704acfd3ef748ff7655ecc02a33838f97768f79b5b53952a37d955746ea0be`
+- single flow tx `b40fcdede4f0785d41d8a903bca85fbae7e2dcd90361026f900df1e2ea5a8b1f`
+- batch flow txs `e3338678d459652046791b0d752496dba98e1c365bfc6e651998ae5ee658c69c`, `2984db871c45d0695ca36b3e10b5f6323552def2e1be01352c5e707225722de2`, `af781810bc258d1d843641e50dd157f66e12045574b5f6fa7bc3a5b36c91f0c0`

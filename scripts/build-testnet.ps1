@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $includeDir = Join-Path $projectRoot "include"
+$ricardianDir = Join-Path $projectRoot "ricardian"
 
 $compiler = Get-Command cdt-cpp -ErrorAction SilentlyContinue
 if (-not $compiler) {
@@ -41,6 +42,7 @@ foreach ($name in $ContractName) {
     try {
         & $compiler.Source `
             -I $includeDir `
+            -R $ricardianDir `
             -O3 `
             --abigen `
             --abigen_output $abiFile `

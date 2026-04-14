@@ -5,6 +5,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd "${script_dir}/.." && pwd)"
 include_dir="${project_root}/include"
+ricardian_dir="${project_root}/ricardian"
 
 if command -v cdt-cpp >/dev/null 2>&1; then
     compiler="cdt-cpp"
@@ -44,6 +45,7 @@ build_contract() {
     pushd "${project_root}" >/dev/null
     "${compiler}" \
         -I "${include_dir}" \
+        -R "${ricardian_dir}" \
         -O3 \
         --abigen \
         --abigen_output "${abi_file}" \

@@ -25,6 +25,7 @@
 Current baseline artifact:
 
 - [tests/test_service_integration.py](/c:/projects/verification-contract/tests/test_service_integration.py:1)
+- [tests/live_chain_integration.py](/c:/projects/verification-contract/tests/live_chain_integration.py:1)
 
 ### 3. End-to-end verification tests
 
@@ -125,6 +126,14 @@ Current baseline artifact:
 - single request can move from ingress prepare to receipt and audit lookup
 - batch request can move from ingress prepare to receipt and audit lookup
 - audit API can resolve by `commitment_id` and `batch_id` after watcher anchor updates
+
+### Live-chain integration baseline
+
+- local services can prepare requests while targeting a real Antelope RPC
+- `submit` can be broadcast on-chain and reconciled into watcher finality state
+- `submitroot`, `linkmanifest`, and `closebatch` can be broadcast on-chain and reconciled into watcher finality state
+- finalized receipt matches the real live-chain `tx_id` and `block_num`
+- audit API can resolve live requests by `tx_id`, `commitment_id`, `batch_id`, and `external_ref_hash`
 
 ### Receipt service
 

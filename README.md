@@ -23,6 +23,7 @@ Implemented roadmap stages:
 Current next step:
 
 - Stage 9: security hardening
+- Stage 11: live-chain integration depth and rollout gates
 
 ## `verification` scope
 
@@ -196,6 +197,49 @@ The smoke test covers:
 - duplicate batch rejection
 - manifest linking and close guards
 
+## Integration tests
+
+Local mock-chain integration baseline:
+
+- [tests/test_service_integration.py](/c:/projects/verification-contract/tests/test_service_integration.py:1)
+- [scripts/run-integration-tests.sh](/c:/projects/verification-contract/scripts/run-integration-tests.sh:1)
+- [docs/denotary-integration-tests.md](/c:/projects/verification-contract/docs/denotary-integration-tests.md:1)
+
+Live-chain integration baseline:
+
+- [tests/live_chain_integration.py](/c:/projects/verification-contract/tests/live_chain_integration.py:1)
+- [scripts/run-live-chain-integration.sh](/c:/projects/verification-contract/scripts/run-live-chain-integration.sh:1)
+- [scripts/run-live-chain-integration.ps1](/c:/projects/verification-contract/scripts/run-live-chain-integration.ps1:1)
+
+Typical `deNotary.io` run:
+
+```bash
+export OWNER_ACCOUNT=verification
+export SUBMITTER_ACCOUNT=someuser
+./scripts/run-live-chain-integration.sh --owner-account "${OWNER_ACCOUNT}" --submitter-account "${SUBMITTER_ACCOUNT}"
+```
+
+Typical Jungle4 run:
+
+```bash
+export OWNER_ACCOUNT=verification
+export SUBMITTER_ACCOUNT=someuser
+./scripts/run-live-chain-integration.sh \
+  --rpc-url https://jungle4.api.eosnation.io \
+  --expected-chain-id 73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d \
+  --network-label Jungle4 \
+  --owner-account "${OWNER_ACCOUNT}" \
+  --submitter-account "${SUBMITTER_ACCOUNT}"
+```
+
+This live suite:
+
+- starts local `Ingress API`, `Finality Watcher`, `Receipt Service`, and `Audit API`
+- prepares real single and batch requests through the local services
+- pushes actual `submit`, `submitroot`, `linkmanifest`, and `closebatch` transactions with `cleos`
+- waits for irreversible finality on the live chain
+- verifies finalized receipts and audit lookups by `tx_id`, `commitment_id`, `batch_id`, and `external_ref_hash`
+
 ## Documentation map
 
 Architecture and roadmap:
@@ -214,6 +258,7 @@ Service docs:
 - [docs/denotary-finality-services.md](/c:/projects/verification-contract/docs/denotary-finality-services.md:1)
 - [docs/denotary-audit-api.md](/c:/projects/verification-contract/docs/denotary-audit-api.md:1)
 - [docs/denotary-integration-tests.md](/c:/projects/verification-contract/docs/denotary-integration-tests.md:1)
+- [docs/denotary-live-chain-integration.md](/c:/projects/verification-contract/docs/denotary-live-chain-integration.md:1)
 - [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1)
 - [docs/denotary-security-hardening.md](/c:/projects/verification-contract/docs/denotary-security-hardening.md:1)
 

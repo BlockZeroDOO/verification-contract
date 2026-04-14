@@ -84,6 +84,19 @@ export SUBMITTER_ACCOUNT=youruser
 ./scripts/smoke-test-jungle4.sh
 ```
 
+## Live-chain integration test
+
+```bash
+export OWNER_ACCOUNT=verification
+export SUBMITTER_ACCOUNT=youruser
+./scripts/run-live-chain-integration.sh \
+  --rpc-url https://jungle4.api.eosnation.io \
+  --expected-chain-id 73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d \
+  --network-label Jungle4 \
+  --owner-account "${OWNER_ACCOUNT}" \
+  --submitter-account "${SUBMITTER_ACCOUNT}"
+```
+
 ## Verify on-chain state
 
 ```bash

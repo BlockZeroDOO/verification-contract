@@ -102,6 +102,14 @@ export SUBMITTER_ACCOUNT=youruser
 ./scripts/smoke-test-onchain.sh
 ```
 
+Live-chain integration run:
+
+```bash
+export OWNER_ACCOUNT=verification
+export SUBMITTER_ACCOUNT=youruser
+./scripts/run-live-chain-integration.sh --owner-account "${OWNER_ACCOUNT}" --submitter-account "${SUBMITTER_ACCOUNT}"
+```
+
 Legacy paid-proof smoke wrapper, if still needed for the old proof flow:
 
 ```bash

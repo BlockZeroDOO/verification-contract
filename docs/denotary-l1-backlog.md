@@ -196,6 +196,8 @@ Already added in the current pass:
 - local service integration suite
 - mock-chain finality tests
 - end-to-end single and batch off-chain pipeline coverage
+- live-chain integration runner for real `verification` broadcasts
+- receipt and audit verification against live `tx_id`, `commitment_id`, and `batch_id`
 
 ## Epic 10. Optional proof layer
 

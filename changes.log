@@ -275,3 +275,21 @@ Generated: 2026-04-14
 - end-to-end batch request pipeline
 - watcher conflict rejection on re-registration
 - receipt and audit verification after simulated irreversible finality
+
+17. Live-chain integration baseline
+
+- Added a real-chain integration runner:
+- `tests/live_chain_integration.py`
+- Added runner scripts:
+- `scripts/run-live-chain-integration.sh`
+- `scripts/run-live-chain-integration.ps1`
+- Added live-chain documentation:
+- `docs/denotary-live-chain-integration.md`
+
+- Implemented live-chain checks for:
+- local in-process `Ingress API`, `Finality Watcher`, `Receipt Service`, and `Audit API`
+- real `cleos` broadcasts for `submit`
+- real `cleos` broadcasts for `submitroot`, `linkmanifest`, and `closebatch`
+- irreversible finality polling against a live Antelope RPC
+- receipt verification against real `tx_id` and `block_num`
+- audit verification by `tx_id`, `commitment_id`, `batch_id`, and `external_ref_hash`

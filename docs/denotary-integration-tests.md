@@ -2,13 +2,16 @@
 
 ## Purpose
 
-This document describes the current integration-testing baseline for the off-chain DeNotary pipeline.
+This document describes the current integration-testing baseline for the DeNotary services layer and its adjacent live-chain follow-up.
 
 Implementation:
 
 - [tests/test_service_integration.py](/c:/projects/verification-contract/tests/test_service_integration.py:1)
 - [scripts/run-integration-tests.sh](/c:/projects/verification-contract/scripts/run-integration-tests.sh:1)
 - [scripts/run-integration-tests.ps1](/c:/projects/verification-contract/scripts/run-integration-tests.ps1:1)
+- [tests/live_chain_integration.py](/c:/projects/verification-contract/tests/live_chain_integration.py:1)
+- [scripts/run-live-chain-integration.sh](/c:/projects/verification-contract/scripts/run-live-chain-integration.sh:1)
+- [scripts/run-live-chain-integration.ps1](/c:/projects/verification-contract/scripts/run-live-chain-integration.ps1:1)
 
 ## Current coverage
 
@@ -58,6 +61,10 @@ The integration suite starts local in-process servers for:
 - batch inclusion-proof generation and verification
 - tx failure and dropped-tx recovery paths
 
+Those items are now partially addressed by the separate live-chain suite documented in:
+
+- [docs/denotary-live-chain-integration.md](/c:/projects/verification-contract/docs/denotary-live-chain-integration.md:1)
+
 ## Run
 
 Linux / WSL:
@@ -72,10 +79,26 @@ PowerShell:
 ./scripts/run-integration-tests.ps1
 ```
 
-## Next step
+## Live-chain follow-up
 
-The natural follow-up after this baseline is:
+When you want a real-chain end-to-end check instead of the in-process mock RPC, run:
 
-- add live-chain integration tests for `verification`
-- add finality failure-path tests
-- connect integration assertions to rollout gates
+Linux / WSL:
+
+```bash
+./scripts/run-live-chain-integration.sh --owner-account verification --submitter-account someuser
+```
+
+PowerShell:
+
+```powershell
+./scripts/run-live-chain-integration.ps1 --owner-account verification --submitter-account someuser
+```
+
+The live-chain suite:
+
+- starts the local DeNotary services in-process
+- prepares requests through `Ingress API`
+- broadcasts real `verification` actions with `cleos`
+- waits for irreversible finality against the target RPC
+- verifies `Receipt Service` and `Audit API` against actual `tx_id`, `commitment_id`, and `batch_id`

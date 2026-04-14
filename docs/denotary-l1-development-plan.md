@@ -17,7 +17,7 @@ Already implemented in this repository:
 Current next step:
 
 - Stage 9: security hardening in progress
-- Stage 11 baseline integration tests started
+- Stage 11 live-chain integration and rollout depth in progress
 
 ## Initial gap against TSD v2
 
@@ -229,10 +229,13 @@ Current baseline already added:
 - in-process tests for ingress, watcher, receipt, and audit services
 - mock chain finality simulation
 - end-to-end single and batch off-chain verification paths
+- live-chain integration runner for real `cleos` broadcasts and irreversible-finality checks
+- receipt and audit assertions against real `tx_id`, `commitment_id`, `batch_id`, and `external_ref_hash`
 
 Artifact:
 
 - [docs/denotary-integration-tests.md](/c:/projects/verification-contract/docs/denotary-integration-tests.md:1)
+- [docs/denotary-live-chain-integration.md](/c:/projects/verification-contract/docs/denotary-live-chain-integration.md:1)
 
 ## Recommended implementation order
 

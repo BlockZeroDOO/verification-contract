@@ -1,123 +1,144 @@
-# Verification Contracts for DeNotary.io
+# DeNotary On-Chain Contracts
 
 This repository currently contains two Antelope-compatible smart contracts:
 
-- `verification`: immutable proof registry with built-in payment handling
-- `dfs`: work-in-progress DFS registry, stake, pricing, and settlement contract scaffold
+- `verification`: DeNotary L1 on-chain registry and anchoring core
+- `dfs`: DFS registry, stake, pricing, receipts, and settlement scaffold
 
-`managementel` has been removed. Clients now send paid proof submissions directly to
-`verification`.
+## `verification` scope
 
-## Contract roles
+`verification` now contains the DeNotary on-chain baseline for:
 
-### `verification`
-
-`verification` now handles both payment configuration and proof storage:
-
-- accepted payment tokens in `paytokens`
-- paid proof submissions via `*::transfer`
-- treasury withdrawals
-- immutable proof records in `proofs`
-
-Each proof row stores:
-
-- `writer`
-- `submitter`
-- `object_hash`
-- `canonicalization_profile`
-- `client_reference`
-- `submitted_at`
-
-The `writer` is now always the `verification` contract account itself.
-
-### `dfs`
-
-`dfs` remains a separate scaffold for the DFS economic and trust layer:
-
-- node registry
-- stake policy and stake custody
-- storage price offers
-- accepted token configuration
-- revenue balances and settlements
-
-The current hardening and security backlog for `dfs` is tracked in
-`docs/dfs-hardening-plan.md`.
+- KYC access control
+- schema registry
+- policy registry
+- single-record anchoring
+- batch anchoring
+- business lifecycle tracking for commitments and batches
+- legacy paid proof ingestion and treasury handling
 
 ## Tables
 
-### `verification`
+### Core registry tables
 
-- `proofs`: append-only proof records with `writer`, `submitter`, compact `checksum256 object_hash`,
-  `canonicalization_profile`, `client_reference`, and `submitted_at`
-- `paytokens`: accepted payment tokens with `token_contract` and a single fixed `price`
+- `kyc`: KYC state by account
+- `schemas`: canonicalization and hash-policy references
+- `policies`: single/batch/KYC/ZK capability flags
+- `commitments`: single-record anchoring rows
+- `batches`: batch anchoring rows
+- `counters`: monotonic IDs for anchored entities
+
+### Legacy/payment tables
+
+- `proofs`: legacy append-only proof rows used by the paid transfer flow
+- `paytokens`: accepted payment tokens with fixed prices
 
 ## Actions
 
-### `verification`
+### Registry governance
+
+- `issuekyc(name account, uint8_t level, string provider, string jurisdiction, time_point_sec expires_at)`
+- `renewkyc(name account, time_point_sec expires_at)`
+- `revokekyc(name account)`
+- `suspendkyc(name account)`
+- `addschema(uint64_t id, string version, checksum256 canonicalization_hash, checksum256 hash_policy)`
+- `updateschema(uint64_t id, string version, checksum256 canonicalization_hash, checksum256 hash_policy)`
+- `deprecate(uint64_t id)`
+- `setpolicy(uint64_t id, bool allow_single, bool allow_batch, bool require_kyc, uint8_t min_kyc_level, bool active)`
+- `enablezk(uint64_t id)`
+- `disablezk(uint64_t id)`
+
+### Anchoring core
+
+- `submit(name submitter, uint64_t schema_id, uint64_t policy_id, checksum256 object_hash, checksum256 external_ref)`
+- `supersede(uint64_t id, uint64_t successor_id)`
+- `revokecmmt(uint64_t id)`
+- `expirecmmt(uint64_t id)`
+- `submitroot(name submitter, uint64_t schema_id, uint64_t policy_id, checksum256 root_hash, uint32_t leaf_count, checksum256 external_ref)`
+- `linkmanifest(uint64_t id, checksum256 manifest_hash)`
+- `closebatch(uint64_t id)`
+
+### Legacy/payment layer
 
 - `record(name submitter, checksum256 object_hash, string canonicalization_profile, string client_reference)`
 - `setpaytoken(name token_contract, asset price)`
 - `rmpaytoken(name token_contract, symbol token_symbol)`
 - `withdraw(name token_contract, name to, asset quantity, string memo)`
+- `*::transfer` notify handler for the paid legacy flow
 
-`record(...)` is intended for contract-internal writes. External clients should submit by sending a
-token transfer directly to `verification`.
+## On-chain model notes
 
-## Request model
+- `commitments.status` is a business status, not a finality status
+- `batches.status` tracks open/closed business lifecycle only
+- irreversible finality stays in the off-chain read model by design
+- `supersede(...)` now links the original commitment to a successor via `superseded_by`
+- batch closure requires a linked `manifest_hash`
 
-Paid memo format:
+## Build
 
-```text
-<64-char hex hash>|SHA-256|<canonicalization>|<client_reference>
-```
-
-Rules:
-
-- every submission is paid; there are no wholesale or free flows
-- `client_reference` is required and acts as the idempotency key per `submitter`
-- the same `object_hash` may be submitted multiple times if `client_reference` is new
-- `canonicalization_profile` must be non-empty printable ASCII up to 32 characters
-- `client_reference` must be printable ASCII, max 128 chars, and cannot contain `|`
-- only `SHA-256` is currently accepted
-- transferred quantity must exactly match the configured fixed price for that token
-
-## Example flow
+Linux / WSL:
 
 ```bash
-cleos push action verification setpaytoken '["eosio.token", "1.0000 GFT"]' -p verification
-
-cleos push action eosio.token transfer '[
-  "retail.user",
-  "verification",
-  "1.0000 GFT",
-  "1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef|SHA-256|none|retail-0001"
-]' -p retail.user
-
-cleos get table verification verification proofs
-cleos get table verification verification paytokens
+./scripts/build-testnet.sh
+./scripts/build-release.sh
 ```
 
-## Notes
+PowerShell:
 
-- `verification` is now both the proof source of truth and the pricing/treasury layer.
-- `setpaytoken` validates the configured symbol precision against the token contract `stat` table.
-- `verification` pays RAM for stored proof rows.
-- `withdraw` transfers funds already held by `verification`.
-- `verification` needs `eosio.code` on `active` if you want contract-triggered withdrawals to work.
+```powershell
+./scripts/build-testnet.ps1
+./scripts/build-release.ps1
+```
 
-## Build and deploy
+Expected artifacts:
 
-- Testnet build scripts: `scripts/build-testnet.sh`, `scripts/build-testnet.ps1`
-- Release build scripts: `scripts/build-release.sh`, `scripts/build-release.ps1`
-- Linux bootstrap: `scripts/bootstrap-linux-antelope.sh`
-- Jungle4 deploy script: `scripts/deploy-jungle4.sh`
-- Jungle4 smoke test wrapper: `scripts/smoke-test-jungle4.sh`
-- Smoke test: `scripts/smoke-test.sh`
+- `dist/verification/verification.wasm`
+- `dist/verification/verification.abi`
+- `dist/dfs/dfs.wasm`
+- `dist/dfs/dfs.abi`
 
-## Desktop App
+## On-chain smoke test
 
-- Windows environment check: `scripts/check-tauri-windows-env.ps1`
-- Windows setup guide: `docs/tauri-windows-setup.md`
+The new registry and anchoring flow can be validated with:
+
+```bash
+export RPC_URL=https://your-rpc
+export OWNER_ACCOUNT=verification
+export VERIFICATION_ACCOUNT=verification
+export SUBMITTER_ACCOUNT=someuser
+./scripts/smoke-test-onchain.sh
+```
+
+The script checks:
+
+- KYC issuance and renewal path
+- schema and policy creation
+- single commitment creation
+- duplicate single request rejection
+- supersede flow with explicit successor
+- revoke and expire lifecycle transitions
+- batch creation
+- duplicate batch request rejection
+- manifest linking
+- batch close guard before manifest
+- successful batch close after manifest linking
+
+Detailed usage is documented in [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1).
+
+## Off-chain baseline
+
+The stage-6 ingestion scaffold lives in:
+
+- [services/ingress_api.py](/c:/projects/verification-contract/services/ingress_api.py:1)
+- [docs/denotary-ingress-api.md](/c:/projects/verification-contract/docs/denotary-ingress-api.md:1)
+
+It currently prepares deterministic single and batch payloads for `submit` and `submitroot`.
+
+## Legacy note
+
+Some older deploy and smoke documents still describe the removed `managementel` flow. Treat the
+current `README`, the `denotary-*` docs, and the updated scripts as the source of truth for the
+current contract model.
 
 ## License
 

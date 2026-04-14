@@ -1,0 +1,229 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+RPC_URL="${RPC_URL:-https://dev-history.globalforce.io}"
+VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
+SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
+OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
+KYC_PROVIDER="${KYC_PROVIDER:-denotary-kyc}"
+KYC_JURISDICTION="${KYC_JURISDICTION:-EU}"
+KYC_LEVEL="${KYC_LEVEL:-2}"
+KYC_EXPIRES_AT="${KYC_EXPIRES_AT:-2030-01-01T00:00:00}"
+
+: "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the verification contract authority account.}"
+: "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded test account that can sign submits.}"
+
+if ! command -v cleos >/dev/null 2>&1; then
+    echo "cleos is required for smoke-test-onchain.sh" >&2
+    exit 1
+fi
+
+if command -v jq >/dev/null 2>&1; then
+    JQ_BIN="jq"
+else
+    echo "jq is required for smoke-test-onchain.sh" >&2
+    exit 1
+fi
+
+hash_text() {
+    local input="$1"
+    if command -v sha256sum >/dev/null 2>&1; then
+        printf '%s' "${input}" | sha256sum | awk '{print $1}'
+    elif command -v shasum >/dev/null 2>&1; then
+        printf '%s' "${input}" | shasum -a 256 | awk '{print $1}'
+    elif command -v openssl >/dev/null 2>&1; then
+        printf '%s' "${input}" | openssl dgst -sha256 -binary | xxd -p -c 256
+    else
+        echo "A SHA-256 tool is required (sha256sum, shasum, or openssl)." >&2
+        exit 1
+    fi
+}
+
+log() {
+    printf '[smoke-test-onchain] %s\n' "$1"
+}
+
+get_table_json() {
+    local code="$1"
+    local scope="$2"
+    local table="$3"
+    cleos -u "${RPC_URL}" get table "${code}" "${scope}" "${table}"
+}
+
+assert_eq() {
+    local expected="$1"
+    local actual="$2"
+    local message="$3"
+
+    if [[ "${expected}" != "${actual}" ]]; then
+        echo "Assertion failed: ${message}. Expected '${expected}', got '${actual}'." >&2
+        exit 1
+    fi
+}
+
+assert_commitment_field() {
+    local commitment_id="$1"
+    local field_name="$2"
+    local expected="$3"
+
+    local actual
+    actual="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
+        --argjson id "${commitment_id}" \
+        --arg field "${field_name}" \
+        '.rows[] | select(.id == $id) | .[$field]')"
+
+    assert_eq "${expected}" "${actual}" "commitment ${commitment_id} field ${field_name}"
+}
+
+get_commitment_id_by_external_ref() {
+    local external_ref="$1"
+    get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
+        --arg external_ref "${external_ref}" \
+        '.rows[] | select(.external_ref == $external_ref) | .id' | tail -n 1
+}
+
+assert_batch_field() {
+    local batch_id="$1"
+    local field_name="$2"
+    local expected="$3"
+
+    local actual
+    actual="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
+        --argjson id "${batch_id}" \
+        --arg field "${field_name}" \
+        '.rows[] | select(.id == $id) | .[$field]')"
+
+    assert_eq "${expected}" "${actual}" "batch ${batch_id} field ${field_name}"
+}
+
+get_batch_id_by_external_ref() {
+    local external_ref="$1"
+    get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
+        --arg external_ref "${external_ref}" \
+        '.rows[] | select(.external_ref == $external_ref) | .id' | tail -n 1
+}
+
+TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
+BASE_ID="$(date -u +%s)"
+
+SCHEMA_ID="${SCHEMA_ID:-$((BASE_ID + 1000))}"
+POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-$((BASE_ID + 2000))}"
+POLICY_BATCH_ID="${POLICY_BATCH_ID:-$((BASE_ID + 2001))}"
+
+COMMIT_EXTREF_1="$(hash_text "commit-1-${TIMESTAMP}")"
+COMMIT_EXTREF_2="$(hash_text "commit-2-${TIMESTAMP}")"
+COMMIT_EXTREF_3="$(hash_text "commit-3-${TIMESTAMP}")"
+COMMIT_EXTREF_4="$(hash_text "commit-4-${TIMESTAMP}")"
+
+OBJECT_HASH_1="$(hash_text "object-1-${TIMESTAMP}")"
+OBJECT_HASH_2="$(hash_text "object-2-${TIMESTAMP}")"
+OBJECT_HASH_3="$(hash_text "object-3-${TIMESTAMP}")"
+OBJECT_HASH_4="$(hash_text "object-4-${TIMESTAMP}")"
+
+BATCH_EXTREF="$(hash_text "batch-${TIMESTAMP}")"
+ROOT_HASH="$(hash_text "root-${TIMESTAMP}")"
+MANIFEST_HASH="$(hash_text "manifest-${TIMESTAMP}")"
+
+log "Creating KYC row for submitter"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" issuekyc \
+    "[\"${SUBMITTER_ACCOUNT}\",${KYC_LEVEL},\"${KYC_PROVIDER}\",\"${KYC_JURISDICTION}\",\"${KYC_EXPIRES_AT}\"]" \
+    -p "${OWNER_ACCOUNT}@active"
+
+log "Renewing KYC row"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" renewkyc \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${KYC_EXPIRES_AT}\"]" \
+    -p "${OWNER_ACCOUNT}@active"
+
+log "Creating schema"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" addschema \
+    "[${SCHEMA_ID},\"1.0.0\",\"$(hash_text "schema-rules-${TIMESTAMP}")\",\"$(hash_text "hash-policy-${TIMESTAMP}")\"]" \
+    -p "${OWNER_ACCOUNT}@active"
+
+log "Creating single-submit policy"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
+    "[${POLICY_SINGLE_ID},true,false,true,${KYC_LEVEL},true]" \
+    -p "${OWNER_ACCOUNT}@active"
+
+log "Creating batch-submit policy"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
+    "[${POLICY_BATCH_ID},false,true,false,0,true]" \
+    -p "${OWNER_ACCOUNT}@active"
+
+log "Submitting commitment #1"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_1}\",\"${COMMIT_EXTREF_1}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active"
+COMMITMENT_ID_1="$(get_commitment_id_by_external_ref "${COMMIT_EXTREF_1}")"
+assert_commitment_field "${COMMITMENT_ID_1}" "submitter" "${SUBMITTER_ACCOUNT}"
+assert_commitment_field "${COMMITMENT_ID_1}" "status" "0"
+
+log "Rejecting duplicate commitment request"
+if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_1}\",\"${COMMIT_EXTREF_1}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: duplicate commitment request was accepted." >&2
+    exit 1
+fi
+
+log "Submitting successor commitment #2"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_2}\",\"${COMMIT_EXTREF_2}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active"
+COMMITMENT_ID_2="$(get_commitment_id_by_external_ref "${COMMIT_EXTREF_2}")"
+
+log "Superseding commitment #1 with #2"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" supersede \
+    "[${COMMITMENT_ID_1},${COMMITMENT_ID_2}]" \
+    -p "${SUBMITTER_ACCOUNT}@active"
+assert_commitment_field "${COMMITMENT_ID_1}" "status" "1"
+assert_commitment_field "${COMMITMENT_ID_1}" "superseded_by" "${COMMITMENT_ID_2}"
+assert_commitment_field "${COMMITMENT_ID_2}" "status" "0"
+
+log "Submitting commitment #3 for revoke path"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_3}\",\"${COMMIT_EXTREF_3}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active"
+COMMITMENT_ID_3="$(get_commitment_id_by_external_ref "${COMMIT_EXTREF_3}")"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" revokecmmt "[${COMMITMENT_ID_3}]" -p "${OWNER_ACCOUNT}@active"
+assert_commitment_field "${COMMITMENT_ID_3}" "status" "2"
+
+log "Submitting commitment #4 for expire path"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_4}\",\"${COMMIT_EXTREF_4}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active"
+COMMITMENT_ID_4="$(get_commitment_id_by_external_ref "${COMMIT_EXTREF_4}")"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" expirecmmt "[${COMMITMENT_ID_4}]" -p "${OWNER_ACCOUNT}@active"
+assert_commitment_field "${COMMITMENT_ID_4}" "status" "3"
+
+log "Submitting batch #1"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submitroot \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${BATCH_EXTREF}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active"
+BATCH_ID_1="$(get_batch_id_by_external_ref "${BATCH_EXTREF}")"
+assert_batch_field "${BATCH_ID_1}" "submitter" "${SUBMITTER_ACCOUNT}"
+assert_batch_field "${BATCH_ID_1}" "status" "0"
+
+log "Rejecting duplicate batch request"
+if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submitroot \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${BATCH_EXTREF}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: duplicate batch request was accepted." >&2
+    exit 1
+fi
+
+log "Rejecting closebatch before manifest is linked"
+if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" closebatch "[${BATCH_ID_1}]" -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: closebatch succeeded before manifest linking." >&2
+    exit 1
+fi
+
+log "Linking manifest to batch #1"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" linkmanifest "[${BATCH_ID_1},\"${MANIFEST_HASH}\"]" -p "${SUBMITTER_ACCOUNT}@active"
+assert_batch_field "${BATCH_ID_1}" "manifest_hash" "${MANIFEST_HASH}"
+
+log "Closing batch #1"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" closebatch "[${BATCH_ID_1}]" -p "${SUBMITTER_ACCOUNT}@active"
+assert_batch_field "${BATCH_ID_1}" "status" "1"
+
+log "On-chain smoke test passed"

@@ -327,3 +327,8 @@ Generated: 2026-04-14
 - code hash `28704acfd3ef748ff7655ecc02a33838f97768f79b5b53952a37d955746ea0be`
 - single flow tx `b40fcdede4f0785d41d8a903bca85fbae7e2dcd90361026f900df1e2ea5a8b1f`
 - batch flow txs `e3338678d459652046791b0d752496dba98e1c365bfc6e651998ae5ee658c69c`, `2984db871c45d0695ca36b3e10b5f6323552def2e1be01352c5e707225722de2`, `af781810bc258d1d843641e50dd157f66e12045574b5f6fa7bc3a5b36c91f0c0`
+
+20. Legacy brand cleanup
+
+- Kept Jungle4/testnet token examples on `EOS`, which is the practical network token for the current public test environment.
+- Renamed remaining local legacy reference files in the workspace so the retired branding no longer appears in active filenames.

@@ -45,7 +45,7 @@ This bootstrap does not yet assume:
 - `cdt-cpp` or `eosio-cpp`
 - imported key for the `dfs` deployment authority
 - imported keys for initial node owner accounts
-- chosen testnet stake/payment token, expected to be `GFT`
+- chosen testnet stake/payment token, expected to be a live Antelope symbol such as `EOS`
 - a chosen settlement authority account
 
 Recommended initial accounts:
@@ -99,7 +99,7 @@ Example baseline policy:
 ```powershell
 cleos -u https://history.denotary.io push action dfs setpolicy '[
   "eosio.token",
-  "100000.0000 GFT",
+  "100000.0000 EOS",
   "trimmedmed",
   "settleauth1",
   86400,
@@ -132,7 +132,7 @@ Example:
 ```powershell
 cleos -u https://history.denotary.io push action dfs settoken '[
   "eosio.token",
-  "4,GFT",
+  "4,EOS",
   true
 ]' -p dfs@active
 ```
@@ -181,7 +181,7 @@ Example:
 cleos -u https://history.denotary.io push action eosio.token transfer '[
   "nodeowner1111",
   "dfs",
-  "100000.0000 GFT",
+  "100000.0000 EOS",
   "stake|metadata-node-1"
 ]' -p nodeowner1111@active
 ```
@@ -199,7 +199,7 @@ Example:
 cleos -u https://history.denotary.io push action dfs setprice '[
   "metadata-node-1",
   "eosio.token",
-  "0.2500 GFT",
+  "0.2500 EOS",
   "per_kib"
 ]' -p nodeowner1111@active
 ```
@@ -218,7 +218,7 @@ Example:
 cleos -u https://history.denotary.io push action eosio.token transfer '[
   "retail.user",
   "dfs",
-  "5.0000 GFT",
+  "5.0000 EOS",
   "storage|quote-0001|manifest-sha256-example"
 ]' -p retail.user@active
 ```
@@ -241,11 +241,11 @@ cleos -u https://history.denotary.io push action dfs settle '[
   "chain-tx-0001",
   "manifest-sha256-example",
   "eosio.token",
-  "5.0000 GFT",
-  "0.0000 GFT",
+  "5.0000 EOS",
+  "0.0000 EOS",
   [
-    ["nodeowner1111", "2.5000 GFT"],
-    ["nodeowner2222", "2.5000 GFT"]
+    ["nodeowner1111", "2.5000 EOS"],
+    ["nodeowner2222", "2.5000 EOS"]
   ]
 ]' -p settleauth1@active
 ```
@@ -264,7 +264,7 @@ Example:
 cleos -u https://history.denotary.io push action dfs claimrevenue '[
   "nodeowner1111",
   "eosio.token",
-  "2.5000 GFT"
+  "2.5000 EOS"
 ]' -p nodeowner1111@active
 ```
 

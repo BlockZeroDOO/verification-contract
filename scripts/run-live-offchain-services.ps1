@@ -37,7 +37,7 @@ if (-not $pythonCommand) {
 
 Push-Location $projectRoot
 try {
-    & $pythonCommand @pythonArgs "tests/live_chain_integration.py" @RemainingArgs
+    & $pythonCommand @pythonArgs "tests/live_offchain_services.py" @RemainingArgs
 }
 finally {
     Pop-Location

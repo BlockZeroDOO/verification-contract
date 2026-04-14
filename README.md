@@ -215,6 +215,13 @@ Live-chain integration baseline:
 - [scripts/run-live-chain-integration.ps1](/c:/projects/verification-contract/scripts/run-live-chain-integration.ps1:1)
 - [docs/denotary-live-chain-integration.md](/c:/projects/verification-contract/docs/denotary-live-chain-integration.md:1)
 
+Live off-chain service coverage:
+
+- [tests/live_offchain_services.py](/c:/projects/verification-contract/tests/live_offchain_services.py:1)
+- [scripts/run-live-offchain-services.sh](/c:/projects/verification-contract/scripts/run-live-offchain-services.sh:1)
+- [scripts/run-live-offchain-services.ps1](/c:/projects/verification-contract/scripts/run-live-offchain-services.ps1:1)
+- [docs/denotary-live-offchain-services.md](/c:/projects/verification-contract/docs/denotary-live-offchain-services.md:1)
+
 Rollout dry-run baseline:
 
 - [scripts/run-rollout-dry-run.sh](/c:/projects/verification-contract/scripts/run-rollout-dry-run.sh:1)
@@ -270,6 +277,7 @@ Service docs:
 - [docs/denotary-audit-api.md](/c:/projects/verification-contract/docs/denotary-audit-api.md:1)
 - [docs/denotary-integration-tests.md](/c:/projects/verification-contract/docs/denotary-integration-tests.md:1)
 - [docs/denotary-live-chain-integration.md](/c:/projects/verification-contract/docs/denotary-live-chain-integration.md:1)
+- [docs/denotary-live-offchain-services.md](/c:/projects/verification-contract/docs/denotary-live-offchain-services.md:1)
 - [docs/denotary-rollout-dry-run.md](/c:/projects/verification-contract/docs/denotary-rollout-dry-run.md:1)
 - [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1)
 - [docs/denotary-security-hardening.md](/c:/projects/verification-contract/docs/denotary-security-hardening.md:1)

@@ -368,3 +368,23 @@ Generated: 2026-04-14
 - `docker compose ... up -d --build`
 - successful `healthz` checks for `Ingress API`, `Finality Watcher`, `Receipt Service`, and `Audit API`
 - clean shutdown with `docker compose ... down -v`
+
+23. Live off-chain service test suite
+
+- Added a broader live test suite for the off-chain service surface:
+- `tests/live_offchain_services.py`
+- Added launchers:
+- `scripts/run-live-offchain-services.sh`
+- `scripts/run-live-offchain-services.ps1`
+- Added runbook:
+- `docs/denotary-live-offchain-services.md`
+- Covered live checks for:
+- all `healthz` endpoints
+- ingress redaction and debug-material modes
+- ingress invalid payload rejection
+- watcher auth enforcement
+- watcher idempotent registration and conflict rejection
+- watcher failed-request flow
+- pending, failed, and finalized receipt behavior
+- audit request, chain, lookup, search, and `jsonl` export paths
+- real single and batch finality reconciliation against a live chain

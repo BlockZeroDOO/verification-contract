@@ -1,0 +1,60 @@
+﻿{
+    "sequence":  14,
+    "event":  "failed_surface_prepare",
+    "timestamp":  "2026-04-14T20:18:11Z",
+    "payload":  {
+                    "request":  {
+                                    "submitter":  "vadim1111111",
+                                    "external_ref":  "svc-failed-1776197886",
+                                    "schema":  {
+                                                   "id":  1776201886,
+                                                   "version":  "1.0.0",
+                                                   "active":  true,
+                                                   "canonicalization_profile":  "json-sorted-v1"
+                                               },
+                                    "policy":  {
+                                                   "id":  1776202886,
+                                                   "active":  true,
+                                                   "allow_single":  true,
+                                                   "allow_batch":  false,
+                                                   "require_kyc":  false,
+                                                   "min_kyc_level":  0
+                                               },
+                                    "kyc":  {
+                                                "active":  true,
+                                                "level":  2,
+                                                "expires_at":  "2030-01-01T00:00:00"
+                                            },
+                                    "payload":  {
+                                                    "doc_id":  "svc-failed-1776197886",
+                                                    "kind":  "invoice",
+                                                    "amount":  42
+                                                }
+                                },
+                    "status_code":  200,
+                    "response":  {
+                                     "trace_id":  "91d6c59a-0e2f-438d-be71-15878199e896",
+                                     "request_id":  "a086f38b6bd69012c26159fc28a1460148a1b85658f84541f6844c7c0aa2677c",
+                                     "received_at":  "2026-04-14T20:18:11Z",
+                                     "mode":  "single",
+                                     "canonicalization_profile":  "json-sorted-v1",
+                                     "object_hash":  "5d0bb9759d919bafa0791e00228be6deb2e0aa44596a173382309333c561a7b7",
+                                     "external_ref_hash":  "781d328e8d6e5ea266475af3ecfe401af59dacb00cab37f056626fd68bb68074",
+                                     "prepared_action":  {
+                                                             "contract":  "verification",
+                                                             "action":  "submit",
+                                                             "data":  {
+                                                                          "submitter":  "vadim1111111",
+                                                                          "schema_id":  1776201886,
+                                                                          "policy_id":  1776202886,
+                                                                          "object_hash":  "5d0bb9759d919bafa0791e00228be6deb2e0aa44596a173382309333c561a7b7",
+                                                                          "external_ref":  "781d328e8d6e5ea266475af3ecfe401af59dacb00cab37f056626fd68bb68074"
+                                                                      }
+                                                         }
+                                 }
+                },
+    "request_kind":  "failed-request",
+    "request_label":  "svc-failed-1776197886",
+    "stage_summary":  "Подготовка synthetic single-запроса для failure path.",
+    "comment":  "Это отдельный тестовый single request, который не доводится до chain finality, а специально переводится в failed внутри watcher."
+}

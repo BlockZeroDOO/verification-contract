@@ -1,0 +1,50 @@
+﻿{
+    "sequence":  16,
+    "event":  "watcher_register_authorized",
+    "timestamp":  "2026-04-14T20:18:11Z",
+    "payload":  {
+                    "request":  {
+                                    "request_id":  "a086f38b6bd69012c26159fc28a1460148a1b85658f84541f6844c7c0aa2677c",
+                                    "trace_id":  "91d6c59a-0e2f-438d-be71-15878199e896",
+                                    "mode":  "single",
+                                    "submitter":  "vadim1111111",
+                                    "contract":  "verification",
+                                    "anchor":  {
+                                                   "object_hash":  "5d0bb9759d919bafa0791e00228be6deb2e0aa44596a173382309333c561a7b7",
+                                                   "external_ref_hash":  "781d328e8d6e5ea266475af3ecfe401af59dacb00cab37f056626fd68bb68074"
+                                               },
+                                    "rpc_url":  "https://jungle4.api.eosnation.io"
+                                },
+                    "status_code":  200,
+                    "response":  {
+                                     "request_id":  "a086f38b6bd69012c26159fc28a1460148a1b85658f84541f6844c7c0aa2677c",
+                                     "trace_id":  "91d6c59a-0e2f-438d-be71-15878199e896",
+                                     "mode":  "single",
+                                     "submitter":  "vadim1111111",
+                                     "contract":  "verification",
+                                     "rpc_url":  "https://jungle4.api.eosnation.io",
+                                     "anchor":  {
+                                                    "object_hash":  "5d0bb9759d919bafa0791e00228be6deb2e0aa44596a173382309333c561a7b7",
+                                                    "external_ref_hash":  "781d328e8d6e5ea266475af3ecfe401af59dacb00cab37f056626fd68bb68074"
+                                                },
+                                     "tx_id":  null,
+                                     "block_num":  null,
+                                     "status":  "submitted",
+                                     "registered_at":  "2026-04-14T20:18:11Z",
+                                     "included_at":  null,
+                                     "updated_at":  "2026-04-14T20:18:11Z",
+                                     "finalized_at":  null,
+                                     "failed_at":  null,
+                                     "failure_reason":  null,
+                                     "failure_details":  null,
+                                     "chain_state":  {
+                                                         "head_block_num":  null,
+                                                         "last_irreversible_block_num":  null
+                                                     }
+                                 }
+                },
+    "request_kind":  "failed-request",
+    "request_label":  "a086f38b6bd69012c26159fc28a1460148a1b85658f84541f6844c7c0aa2677c",
+    "stage_summary":  "Успешный register с auth token.",
+    "comment":  "Этот шаг показывает, что тот же failed-path request корректно регистрируется в watcher при наличии токена."
+}

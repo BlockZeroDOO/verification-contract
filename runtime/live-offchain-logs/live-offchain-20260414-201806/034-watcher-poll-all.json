@@ -1,0 +1,18 @@
+﻿{
+    "sequence":  34,
+    "event":  "watcher_poll_all",
+    "timestamp":  "2026-04-14T20:18:13Z",
+    "payload":  {
+                    "status_code":  200,
+                    "response":  {
+                                     "updated":  {
+                                                     "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7":  "included",
+                                                     "a086f38b6bd69012c26159fc28a1460148a1b85658f84541f6844c7c0aa2677c":  "failed"
+                                                 }
+                                 }
+                },
+    "request_kind":  "polling",
+    "request_label":  "shared",
+    "stage_summary":  "Глобальный poll watcher-а.",
+    "comment":  "Этот шаг запускает разовый poll всех зарегистрированных request и показывает, какие из них были обновлены."
+}

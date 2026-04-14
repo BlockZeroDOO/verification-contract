@@ -1,0 +1,26 @@
+﻿{
+    "sequence":  31,
+    "event":  "single_commitment_row",
+    "timestamp":  "2026-04-14T20:18:12Z",
+    "payload":  {
+                    "request_id":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+                    "row":  {
+                                "id":  7,
+                                "submitter":  "vadim1111111",
+                                "schema_id":  1776201886,
+                                "policy_id":  1776202886,
+                                "object_hash":  "af923e601271d0a30f7c23303e7cd1c2bdba2a0a4bdf38b2f70ddebb22a1bb1c",
+                                "external_ref":  "28726b90e6406fe0c1964d7be90b103b03efa6b71a4a9b5738bf0c251fcfee4e",
+                                "request_key":  "2ae614702c3c9377b2eabbda723302effae79d39824a8c7b653c2c4f8bbe8a6c",
+                                "block_num":  41627,
+                                "created_at":  "2026-04-14T20:18:12",
+                                "status_changed_at":  "2026-04-14T20:18:12",
+                                "status":  0,
+                                "superseded_by":  0
+                            }
+                },
+    "request_kind":  "live-single",
+    "request_label":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+    "stage_summary":  "Появление commitment row on-chain.",
+    "comment":  "После submit тест ждет строку в таблице commitments и здесь фиксирует найденную row вместе с commitment_id."
+}

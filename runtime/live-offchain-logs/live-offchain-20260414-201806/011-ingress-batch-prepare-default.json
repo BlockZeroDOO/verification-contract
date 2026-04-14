@@ -1,0 +1,74 @@
+﻿{
+    "sequence":  11,
+    "event":  "ingress_batch_prepare_default",
+    "timestamp":  "2026-04-14T20:18:11Z",
+    "payload":  {
+                    "request":  {
+                                    "submitter":  "vadim1111111",
+                                    "external_ref":  "svc-batch-1776197886",
+                                    "schema":  {
+                                                   "id":  1776201886,
+                                                   "version":  "1.0.0",
+                                                   "active":  true,
+                                                   "canonicalization_profile":  "json-sorted-v1"
+                                               },
+                                    "policy":  {
+                                                   "id":  1776202887,
+                                                   "active":  true,
+                                                   "allow_single":  false,
+                                                   "allow_batch":  true,
+                                                   "require_kyc":  false,
+                                                   "min_kyc_level":  0
+                                               },
+                                    "kyc":  {
+                                                "active":  true,
+                                                "level":  2,
+                                                "expires_at":  "2030-01-01T00:00:00"
+                                            },
+                                    "items":  [
+                                                  {
+                                                      "external_leaf_ref":  "svc-batch-1776197886-leaf-a",
+                                                      "payload":  {
+                                                                      "doc_id":  "a",
+                                                                      "amount":  1
+                                                                  }
+                                                  },
+                                                  {
+                                                      "external_leaf_ref":  "svc-batch-1776197886-leaf-b",
+                                                      "payload":  {
+                                                                      "doc_id":  "b",
+                                                                      "amount":  2
+                                                                  }
+                                                  }
+                                              ]
+                                },
+                    "status_code":  200,
+                    "response":  {
+                                     "trace_id":  "003db1b2-1965-4af6-bb08-2e63205de4e7",
+                                     "request_id":  "b40d5c7c0864d2847e9b0a0e9cd281b96418b6cf085f8685c1415d813b77d545",
+                                     "received_at":  "2026-04-14T20:18:11Z",
+                                     "mode":  "batch",
+                                     "canonicalization_profile":  "json-sorted-v1",
+                                     "leaf_count":  2,
+                                     "root_hash":  "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+                                     "external_ref_hash":  "224fcd3a6b1ac955a62c67890f38205b2492197dd0943b1d97af1bdb10beaaa9",
+                                     "manifest_hash":  "112a3337ce8859510fbfec67a75b1424d06fd87c40d37d125cb36965c6da1d3e",
+                                     "prepared_action":  {
+                                                             "contract":  "verification",
+                                                             "action":  "submitroot",
+                                                             "data":  {
+                                                                          "submitter":  "vadim1111111",
+                                                                          "schema_id":  1776201886,
+                                                                          "policy_id":  1776202887,
+                                                                          "root_hash":  "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+                                                                          "leaf_count":  2,
+                                                                          "external_ref":  "224fcd3a6b1ac955a62c67890f38205b2492197dd0943b1d97af1bdb10beaaa9"
+                                                                      }
+                                                         }
+                                 }
+                },
+    "request_kind":  "ingress-batch-probe",
+    "request_label":  "svc-batch-1776197886",
+    "stage_summary":  "Batch prepare без debug material.",
+    "comment":  "Этот запрос проверяет, что Ingress API считает root_hash и manifest_hash, но по умолчанию скрывает manifest и leaf_hashes."
+}

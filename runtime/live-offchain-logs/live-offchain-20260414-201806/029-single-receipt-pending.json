@@ -1,0 +1,18 @@
+﻿{
+    "sequence":  29,
+    "event":  "single_receipt_pending",
+    "timestamp":  "2026-04-14T20:18:11Z",
+    "payload":  {
+                    "request_id":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+                    "status_code":  409,
+                    "response":  {
+                                     "request_id":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+                                     "status":  "submitted",
+                                     "error":  "receipt is not available before finality"
+                                 }
+                },
+    "request_kind":  "live-single",
+    "request_label":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+    "stage_summary":  "Receipt до finality.",
+    "comment":  "Receipt Service должен вернуть pending/conflict, потому что single transaction еще не получила irreversible finality."
+}

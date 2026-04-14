@@ -1,0 +1,89 @@
+﻿{
+    "sequence":  8,
+    "event":  "governance_setpolicy_batch",
+    "timestamp":  "2026-04-14T20:18:11Z",
+    "payload":  {
+                    "result":  {
+                                   "transaction_id":  "46479e37e9a76ba3ad328c8323452e159c28f9e8fdb021c4832246062fa5850f",
+                                   "processed":  {
+                                                     "id":  "46479e37e9a76ba3ad328c8323452e159c28f9e8fdb021c4832246062fa5850f",
+                                                     "block_num":  260678301,
+                                                     "block_time":  "2026-04-14T20:18:11.500",
+                                                     "producer_block_id":  null,
+                                                     "receipt":  {
+                                                                     "status":  "executed",
+                                                                     "cpu_usage_us":  209,
+                                                                     "net_usage_words":  14
+                                                                 },
+                                                     "elapsed":  209,
+                                                     "net_usage":  112,
+                                                     "scheduled":  false,
+                                                     "action_traces":  [
+                                                                           {
+                                                                               "action_ordinal":  1,
+                                                                               "creator_action_ordinal":  0,
+                                                                               "closest_unnotified_ancestor_action_ordinal":  0,
+                                                                               "receipt":  {
+                                                                                               "receiver":  "verification",
+                                                                                               "act_digest":  "7771d549fd4c71a81cc12f14d101dff37e4bc4590528b935039a32d851f535fb",
+                                                                                               "global_sequence":  338350316,
+                                                                                               "recv_sequence":  93,
+                                                                                               "auth_sequence":  [
+                                                                                                                     [
+                                                                                                                         "verification",
+                                                                                                                         118
+                                                                                                                     ]
+                                                                                                                 ],
+                                                                                               "code_sequence":  2,
+                                                                                               "abi_sequence":  2
+                                                                                           },
+                                                                               "receiver":  "verification",
+                                                                               "act":  {
+                                                                                           "account":  "verification",
+                                                                                           "name":  "setpolicy",
+                                                                                           "authorization":  [
+                                                                                                                 {
+                                                                                                                     "actor":  "verification",
+                                                                                                                     "permission":  "active"
+                                                                                                                 }
+                                                                                                             ],
+                                                                                           "data":  {
+                                                                                                        "id":  1776202887,
+                                                                                                        "allow_single":  0,
+                                                                                                        "allow_batch":  1,
+                                                                                                        "require_kyc":  0,
+                                                                                                        "min_kyc_level":  0,
+                                                                                                        "active":  1
+                                                                                                    },
+                                                                                           "hex_data":  "87b4de69000000000001000001"
+                                                                                       },
+                                                                               "context_free":  false,
+                                                                               "elapsed":  75,
+                                                                               "console":  "",
+                                                                               "trx_id":  "46479e37e9a76ba3ad328c8323452e159c28f9e8fdb021c4832246062fa5850f",
+                                                                               "block_num":  260678301,
+                                                                               "block_time":  "2026-04-14T20:18:11.500",
+                                                                               "producer_block_id":  null,
+                                                                               "account_ram_deltas":  [
+                                                                                                          {
+                                                                                                              "account":  "verification",
+                                                                                                              "delta":  134
+                                                                                                          }
+                                                                                                      ],
+                                                                               "except":  null,
+                                                                               "error_code":  null,
+                                                                               "return_value_hex_data":  ""
+                                                                           }
+                                                                       ],
+                                                     "account_ram_delta":  null,
+                                                     "except":  null,
+                                                     "error_code":  null
+                                                 }
+                               },
+                    "policy_id":  1776202887
+                },
+    "request_kind":  "governance-setup",
+    "request_label":  "verification-governance",
+    "stage_summary":  "Создание batch policy для live suite.",
+    "comment":  "Эта policy разрешает batch submitroot-запросы и нужна для batch off-chain flow."
+}

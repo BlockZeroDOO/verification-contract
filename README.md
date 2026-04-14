@@ -222,6 +222,12 @@ Live off-chain service coverage:
 - [scripts/run-live-offchain-services.ps1](/c:/projects/verification-contract/scripts/run-live-offchain-services.ps1:1)
 - [docs/denotary-live-offchain-services.md](/c:/projects/verification-contract/docs/denotary-live-offchain-services.md:1)
 
+Example with full artifact dump:
+
+```powershell
+./scripts/run-live-offchain-services.ps1 --owner-account verification --submitter-account vadim1111111 --dump-dir runtime/live-offchain-logs
+```
+
 Rollout dry-run baseline:
 
 - [scripts/run-rollout-dry-run.sh](/c:/projects/verification-contract/scripts/run-rollout-dry-run.sh:1)

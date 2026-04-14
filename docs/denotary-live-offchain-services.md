@@ -96,6 +96,18 @@ export SUBMITTER_ACCOUNT=youruser
 ./scripts/run-live-offchain-services.ps1 --owner-account verification --submitter-account youruser
 ```
 
+PowerShell run with full artifact dump:
+
+```powershell
+./scripts/run-live-offchain-services.ps1 `
+  --rpc-url https://jungle4.api.eosnation.io `
+  --expected-chain-id 73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d `
+  --network-label Jungle4 `
+  --owner-account verification `
+  --submitter-account vadim1111111 `
+  --dump-dir runtime/live-offchain-logs
+```
+
 ## Useful options
 
 Available options:
@@ -110,6 +122,23 @@ Available options:
 - `--watcher-auth-token`
 - `--wait-timeout-sec`
 - `--poll-interval-sec`
+- `--dump-dir`
+- `--print-json-events`
+
+## Full logs
+
+If `--dump-dir` is provided, the suite writes one JSON file per major step plus `summary.json`.
+
+Typical contents:
+
+- ingress requests and responses
+- watcher register, anchor, included, failed, and poll responses
+- receipts before and after finality
+- audit request, chain, lookup, search, and `jsonl` responses
+- live transaction metadata for `submit`, `submitroot`, `linkmanifest`, and `closebatch`
+- rows fetched from on-chain `commitments` and `batches`
+
+If `--print-json-events` is also enabled, the same structured events are printed directly to stdout.
 
 ## Notes
 

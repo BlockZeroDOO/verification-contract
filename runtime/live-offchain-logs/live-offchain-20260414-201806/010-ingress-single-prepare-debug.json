@@ -1,0 +1,62 @@
+﻿{
+    "sequence":  10,
+    "event":  "ingress_single_prepare_debug",
+    "timestamp":  "2026-04-14T20:18:11Z",
+    "payload":  {
+                    "request":  {
+                                    "submitter":  "vadim1111111",
+                                    "external_ref":  "svc-single-1776197886",
+                                    "schema":  {
+                                                   "id":  1776201886,
+                                                   "version":  "1.0.0",
+                                                   "active":  true,
+                                                   "canonicalization_profile":  "json-sorted-v1"
+                                               },
+                                    "policy":  {
+                                                   "id":  1776202886,
+                                                   "active":  true,
+                                                   "allow_single":  true,
+                                                   "allow_batch":  false,
+                                                   "require_kyc":  false,
+                                                   "min_kyc_level":  0
+                                               },
+                                    "kyc":  {
+                                                "active":  true,
+                                                "level":  2,
+                                                "expires_at":  "2030-01-01T00:00:00"
+                                            },
+                                    "payload":  {
+                                                    "doc_id":  "svc-single-1776197886",
+                                                    "kind":  "invoice",
+                                                    "amount":  42
+                                                },
+                                    "include_debug_material":  true
+                                },
+                    "status_code":  200,
+                    "response":  {
+                                     "trace_id":  "ef8b71a0-db53-486d-be4a-07147a92c6b5",
+                                     "request_id":  "0ab7ac5600c5c2e46dd82f6d5f31bbcd23a19224d1b7a1ccca3560925bb6604d",
+                                     "received_at":  "2026-04-14T20:18:11Z",
+                                     "mode":  "single",
+                                     "canonicalization_profile":  "json-sorted-v1",
+                                     "object_hash":  "5129b159546d92a8cb59eeba0cf182fb362a2608e862e32a61312804a04f24ba",
+                                     "external_ref_hash":  "215a9ddefaa75403113c67b4a227333e49268f3b20efccebebdd92f93fffe3a9",
+                                     "prepared_action":  {
+                                                             "contract":  "verification",
+                                                             "action":  "submit",
+                                                             "data":  {
+                                                                          "submitter":  "vadim1111111",
+                                                                          "schema_id":  1776201886,
+                                                                          "policy_id":  1776202886,
+                                                                          "object_hash":  "5129b159546d92a8cb59eeba0cf182fb362a2608e862e32a61312804a04f24ba",
+                                                                          "external_ref":  "215a9ddefaa75403113c67b4a227333e49268f3b20efccebebdd92f93fffe3a9"
+                                                                      }
+                                                         },
+                                     "canonical_form":  "{\"amount\":42,\"doc_id\":\"svc-single-1776197886\",\"kind\":\"invoice\"}"
+                                 }
+                },
+    "request_kind":  "ingress-single-probe",
+    "request_label":  "svc-single-1776197886",
+    "stage_summary":  "Single prepare с debug material.",
+    "comment":  "Этот запрос повторяет single prepare, но с include_debug_material=true, чтобы убедиться, что debug-материал выдается только по явному флагу."
+}

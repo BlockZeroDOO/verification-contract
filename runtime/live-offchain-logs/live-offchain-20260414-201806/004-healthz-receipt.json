@@ -1,0 +1,17 @@
+﻿{
+    "sequence":  4,
+    "event":  "healthz_receipt",
+    "timestamp":  "2026-04-14T20:18:07Z",
+    "payload":  {
+                    "url":  "http://127.0.0.1:54997/healthz",
+                    "status_code":  200,
+                    "response":  {
+                                     "status":  "ok",
+                                     "service":  "receipt-service"
+                                 }
+                },
+    "request_kind":  "health-check",
+    "request_label":  "receipt",
+    "stage_summary":  "Проверка доступности сервиса receipt.",
+    "comment":  "Этот файл подтверждает, что endpoint /healthz у сервиса receipt ответил успешно и сервис был жив перед функциональными тестами."
+}

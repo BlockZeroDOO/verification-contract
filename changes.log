@@ -388,3 +388,10 @@ Generated: 2026-04-14
 - pending, failed, and finalized receipt behavior
 - audit request, chain, lookup, search, and `jsonl` export paths
 - real single and batch finality reconciliation against a live chain
+
+24. Structured artifact logs for live off-chain tests
+
+- Extended `tests/live_offchain_services.py` with structured event capture.
+- Added `--dump-dir` to save per-step JSON artifacts and `summary.json`.
+- Added `--print-json-events` to mirror structured events into stdout.
+- Failure runs now also persist collected artifacts and a failed summary.

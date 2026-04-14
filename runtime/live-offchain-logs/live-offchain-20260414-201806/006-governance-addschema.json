@@ -1,0 +1,87 @@
+﻿{
+    "sequence":  6,
+    "event":  "governance_addschema",
+    "timestamp":  "2026-04-14T20:18:09Z",
+    "payload":  {
+                    "result":  {
+                                   "transaction_id":  "14deee40f6719a80cd81d09e3e3d36320b2e4ee8e7186f7a61550769122b073b",
+                                   "processed":  {
+                                                     "id":  "14deee40f6719a80cd81d09e3e3d36320b2e4ee8e7186f7a61550769122b073b",
+                                                     "block_num":  260678297,
+                                                     "block_time":  "2026-04-14T20:18:09.500",
+                                                     "producer_block_id":  null,
+                                                     "receipt":  {
+                                                                     "status":  "executed",
+                                                                     "cpu_usage_us":  257,
+                                                                     "net_usage_words":  22
+                                                                 },
+                                                     "elapsed":  257,
+                                                     "net_usage":  176,
+                                                     "scheduled":  false,
+                                                     "action_traces":  [
+                                                                           {
+                                                                               "action_ordinal":  1,
+                                                                               "creator_action_ordinal":  0,
+                                                                               "closest_unnotified_ancestor_action_ordinal":  0,
+                                                                               "receipt":  {
+                                                                                               "receiver":  "verification",
+                                                                                               "act_digest":  "470fc6e29f3ca9765c9bba9b972b755a1cdbdb4b118407956552d467fd06559f",
+                                                                                               "global_sequence":  338350310,
+                                                                                               "recv_sequence":  91,
+                                                                                               "auth_sequence":  [
+                                                                                                                     [
+                                                                                                                         "verification",
+                                                                                                                         116
+                                                                                                                     ]
+                                                                                                                 ],
+                                                                                               "code_sequence":  2,
+                                                                                               "abi_sequence":  2
+                                                                                           },
+                                                                               "receiver":  "verification",
+                                                                               "act":  {
+                                                                                           "account":  "verification",
+                                                                                           "name":  "addschema",
+                                                                                           "authorization":  [
+                                                                                                                 {
+                                                                                                                     "actor":  "verification",
+                                                                                                                     "permission":  "active"
+                                                                                                                 }
+                                                                                                             ],
+                                                                                           "data":  {
+                                                                                                        "id":  1776201886,
+                                                                                                        "version":  "1.0.0",
+                                                                                                        "canonicalization_hash":  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                                                                                                        "hash_policy":  "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                                                                                                    },
+                                                                                           "hex_data":  "9eb0de690000000005312e302e30aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                                                                                       },
+                                                                               "context_free":  false,
+                                                                               "elapsed":  121,
+                                                                               "console":  "",
+                                                                               "trx_id":  "14deee40f6719a80cd81d09e3e3d36320b2e4ee8e7186f7a61550769122b073b",
+                                                                               "block_num":  260678297,
+                                                                               "block_time":  "2026-04-14T20:18:09.500",
+                                                                               "producer_block_id":  null,
+                                                                               "account_ram_deltas":  [
+                                                                                                          {
+                                                                                                              "account":  "verification",
+                                                                                                              "delta":  199
+                                                                                                          }
+                                                                                                      ],
+                                                                               "except":  null,
+                                                                               "error_code":  null,
+                                                                               "return_value_hex_data":  ""
+                                                                           }
+                                                                       ],
+                                                     "account_ram_delta":  null,
+                                                     "except":  null,
+                                                     "error_code":  null
+                                                 }
+                               },
+                    "schema_id":  1776201886
+                },
+    "request_kind":  "governance-setup",
+    "request_label":  "verification-governance",
+    "stage_summary":  "Создание тестовой schema для live suite.",
+    "comment":  "Здесь on-chain создается новая schema, которую дальше используют single и batch офчейн-потоки."
+}

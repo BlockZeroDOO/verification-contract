@@ -1,0 +1,42 @@
+﻿{
+    "sequence":  50,
+    "event":  "batch_watcher_anchor",
+    "timestamp":  "2026-04-14T20:18:16Z",
+    "payload":  {
+                    "request_id":  "391225be3cfa2a53f40967880edb4386abc38062bf05dfd7f2817e88afa6068a",
+                    "status_code":  200,
+                    "response":  {
+                                     "anchor":  {
+                                                    "external_ref_hash":  "6499623196e42e9f3d4b6f74fc5c92a48e65f88072df61ffeafc1522755e3539",
+                                                    "leaf_count":  2,
+                                                    "manifest_hash":  "00fbeb2833e8908706eb29fc8026b6f62ef20424f0922dfa1ad7e5fb327dbace",
+                                                    "root_hash":  "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+                                                    "batch_id":  4
+                                                },
+                                     "block_num":  null,
+                                     "chain_state":  {
+                                                         "head_block_num":  null,
+                                                         "last_irreversible_block_num":  null
+                                                     },
+                                     "contract":  "verification",
+                                     "failed_at":  null,
+                                     "failure_details":  null,
+                                     "failure_reason":  null,
+                                     "finalized_at":  null,
+                                     "included_at":  null,
+                                     "mode":  "batch",
+                                     "registered_at":  "2026-04-14T20:18:13Z",
+                                     "request_id":  "391225be3cfa2a53f40967880edb4386abc38062bf05dfd7f2817e88afa6068a",
+                                     "rpc_url":  "https://jungle4.api.eosnation.io",
+                                     "status":  "submitted",
+                                     "submitter":  "vadim1111111",
+                                     "trace_id":  "e5041bb7-4e40-49c3-a4c6-5394340de23e",
+                                     "tx_id":  null,
+                                     "updated_at":  "2026-04-14T20:18:16Z"
+                                 }
+                },
+    "request_kind":  "live-batch",
+    "request_label":  "391225be3cfa2a53f40967880edb4386abc38062bf05dfd7f2817e88afa6068a",
+    "stage_summary":  "Привязка batch_id к request.",
+    "comment":  "Watcher обогащается on-chain batch_id, чтобы Audit API и receipt могли ссылаться на batch row."
+}

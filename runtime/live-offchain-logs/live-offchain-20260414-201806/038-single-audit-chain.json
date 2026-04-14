@@ -1,0 +1,92 @@
+﻿{
+    "sequence":  38,
+    "event":  "single_audit_chain",
+    "timestamp":  "2026-04-14T20:18:13Z",
+    "payload":  {
+                    "request_id":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+                    "status_code":  200,
+                    "response":  {
+                                     "record":  {
+                                                    "request_id":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+                                                    "trace_id":  "2e4fa72b-8aa0-4713-9298-2cd6c9788540",
+                                                    "mode":  "single",
+                                                    "submitter":  "vadim1111111",
+                                                    "contract":  "verification",
+                                                    "status":  "finalized",
+                                                    "commitment_id":  7,
+                                                    "batch_id":  null,
+                                                    "external_ref_hash":  "28726b90e6406fe0c1964d7be90b103b03efa6b71a4a9b5738bf0c251fcfee4e",
+                                                    "tx_id":  "19c60a21f5e12a40d8e53330f2db2fd985d3799f5c4b1c44f81362b3cb25a13c",
+                                                    "block_num":  260678303,
+                                                    "registered_at":  "2026-04-14T20:18:11Z",
+                                                    "updated_at":  "2026-04-14T20:18:13Z",
+                                                    "finalized_at":  "2026-04-14T20:18:13Z",
+                                                    "failed_at":  null,
+                                                    "failure_reason":  null,
+                                                    "failure_details":  null,
+                                                    "anchor":  {
+                                                                   "commitment_id":  7,
+                                                                   "external_ref_hash":  "28726b90e6406fe0c1964d7be90b103b03efa6b71a4a9b5738bf0c251fcfee4e",
+                                                                   "object_hash":  "af923e601271d0a30f7c23303e7cd1c2bdba2a0a4bdf38b2f70ddebb22a1bb1c"
+                                                               },
+                                                    "chain_state":  {
+                                                                        "head_block_num":  260678305,
+                                                                        "last_irreversible_block_num":  260678303
+                                                                    }
+                                                },
+                                     "receipt":  {
+                                                     "issued_at":  "2026-04-14T20:18:13Z",
+                                                     "request_id":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+                                                     "trace_id":  "2e4fa72b-8aa0-4713-9298-2cd6c9788540",
+                                                     "mode":  "single",
+                                                     "submitter":  "vadim1111111",
+                                                     "contract":  "verification",
+                                                     "object_hash":  "af923e601271d0a30f7c23303e7cd1c2bdba2a0a4bdf38b2f70ddebb22a1bb1c",
+                                                     "external_ref_hash":  "28726b90e6406fe0c1964d7be90b103b03efa6b71a4a9b5738bf0c251fcfee4e",
+                                                     "tx_id":  "19c60a21f5e12a40d8e53330f2db2fd985d3799f5c4b1c44f81362b3cb25a13c",
+                                                     "block_num":  260678303,
+                                                     "finality_flag":  true,
+                                                     "finalized_at":  "2026-04-14T20:18:13Z",
+                                                     "chain_state":  {
+                                                                         "head_block_num":  260678305,
+                                                                         "last_irreversible_block_num":  260678303
+                                                                     }
+                                                 },
+                                     "proof_chain":  [
+                                                         {
+                                                             "stage":  "request_registered",
+                                                             "status":  "completed",
+                                                             "timestamp":  "2026-04-14T20:18:11Z",
+                                                             "details":  {
+                                                                             "request_id":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+                                                                             "trace_id":  "2e4fa72b-8aa0-4713-9298-2cd6c9788540",
+                                                                             "mode":  "single",
+                                                                             "submitter":  "vadim1111111"
+                                                                         }
+                                                         },
+                                                         {
+                                                             "stage":  "transaction_included",
+                                                             "status":  "completed",
+                                                             "timestamp":  "2026-04-14T20:18:13Z",
+                                                             "details":  {
+                                                                             "tx_id":  "19c60a21f5e12a40d8e53330f2db2fd985d3799f5c4b1c44f81362b3cb25a13c",
+                                                                             "block_num":  260678303
+                                                                         }
+                                                         },
+                                                         {
+                                                             "stage":  "block_finalized",
+                                                             "status":  "completed",
+                                                             "timestamp":  "2026-04-14T20:18:13Z",
+                                                             "details":  {
+                                                                             "head_block_num":  260678305,
+                                                                             "last_irreversible_block_num":  260678303
+                                                                         }
+                                                         }
+                                                     ]
+                                 }
+                },
+    "request_kind":  "live-single",
+    "request_label":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+    "stage_summary":  "Single audit chain view.",
+    "comment":  "Расширенный audit view: record + receipt + proof_chain для single request."
+}

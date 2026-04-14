@@ -1,0 +1,16 @@
+﻿{
+    "sequence":  22,
+    "event":  "watcher_failed_included_rejection",
+    "timestamp":  "2026-04-14T20:18:11Z",
+    "payload":  {
+                    "request_id":  "a086f38b6bd69012c26159fc28a1460148a1b85658f84541f6844c7c0aa2677c",
+                    "status_code":  400,
+                    "response":  {
+                                     "error":  "failed request cannot move to included"
+                                 }
+                },
+    "request_kind":  "failed-request",
+    "request_label":  "a086f38b6bd69012c26159fc28a1460148a1b85658f84541f6844c7c0aa2677c",
+    "stage_summary":  "Запрет included после failed.",
+    "comment":  "После terminal failed state watcher должен отвергать попытку перевести этот request в included."
+}

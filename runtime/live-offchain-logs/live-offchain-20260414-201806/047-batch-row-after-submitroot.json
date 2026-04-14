@@ -1,0 +1,28 @@
+﻿{
+    "sequence":  47,
+    "event":  "batch_row_after_submitroot",
+    "timestamp":  "2026-04-14T20:18:15Z",
+    "payload":  {
+                    "request_id":  "391225be3cfa2a53f40967880edb4386abc38062bf05dfd7f2817e88afa6068a",
+                    "row":  {
+                                "id":  4,
+                                "submitter":  "vadim1111111",
+                                "root_hash":  "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+                                "leaf_count":  2,
+                                "schema_id":  1776201886,
+                                "policy_id":  1776202887,
+                                "manifest_hash":  "0000000000000000000000000000000000000000000000000000000000000000",
+                                "external_ref":  "6499623196e42e9f3d4b6f74fc5c92a48e65f88072df61ffeafc1522755e3539",
+                                "request_key":  "fb87f5d4bf04f76732b70db9c469befb0f3169869ee5407743f12ffe9731cc06",
+                                "block_num":  41633,
+                                "created_at":  "2026-04-14T20:18:15",
+                                "manifest_linked_at":  "1970-01-01T00:00:00",
+                                "status_changed_at":  "2026-04-14T20:18:15",
+                                "status":  0
+                            }
+                },
+    "request_kind":  "live-batch",
+    "request_label":  "391225be3cfa2a53f40967880edb4386abc38062bf05dfd7f2817e88afa6068a",
+    "stage_summary":  "Появление batch row после submitroot.",
+    "comment":  "После submitroot тест ждет строку в таблице batches и здесь фиксирует найденную row с batch_id."
+}

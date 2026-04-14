@@ -1,0 +1,16 @@
+﻿{
+    "sequence":  23,
+    "event":  "watcher_failed_anchor_rejection",
+    "timestamp":  "2026-04-14T20:18:11Z",
+    "payload":  {
+                    "request_id":  "a086f38b6bd69012c26159fc28a1460148a1b85658f84541f6844c7c0aa2677c",
+                    "status_code":  400,
+                    "response":  {
+                                     "error":  "terminal request cannot accept new anchor mutations"
+                                 }
+                },
+    "request_kind":  "failed-request",
+    "request_label":  "a086f38b6bd69012c26159fc28a1460148a1b85658f84541f6844c7c0aa2677c",
+    "stage_summary":  "Запрет anchor mutation после failed.",
+    "comment":  "После failed уже нельзя менять anchor metadata; этот шаг проверяет именно этот guard."
+}

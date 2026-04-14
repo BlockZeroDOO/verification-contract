@@ -1,0 +1,96 @@
+﻿{
+    "sequence":  57,
+    "event":  "batch_audit_by_external_ref",
+    "timestamp":  "2026-04-14T20:18:20Z",
+    "payload":  {
+                    "external_ref_hash":  "6499623196e42e9f3d4b6f74fc5c92a48e65f88072df61ffeafc1522755e3539",
+                    "status_code":  200,
+                    "response":  {
+                                     "record":  {
+                                                    "request_id":  "391225be3cfa2a53f40967880edb4386abc38062bf05dfd7f2817e88afa6068a",
+                                                    "trace_id":  "e5041bb7-4e40-49c3-a4c6-5394340de23e",
+                                                    "mode":  "batch",
+                                                    "submitter":  "vadim1111111",
+                                                    "contract":  "verification",
+                                                    "status":  "finalized",
+                                                    "commitment_id":  null,
+                                                    "batch_id":  4,
+                                                    "external_ref_hash":  "6499623196e42e9f3d4b6f74fc5c92a48e65f88072df61ffeafc1522755e3539",
+                                                    "tx_id":  "279e650f53b2ec716ab08f2ff2a2e5e153bc5a514d1eefdd3a44362943b4b02d",
+                                                    "block_num":  260678313,
+                                                    "registered_at":  "2026-04-14T20:18:13Z",
+                                                    "updated_at":  "2026-04-14T20:18:20Z",
+                                                    "finalized_at":  "2026-04-14T20:18:20Z",
+                                                    "failed_at":  null,
+                                                    "failure_reason":  null,
+                                                    "failure_details":  null,
+                                                    "anchor":  {
+                                                                   "batch_id":  4,
+                                                                   "external_ref_hash":  "6499623196e42e9f3d4b6f74fc5c92a48e65f88072df61ffeafc1522755e3539",
+                                                                   "leaf_count":  2,
+                                                                   "manifest_hash":  "00fbeb2833e8908706eb29fc8026b6f62ef20424f0922dfa1ad7e5fb327dbace",
+                                                                   "root_hash":  "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa"
+                                                               },
+                                                    "chain_state":  {
+                                                                        "head_block_num":  260678320,
+                                                                        "last_irreversible_block_num":  260678318
+                                                                    }
+                                                },
+                                     "receipt":  {
+                                                     "issued_at":  "2026-04-14T20:18:20Z",
+                                                     "request_id":  "391225be3cfa2a53f40967880edb4386abc38062bf05dfd7f2817e88afa6068a",
+                                                     "trace_id":  "e5041bb7-4e40-49c3-a4c6-5394340de23e",
+                                                     "mode":  "batch",
+                                                     "submitter":  "vadim1111111",
+                                                     "contract":  "verification",
+                                                     "root_hash":  "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+                                                     "manifest_hash":  "00fbeb2833e8908706eb29fc8026b6f62ef20424f0922dfa1ad7e5fb327dbace",
+                                                     "external_ref_hash":  "6499623196e42e9f3d4b6f74fc5c92a48e65f88072df61ffeafc1522755e3539",
+                                                     "leaf_count":  2,
+                                                     "tx_id":  "279e650f53b2ec716ab08f2ff2a2e5e153bc5a514d1eefdd3a44362943b4b02d",
+                                                     "block_num":  260678313,
+                                                     "finality_flag":  true,
+                                                     "finalized_at":  "2026-04-14T20:18:20Z",
+                                                     "chain_state":  {
+                                                                         "head_block_num":  260678320,
+                                                                         "last_irreversible_block_num":  260678318
+                                                                     }
+                                                 },
+                                     "proof_chain":  [
+                                                         {
+                                                             "stage":  "request_registered",
+                                                             "status":  "completed",
+                                                             "timestamp":  "2026-04-14T20:18:13Z",
+                                                             "details":  {
+                                                                             "request_id":  "391225be3cfa2a53f40967880edb4386abc38062bf05dfd7f2817e88afa6068a",
+                                                                             "trace_id":  "e5041bb7-4e40-49c3-a4c6-5394340de23e",
+                                                                             "mode":  "batch",
+                                                                             "submitter":  "vadim1111111"
+                                                                         }
+                                                         },
+                                                         {
+                                                             "stage":  "transaction_included",
+                                                             "status":  "completed",
+                                                             "timestamp":  "2026-04-14T20:18:20Z",
+                                                             "details":  {
+                                                                             "tx_id":  "279e650f53b2ec716ab08f2ff2a2e5e153bc5a514d1eefdd3a44362943b4b02d",
+                                                                             "block_num":  260678313
+                                                                         }
+                                                         },
+                                                         {
+                                                             "stage":  "block_finalized",
+                                                             "status":  "completed",
+                                                             "timestamp":  "2026-04-14T20:18:20Z",
+                                                             "details":  {
+                                                                             "head_block_num":  260678320,
+                                                                             "last_irreversible_block_num":  260678318
+                                                                         }
+                                                         }
+                                                     ]
+                                 }
+                },
+    "request_kind":  "live-batch",
+    "request_label":  "external_ref_hash:6499623196e42e9f3d4b6f74fc5c92a48e65f88072df61ffeafc1522755e3539",
+    "stage_summary":  "Поиск batch request по external_ref_hash.",
+    "comment":  "Этот lookup показывает, что batch request можно восстановить по business key external_ref_hash."
+}

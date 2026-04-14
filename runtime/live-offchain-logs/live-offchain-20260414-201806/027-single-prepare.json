@@ -1,0 +1,62 @@
+﻿{
+    "sequence":  27,
+    "event":  "single_prepare",
+    "timestamp":  "2026-04-14T20:18:11Z",
+    "payload":  {
+                    "request":  {
+                                    "submitter":  "vadim1111111",
+                                    "external_ref":  "svc-live-single-1776197886",
+                                    "schema":  {
+                                                   "id":  1776201886,
+                                                   "version":  "1.0.0",
+                                                   "active":  true,
+                                                   "canonicalization_profile":  "json-sorted-v1"
+                                               },
+                                    "policy":  {
+                                                   "id":  1776202886,
+                                                   "active":  true,
+                                                   "allow_single":  true,
+                                                   "allow_batch":  false,
+                                                   "require_kyc":  false,
+                                                   "min_kyc_level":  0
+                                               },
+                                    "kyc":  {
+                                                "active":  true,
+                                                "level":  2,
+                                                "expires_at":  "2030-01-01T00:00:00"
+                                            },
+                                    "payload":  {
+                                                    "doc_id":  "svc-live-single-1776197886",
+                                                    "kind":  "invoice",
+                                                    "amount":  42
+                                                },
+                                    "include_debug_material":  true
+                                },
+                    "status_code":  200,
+                    "response":  {
+                                     "trace_id":  "2e4fa72b-8aa0-4713-9298-2cd6c9788540",
+                                     "request_id":  "91a05ba7fa97dacdb9f8c326119aee59a2c99cc548e99c47dc77c4a2d79003e7",
+                                     "received_at":  "2026-04-14T20:18:11Z",
+                                     "mode":  "single",
+                                     "canonicalization_profile":  "json-sorted-v1",
+                                     "object_hash":  "af923e601271d0a30f7c23303e7cd1c2bdba2a0a4bdf38b2f70ddebb22a1bb1c",
+                                     "external_ref_hash":  "28726b90e6406fe0c1964d7be90b103b03efa6b71a4a9b5738bf0c251fcfee4e",
+                                     "prepared_action":  {
+                                                             "contract":  "verification",
+                                                             "action":  "submit",
+                                                             "data":  {
+                                                                          "submitter":  "vadim1111111",
+                                                                          "schema_id":  1776201886,
+                                                                          "policy_id":  1776202886,
+                                                                          "object_hash":  "af923e601271d0a30f7c23303e7cd1c2bdba2a0a4bdf38b2f70ddebb22a1bb1c",
+                                                                          "external_ref":  "28726b90e6406fe0c1964d7be90b103b03efa6b71a4a9b5738bf0c251fcfee4e"
+                                                                      }
+                                                         },
+                                     "canonical_form":  "{\"amount\":42,\"doc_id\":\"svc-live-single-1776197886\",\"kind\":\"invoice\"}"
+                                 }
+                },
+    "request_kind":  "live-single",
+    "request_label":  "svc-live-single-1776197886",
+    "stage_summary":  "Подготовка боевого single request.",
+    "comment":  "Это основной single request для live flow: здесь Ingress API считает object_hash, external_ref_hash и готовит on-chain action submit."
+}

@@ -277,7 +277,7 @@ void verification::submit(
         row.object_hash = object_hash;
         row.external_ref = external_ref;
         row.request_key = request_key;
-        row.block_num = static_cast<uint32_t>(tapos_block_num());
+        row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());
         row.created_at = now;
         row.status = commitment_status_active;
     });

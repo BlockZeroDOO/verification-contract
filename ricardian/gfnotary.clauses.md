@@ -1,3 +1,5 @@
 # Clause Definitions
 
-This file intentionally contains minimal clause definitions for ABI generation.
+## general
+
+This contract family records verifiable anchoring metadata and related registry state on-chain.

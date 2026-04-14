@@ -7,6 +7,7 @@
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
+#include <eosio/transaction.hpp>
 
 #include <request_key.hpp>
 

@@ -290,12 +290,16 @@ void verification::submit(
         row.request_key = request_key;
         row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());
         row.created_at = now;
+        row.status_changed_at = now;
         row.status = commitment_status_active;
+        row.superseded_by = 0;
     });
 }
 
-void verification::supersede(uint64_t id) {
+void verification::supersede(uint64_t id, uint64_t successor_id) {
     validate_registry_id(id, "id");
+    validate_registry_id(successor_id, "successor_id");
+    check(id != successor_id, "successor_id must be different from id");
 
     commitment_table commitments(get_self(), get_self().value);
     auto existing = commitments.find(id);
@@ -306,8 +310,14 @@ void verification::supersede(uint64_t id) {
     );
     validate_commitment_is_active(*existing);
 
+    auto successor = commitments.find(successor_id);
+    check(successor != commitments.end(), "successor commitment does not exist");
+    validate_commitment_can_be_successor(*existing, *successor);
+
     commitments.modify(existing, get_self(), [&](auto& row) {
         row.status = commitment_status_superseded;
+        row.status_changed_at = time_point_sec(current_time_point());
+        row.superseded_by = successor_id;
     });
 }
 
@@ -322,6 +332,7 @@ void verification::revokecmmt(uint64_t id) {
 
     commitments.modify(existing, get_self(), [&](auto& row) {
         row.status = commitment_status_revoked;
+        row.status_changed_at = time_point_sec(current_time_point());
     });
 }
 
@@ -336,6 +347,7 @@ void verification::expirecmmt(uint64_t id) {
 
     commitments.modify(existing, get_self(), [&](auto& row) {
         row.status = commitment_status_expired;
+        row.status_changed_at = time_point_sec(current_time_point());
     });
 }
 
@@ -385,6 +397,8 @@ void verification::submitroot(
         row.request_key = request_key;
         row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());
         row.created_at = now;
+        row.manifest_linked_at = time_point_sec{};
+        row.status_changed_at = now;
         row.status = batch_status_open;
     });
 }
@@ -405,6 +419,7 @@ void verification::linkmanifest(uint64_t id, const checksum256& manifest_hash) {
 
     batches.modify(existing, get_self(), [&](auto& row) {
         row.manifest_hash = manifest_hash;
+        row.manifest_linked_at = time_point_sec(current_time_point());
     });
 }
 
@@ -423,6 +438,7 @@ void verification::closebatch(uint64_t id) {
 
     batches.modify(existing, get_self(), [&](auto& row) {
         row.status = batch_status_closed;
+        row.status_changed_at = time_point_sec(current_time_point());
     });
 }
 
@@ -646,6 +662,17 @@ void verification::validate_commitment_request_unique(const name& submitter, con
     auto by_request = commitments.get_index<"byrequest"_n>();
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     check(by_request.find(request_key) == by_request.end(), "duplicate request for submitter");
+}
+
+void verification::validate_commitment_can_be_successor(
+    const commitment_row& current,
+    const commitment_row& successor
+) const {
+    validate_commitment_is_active(successor);
+    check(successor.submitter == current.submitter, "successor must have the same submitter");
+    check(successor.schema_id == current.schema_id, "successor must have the same schema_id");
+    check(successor.policy_id == current.policy_id, "successor must have the same policy_id");
+    check(successor.created_at >= current.created_at, "successor must not predate current commitment");
 }
 
 void verification::validate_commitment_is_active(const commitment_row& commitment) const {

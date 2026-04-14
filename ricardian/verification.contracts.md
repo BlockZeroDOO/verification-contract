@@ -44,7 +44,7 @@ Creates a single anchored commitment after schema, policy, and optional KYC vali
 
 <h1 class="contract">supersede</h1>
 
-Moves an active commitment into the `superseded` business status.
+Moves an active commitment into the `superseded` business status and links it to a successor commitment.
 
 <h1 class="contract">revokecmmt</h1>
 

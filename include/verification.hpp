@@ -84,7 +84,7 @@ public:
     );
 
     [[eosio::action]]
-    void supersede(uint64_t id);
+    void supersede(uint64_t id, uint64_t successor_id);
 
     [[eosio::action]]
     void revokecmmt(uint64_t id);
@@ -191,7 +191,9 @@ private:
         checksum256 request_key;
         uint32_t block_num;
         time_point_sec created_at;
+        time_point_sec status_changed_at;
         uint8_t status;
+        uint64_t superseded_by;
 
         uint64_t primary_key() const { return id; }
         uint64_t by_submitter() const { return submitter.value; }
@@ -225,6 +227,8 @@ private:
         checksum256 request_key;
         uint32_t block_num;
         time_point_sec created_at;
+        time_point_sec manifest_linked_at;
+        time_point_sec status_changed_at;
         uint8_t status;
 
         uint64_t primary_key() const { return id; }
@@ -316,6 +320,7 @@ private:
     void validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const;
     void validate_batch_is_open(const batch_row& batch) const;
     void validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const;
+    void validate_commitment_can_be_successor(const commitment_row& current, const commitment_row& successor) const;
     void validate_commitment_is_active(const commitment_row& commitment) const;
     void validate_future_time(const time_point_sec& value, const char* field_name) const;
     void validate_registry_id(uint64_t id, const char* field_name) const;

@@ -54,6 +54,18 @@ Moves an active commitment into the `revoked` business status.
 
 Moves an active commitment into the `expired` business status.
 
+<h1 class="contract">submitroot</h1>
+
+Creates a batch anchoring record after schema, policy, and optional KYC validation.
+
+<h1 class="contract">linkmanifest</h1>
+
+Links an immutable manifest hash to an open batch record.
+
+<h1 class="contract">closebatch</h1>
+
+Closes an open batch and prevents further mutable batch updates.
+
 <h1 class="contract">record</h1>
 
 Appends a proof row to the immutable `verification` registry.

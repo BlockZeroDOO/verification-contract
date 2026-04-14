@@ -24,6 +24,16 @@ void validate_token_contract_stat(const eosio::name& token_contract, const eosio
         "token symbol precision does not match token contract stat"
     );
 }
+
+bool is_zero_checksum(const eosio::checksum256& value) {
+    const auto bytes = value.extract_as_byte_array();
+    for (auto byte : bytes) {
+        if (byte != 0) {
+            return false;
+        }
+    }
+    return true;
+}
 }  // namespace
 
 void verification::issuekyc(
@@ -248,6 +258,7 @@ void verification::submit(
 ) {
     require_auth(submitter);
     check(is_account(submitter), "submitter account does not exist");
+    validate_nonzero_checksum(external_ref, "external_ref");
 
     const auto schema = require_schema(schema_id);
     check(schema.active, "schema is inactive");
@@ -325,6 +336,93 @@ void verification::expirecmmt(uint64_t id) {
 
     commitments.modify(existing, get_self(), [&](auto& row) {
         row.status = commitment_status_expired;
+    });
+}
+
+void verification::submitroot(
+    const name& submitter,
+    uint64_t schema_id,
+    uint64_t policy_id,
+    const checksum256& root_hash,
+    uint32_t leaf_count,
+    const checksum256& external_ref
+) {
+    require_auth(submitter);
+    check(is_account(submitter), "submitter account does not exist");
+    check(leaf_count > 0, "leaf_count must be greater than zero");
+    validate_nonzero_checksum(root_hash, "root_hash");
+    validate_nonzero_checksum(external_ref, "external_ref");
+
+    const auto schema = require_schema(schema_id);
+    check(schema.active, "schema is inactive");
+
+    const auto policy = require_policy(policy_id);
+    check(policy.active, "policy is inactive");
+    check(policy.allow_batch, "policy does not allow batch submissions");
+
+    if (policy.require_kyc) {
+        const auto kyc = require_kyc_record(submitter);
+        check(kyc.active, "kyc record is inactive");
+        check(kyc.expires_at > time_point_sec(current_time_point()), "kyc record is expired");
+        check(kyc.level >= policy.min_kyc_level, "kyc level is below policy minimum");
+    }
+
+    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
+    validate_batch_request_unique(submitter, external_ref);
+
+    batch_table batches(get_self(), get_self().value);
+    const auto now = time_point_sec(current_time_point());
+    const auto batch_id = next_batch_id();
+    batches.emplace(get_self(), [&](auto& row) {
+        row.id = batch_id;
+        row.submitter = submitter;
+        row.root_hash = root_hash;
+        row.leaf_count = leaf_count;
+        row.schema_id = schema_id;
+        row.policy_id = policy_id;
+        row.manifest_hash = checksum256{};
+        row.external_ref = external_ref;
+        row.request_key = request_key;
+        row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());
+        row.created_at = now;
+        row.status = batch_status_open;
+    });
+}
+
+void verification::linkmanifest(uint64_t id, const checksum256& manifest_hash) {
+    validate_registry_id(id, "id");
+    validate_nonzero_checksum(manifest_hash, "manifest_hash");
+
+    batch_table batches(get_self(), get_self().value);
+    auto existing = batches.find(id);
+    check(existing != batches.end(), "batch does not exist");
+    check(
+        has_auth(existing->submitter) || has_auth(get_self()),
+        "missing required authority of submitter or contract"
+    );
+    validate_batch_is_open(*existing);
+    check(is_zero_checksum(existing->manifest_hash), "manifest is already linked");
+
+    batches.modify(existing, get_self(), [&](auto& row) {
+        row.manifest_hash = manifest_hash;
+    });
+}
+
+void verification::closebatch(uint64_t id) {
+    validate_registry_id(id, "id");
+
+    batch_table batches(get_self(), get_self().value);
+    auto existing = batches.find(id);
+    check(existing != batches.end(), "batch does not exist");
+    check(
+        has_auth(existing->submitter) || has_auth(get_self()),
+        "missing required authority of submitter or contract"
+    );
+    validate_batch_is_open(*existing);
+    check(!is_zero_checksum(existing->manifest_hash), "manifest is not linked");
+
+    batches.modify(existing, get_self(), [&](auto& row) {
+        row.status = batch_status_closed;
     });
 }
 
@@ -474,6 +572,20 @@ verification::policy_row verification::require_policy(uint64_t id) const {
     return *existing;
 }
 
+uint64_t verification::next_batch_id() {
+    counter_singleton counters(get_self(), get_self().value);
+    auto state = counters.exists() ? counters.get() : counter_state{};
+    if (state.next_batch_id == 0) {
+        state.next_batch_id = 1;
+    }
+
+    const uint64_t allocated = state.next_batch_id;
+    ++state.next_batch_id;
+    counters.set(state, get_self());
+
+    return allocated;
+}
+
 uint64_t verification::next_commitment_id() {
     counter_singleton counters(get_self(), get_self().value);
     auto state = counters.exists() ? counters.get() : counter_state{};
@@ -512,6 +624,21 @@ checksum256 verification::parse_hash(const string& hex) const {
     }
 
     return checksum256(bytes);
+}
+
+void verification::validate_nonzero_checksum(const checksum256& value, const char* field_name) const {
+    check(!is_zero_checksum(value), string(field_name) + " cannot be zero");
+}
+
+void verification::validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const {
+    batch_table batches(get_self(), get_self().value);
+    auto by_request = batches.get_index<"byrequest"_n>();
+    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
+    check(by_request.find(request_key) == by_request.end(), "duplicate batch request for submitter");
+}
+
+void verification::validate_batch_is_open(const batch_row& batch) const {
+    check(batch.status == batch_status_open, "batch is not open");
 }
 
 void verification::validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const {
@@ -676,6 +803,7 @@ extern "C" {
                     (addschema)(updateschema)(deprecate)
                     (setpolicy)(enablezk)(disablezk)
                     (submit)(supersede)(revokecmmt)(expirecmmt)
+                    (submitroot)(linkmanifest)(closebatch)
                     (record)(setpaytoken)(rmpaytoken)(withdraw)
                 )
             }

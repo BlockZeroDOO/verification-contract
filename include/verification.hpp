@@ -93,6 +93,22 @@ public:
     void expirecmmt(uint64_t id);
 
     [[eosio::action]]
+    void submitroot(
+        const name& submitter,
+        uint64_t schema_id,
+        uint64_t policy_id,
+        const checksum256& root_hash,
+        uint32_t leaf_count,
+        const checksum256& external_ref
+    );
+
+    [[eosio::action]]
+    void linkmanifest(uint64_t id, const checksum256& manifest_hash);
+
+    [[eosio::action]]
+    void closebatch(uint64_t id);
+
+    [[eosio::action]]
     void record(
         const name& submitter,
         const checksum256& object_hash,
@@ -197,6 +213,40 @@ private:
         indexed_by<"byexternal"_n, const_mem_fun<commitment_row, checksum256, &commitment_row::by_external_ref>>
     >;
 
+    struct [[eosio::table("batches")]] batch_row {
+        uint64_t id;
+        name submitter;
+        checksum256 root_hash;
+        uint32_t leaf_count;
+        uint64_t schema_id;
+        uint64_t policy_id;
+        checksum256 manifest_hash;
+        checksum256 external_ref;
+        checksum256 request_key;
+        uint32_t block_num;
+        time_point_sec created_at;
+        uint8_t status;
+
+        uint64_t primary_key() const { return id; }
+        uint64_t by_submitter() const { return submitter.value; }
+        uint64_t by_schema_id() const { return schema_id; }
+        uint64_t by_policy_id() const { return policy_id; }
+        uint64_t by_status() const { return static_cast<uint64_t>(status); }
+        checksum256 by_request() const { return request_key; }
+        checksum256 by_external_ref() const { return external_ref; }
+    };
+
+    using batch_table = multi_index<
+        "batches"_n,
+        batch_row,
+        indexed_by<"bysubmitter"_n, const_mem_fun<batch_row, uint64_t, &batch_row::by_submitter>>,
+        indexed_by<"byschemaid"_n, const_mem_fun<batch_row, uint64_t, &batch_row::by_schema_id>>,
+        indexed_by<"bypolicyid"_n, const_mem_fun<batch_row, uint64_t, &batch_row::by_policy_id>>,
+        indexed_by<"bystatus"_n, const_mem_fun<batch_row, uint64_t, &batch_row::by_status>>,
+        indexed_by<"byrequest"_n, const_mem_fun<batch_row, checksum256, &batch_row::by_request>>,
+        indexed_by<"byexternal"_n, const_mem_fun<batch_row, checksum256, &batch_row::by_external_ref>>
+    >;
+
     struct [[eosio::table("counters")]] counter_state {
         uint64_t next_commitment_id = 1;
         uint64_t next_batch_id = 1;
@@ -250,15 +300,21 @@ private:
     static constexpr uint8_t commitment_status_superseded = 1;
     static constexpr uint8_t commitment_status_revoked = 2;
     static constexpr uint8_t commitment_status_expired = 3;
+    static constexpr uint8_t batch_status_open = 0;
+    static constexpr uint8_t batch_status_closed = 1;
 
     uint128_t make_payment_key(const name& token_contract, const symbol_code& token_symbol) const;
     payment_token get_payment_token(const name& token_contract, const symbol_code& token_symbol) const;
     kyc_row require_kyc_record(const name& account) const;
     schema_row require_schema(uint64_t id) const;
     policy_row require_policy(uint64_t id) const;
+    uint64_t next_batch_id();
     uint64_t next_commitment_id();
     asset resolve_price(const name& token_contract, const symbol& token_symbol) const;
     checksum256 parse_hash(const string& hex) const;
+    void validate_nonzero_checksum(const checksum256& value, const char* field_name) const;
+    void validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const;
+    void validate_batch_is_open(const batch_row& batch) const;
     void validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const;
     void validate_commitment_is_active(const commitment_row& commitment) const;
     void validate_future_time(const time_point_sec& value, const char* field_name) const;

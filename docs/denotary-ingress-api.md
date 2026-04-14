@@ -2,42 +2,44 @@
 
 ## Purpose
 
-Этот документ фиксирует минимальный off-chain baseline для этапа 6:
+This document describes the current off-chain baseline for stage 6:
 
 - deterministic canonicalization
 - single submit preparation
 - batch submit preparation
-- trace id / request id для аудита
+- generation of `trace_id` and `request_id` for auditability
 
-Текущая реализация находится в [services/ingress_api.py](/c:/projects/verification-contract/services/ingress_api.py:1).
+Implementation:
 
-## Current Scope
+- [services/ingress_api.py](/c:/projects/verification-contract/services/ingress_api.py:1)
 
-Сервис пока не:
+## Current scope
 
-- подписывает транзакции
-- отправляет их в сеть
-- читает on-chain tables напрямую
-- отслеживает finality
+The service does not yet:
 
-Сервис уже:
+- sign transactions
+- broadcast them to the network
+- read on-chain tables directly
+- track finality by itself
 
-- валидирует входной request context
-- канонизирует payload
-- вычисляет `object_hash`, `external_ref_hash`, `root_hash`, `manifest_hash`
-- подготавливает payload под actions `submit` и `submitroot`
+The service already does:
+
+- validate request context
+- canonicalize the payload
+- compute `object_hash`, `external_ref_hash`, `root_hash`, and `manifest_hash`
+- prepare payloads for `submit` and `submitroot`
 
 ## Endpoints
 
 ### `GET /healthz`
 
-Возвращает базовый health-check.
+Returns a health-check response.
 
 ### `POST /v1/single/prepare`
 
-Готовит single anchoring request.
+Prepares a single anchoring request.
 
-Минимальный request body:
+Minimal request body:
 
 ```json
 {
@@ -70,11 +72,33 @@
 }
 ```
 
+The response includes:
+
+- `trace_id`
+- `request_id`
+- `received_at`
+- `canonical_form`
+- `object_hash`
+- `external_ref_hash`
+- `prepared_action`
+
+By default, the response does not return raw `canonical_form`.
+
+If deep debugging is needed, send:
+
+```json
+{
+  "include_debug_material": true
+}
+```
+
+and the response will include `canonical_form`.
+
 ### `POST /v1/batch/prepare`
 
-Готовит batch anchoring request.
+Prepares a batch anchoring request.
 
-Минимальный request body:
+Minimal request body:
 
 ```json
 {
@@ -113,50 +137,106 @@
 }
 ```
 
-## Canonicalization Rules
+The response includes:
 
-Текущий baseline-профиль:
+- `trace_id`
+- `request_id`
+- `received_at`
+- `leaf_hashes`
+- `root_hash`
+- `manifest`
+- `manifest_hash`
+- `external_ref_hash`
+- `prepared_action`
+
+By default, the response does not return raw batch material such as the full manifest or per-leaf canonical forms.
+
+If deep debugging is needed, send:
+
+```json
+{
+  "include_debug_material": true
+}
+```
+
+and the response will include:
+
+- `leaf_hashes`
+- `manifest`
+- `manifest_canonical_form`
+
+## Canonicalization rules
+
+Current baseline profile:
 
 - `json-sorted-v1`
 
-Правила:
+Rules:
 
-- JSON сериализуется детерминированно
-- ключи объектов сортируются
-- лишние пробелы убираются
-- массивы сохраняют исходный порядок
-- `NaN` и `Infinity` запрещены
-- кодировка: UTF-8
+- JSON is serialized deterministically
+- object keys are sorted
+- extra whitespace is removed
+- arrays preserve original order
+- `NaN` and `Infinity` are rejected
+- encoding is UTF-8
 
-Формула hash:
+Hash formulas:
 
 - `object_hash = SHA-256(canonical_form_utf8_bytes)`
 - `external_ref_hash = SHA-256(external_ref_utf8_bytes)`
 
-## Batch Rules
+## Batch rules
 
-Для batch baseline:
+For the current batch baseline:
 
-- каждый leaf canonicalize-ится отдельно
+- each leaf is canonicalized independently
 - `leaf_hash = SHA-256(canonical_leaf_form)`
-- Merkle root строится попарным SHA-256 от конкатенации raw hash bytes
-- при нечетном числе leaf последний hash дублируется на уровне дерева
+- the Merkle root is built by pairwise SHA-256 over concatenated raw hash bytes
+- if the number of leaves is odd, the last hash is duplicated at that tree level
 - `manifest_hash = SHA-256(canonical_manifest_json)`
 
-## Audit Metadata
+## Audit metadata
 
-Каждый prepare-response возвращает:
+Every prepare response returns:
 
 - `trace_id`
 - `request_id`
 - `received_at`
 
-`request_id` детерминированно считается из:
+`request_id` is deterministically derived from:
 
 - `submitter`
 - `external_ref_hash`
-- `object_hash` или `root_hash`
+- `object_hash` or `root_hash`
 - `mode`
+
+## Operational handoff
+
+The current intended flow after `prepare` is:
+
+1. take the returned `prepared_action`
+2. sign and broadcast it outside the service
+3. register the same `request_id` in the Finality Watcher
+4. after inclusion, attach `tx_id` and `block_num`
+5. if available, attach `commitment_id` or `batch_id` into watcher anchor metadata
+
+Related docs:
+
+- [docs/denotary-finality-services.md](/c:/projects/verification-contract/docs/denotary-finality-services.md:1)
+- [docs/denotary-audit-api.md](/c:/projects/verification-contract/docs/denotary-audit-api.md:1)
+
+## Hardening notes
+
+The current ingress baseline now enforces:
+
+- request body size limit
+- maximum `external_ref` length
+- maximum `external_leaf_ref` length
+- maximum batch size
+- maximum canonicalized material size
+- Antelope account-name validation for `submitter`
+- rejection of `null` payloads
+- safer default responses without raw canonical material
 
 ## Run
 
@@ -172,10 +252,10 @@ Windows PowerShell:
 scripts/run-ingress-api.ps1 -Host 127.0.0.1 -Port 8080 -ContractAccount verification
 ```
 
-## Next Step
+## Next step
 
-Следующий шаг после этого baseline:
+Logical next improvements after this baseline:
 
-- подключить on-chain read model вместо передачи `schema/policy/kyc` в request body
-- добавить tx assembly/sign/broadcast
-- передать prepared tx в `Finality Watcher` и `Receipt Service`
+- pull schema, policy, and KYC context from on-chain or indexed read models
+- add transaction assembly, signing, and broadcasting
+- automate the handoff into finality tracking

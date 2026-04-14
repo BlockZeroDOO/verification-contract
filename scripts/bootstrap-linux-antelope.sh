@@ -95,8 +95,9 @@ cat <<'EOF'
 Linux bootstrap completed.
 
 Next steps:
-  1. Import your Jungle4 deployment keys into cleos wallet.
+  1. Import your deNotary deployment keys into cleos wallet.
   2. Build the contracts with ./scripts/build-testnet.sh
-  3. Deploy with ./scripts/deploy-jungle4.sh
+  3. Deploy with ./scripts/deploy-denotary.sh for the main chain.
+  4. Or deploy with ./scripts/deploy-jungle4.sh for Jungle4 testing.
 
 EOF

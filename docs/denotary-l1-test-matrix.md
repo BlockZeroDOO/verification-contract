@@ -22,6 +22,10 @@
 
 Проверяют взаимодействие `Ingress API`, `Canonicalization Service`, `Batch Builder`, `Finality Watcher`, `Receipt Service`.
 
+Current baseline artifact:
+
+- [tests/test_service_integration.py](/c:/projects/verification-contract/tests/test_service_integration.py:1)
+
 ### 3. End-to-end verification tests
 
 Проверяют пользовательский путь от submit до receipt и Audit API.
@@ -93,6 +97,9 @@
 - API rejects submit when policy/KYC prechecks fail
 - API creates traceable request id for single flow
 - API creates traceable batch id for batch flow
+- API rejects oversized request bodies
+- API rejects overlarge batch manifests or canonicalized payloads
+- API hides raw canonical material unless debug mode is explicitly enabled
 
 ### Batch builder
 
@@ -108,6 +115,16 @@
 - watcher marks tx as finalized only after irreversible
 - watcher handles delayed finality without false positives
 - watcher handles tx failure/rejection path
+- watcher rejects conflicting re-registration of the same `request_id`
+- watcher rejects rewriting `tx_id` or `block_num` after they are recorded
+- watcher rejects conflicting `commitment_id` or `batch_id` anchor rewrites
+
+### Service integration baseline
+
+- local mock-chain test can drive `submitted -> included -> finalized`
+- single request can move from ingress prepare to receipt and audit lookup
+- batch request can move from ingress prepare to receipt and audit lookup
+- audit API can resolve by `commitment_id` and `batch_id` after watcher anchor updates
 
 ### Receipt service
 

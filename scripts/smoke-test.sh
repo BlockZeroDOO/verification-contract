@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-RPC_URL="${RPC_URL:-https://dev-history.globalforce.io}"
+RPC_URL="${RPC_URL:-https://history.denotary.io}"
 VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
 PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
 PAYMENT_PRICE="${PAYMENT_PRICE:-1.0000 GFT}"

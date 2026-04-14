@@ -1,378 +1,257 @@
-# План разработки по ТЗ DeNotary L1 (TSD v2)
+# DeNotary L1 Development Plan
 
-## 1. Исходная точка
+## Status Snapshot (2026-04-14)
 
-Текущее состояние репозитория:
+Already implemented in this repository:
 
-- `verification` уже реализует базовую immutable proof registry с оплатой через `*::transfer`
-- `dfs` существует как отдельный экономический/scaffold-контракт и не покрывает требования TSD v2
-- off-chain сервисы из ТЗ в репозитории пока отсутствуют
+- Stage 0: discovery, ADRs, backlog, test matrix
+- Stage 1: contract-core refactor and clean deployment baseline
+- Stage 2: `KYC`, `Schema`, and `Policy` registries
+- Stage 3: single-record commitment flow
+- Stage 4: batch anchoring flow
+- Stage 5: lifecycle tracking for commitments and batches
+- Stage 6: deterministic ingress API baseline
+- Stage 7: finality watcher and receipt service baseline
+- Stage 8: audit API baseline
 
-Разрыв между текущим состоянием и ТЗ:
+Current next step:
 
-- нет реестров `KYCRegistry`, `SchemaRegistry`, `PolicyRegistry`
-- нет сущностей `CommitmentRegistry`, `BatchRegistry`, `RecordStatusRegistry`, `ProofRegistry`
-- нет batch anchoring и Merkle/inclusion proof потока
-- нет `Finality Watcher`, `Receipt Service`, `Indexer / Audit API`
-- текущая модель `verification.proofs` хранит только факт платной записи, но не покрывает policy/schema/finality lifecycle
+- Stage 9: security hardening in progress
+- Stage 11 baseline integration tests started
 
-## 2. Рекомендуемые рамки MVP
+## Initial gap against TSD v2
 
-Чтобы не расползтись по объему, предлагается зафиксировать MVP так:
+The original gap between the legacy repository state and the target DeNotary model was:
 
-- включить: `KYCRegistry`, `SchemaRegistry`, `PolicyRegistry`, `CommitmentRegistry`, `BatchRegistry`, `RecordStatusRegistry`
-- включить off-chain: `Ingress API`, `Canonicalization Service`, `Batch Builder`, `Finality Watcher`, `Receipt Service`, `Indexer / Audit API`
-- оставить опционально: `ProofRegistry` и ZKP-поток
-- сохранить оплату как отдельный слой, но не смешивать ее с логикой finality и proof lifecycle
+- no `KYCRegistry`, `SchemaRegistry`, or `PolicyRegistry`
+- no `CommitmentRegistry` or `BatchRegistry`
+- no batch anchoring and Merkle-based flow
+- no finality watcher, receipt service, or audit API
+- legacy `verification.proofs` only covered paid proof insertion, not the full schema/policy/finality lifecycle
 
-Ключевое архитектурное допущение для плана:
+Most of that gap is now closed for the MVP baseline.
 
-- на первом этапе core-реестры реализуются в рамках одного контракта `verification` с отдельными таблицами и action-группами
-- `dfs` не трогаем, пока не появится отдельное требование связать экономику DFS с DeNotary L1
-- если позже понадобится жесткое разделение по permission boundary, реестры можно вынести в отдельные контракты после стабилизации модели данных
+## MVP scope
 
-## 3. Главные архитектурные решения до старта кодинга
+Included in the current MVP track:
 
-Перед активной разработкой нужно зафиксировать три решения:
+- `KYCRegistry`
+- `SchemaRegistry`
+- `PolicyRegistry`
+- `CommitmentRegistry`
+- `BatchRegistry`
+- lifecycle tracking for commitments and batches
+- `Ingress API`
+- canonicalization baseline
+- `Finality Watcher`
+- `Receipt Service`
+- `Audit API`
 
-1. Что считается "заверенной записью" в коде и API.
-   Рекомендуемо разделить состояния:
-   - `accepted` — запрос принят
-   - `included` — транзакция попала в блок
-   - `finalized` — блок стал irreversible
+Deferred from MVP:
 
-2. Где хранится finality truth.
-   Рекомендуемо:
-   - on-chain хранит данные записи и ее business status
-   - off-chain `Finality Watcher` отслеживает inclusion/finality
-   - `Receipt Service` выдает проверяемый receipt только после irreversible
+- separate `ProofRegistry`
+- ZKP flow
+- fully indexed chain-native audit backend
 
-3. Где живет batch inclusion proof.
-   Рекомендуемо:
-   - on-chain хранить только `root_hash`, `manifest_hash`, метаданные batch
-   - off-chain хранить manifest и выдавать inclusion proof через `Receipt Service`/`Audit API`
+## Architectural decisions
 
-## 4. Пошаговый план разработки
+### Finality truth
 
-### Этап 0. Discovery и декомпозиция ТЗ
+- on-chain stores record data and business status
+- off-chain tracks inclusion and finality
+- receipts are issued only after irreversible finality
 
-Цель:
+### Batch proof storage
 
-- перевести ТЗ в backlog, контракты, API и тестовые сценарии
+- on-chain stores `root_hash`, `manifest_hash`, and batch metadata
+- off-chain stores the manifest and future inclusion-proof material
 
-Задачи:
+### Deployment model
 
-- описать entity map: KYC, schema, policy, commitment, batch, status, proof
-- зафиксировать state machine записи и batch
-- подготовить action/table matrix с auth-правами
-- решить, какие поля обязательны в MVP, а какие откладываются
-- подготовить ADR по finality model и storage model для batch proof
+- current plan assumes fresh deployment on clean accounts
+- no migration from legacy `proofs` is required for the DeNotary rollout
 
-Результат этапа:
+### Contract boundary
 
-- backlog по эпикам
-- схема данных и auth matrix
-- список API/сервисов для первой поставки
+- current core remains inside a single `verification` contract
+- `dfs` is kept separate and not coupled into the DeNotary MVP flow
 
-### Этап 1. Рефакторинг contract core под новую модель
+## Implemented stages
 
-Цель:
+### Stage 0. Discovery and decomposition
 
-- подготовить `verification` к расширению без смешивания старой proof-модели и новой registry-модели
+Delivered:
 
-Задачи:
+- discovery pack
+- ADRs
+- backlog
+- test matrix
 
-- выделить доменные секции контракта по registry-модулям
-- спроектировать primary/secondary indexes под `schema_id`, `policy_id`, `submitter`, `status`
-- определить стратегию генерации `uint64_t id`
-- зафиксировать clean deployment модель на новых аккаунтах без миграции старых таблиц
-- обновить README и build/deploy сценарии под новый состав контракта
+Artifacts:
 
-Результат этапа:
+- [docs/denotary-l1-discovery.md](/c:/projects/verification-contract/docs/denotary-l1-discovery.md:1)
+- [docs/denotary-l1-backlog.md](/c:/projects/verification-contract/docs/denotary-l1-backlog.md:1)
+- [docs/denotary-l1-test-matrix.md](/c:/projects/verification-contract/docs/denotary-l1-test-matrix.md:1)
 
-- согласованная структура on-chain модуля
-- зафиксированная стратегия fresh deploy без legacy migration
+### Stage 1. Contract core baseline
 
-### Этап 2. Реализация базовых реестров допуска и правил
+Delivered:
 
-Цель:
+- domain model baseline
+- table and action matrix
+- fresh deploy assumption
 
-- закрыть foundation слой: кто может писать и по каким правилам
+Artifacts:
 
-Задачи:
+- [docs/denotary-l1-contract-core.md](/c:/projects/verification-contract/docs/denotary-l1-contract-core.md:1)
+- [docs/adr/0003-clean-deployment-cutover.md](/c:/projects/verification-contract/docs/adr/0003-clean-deployment-cutover.md:1)
 
-- реализовать `KYCRegistry`
-- реализовать `SchemaRegistry`
-- реализовать `PolicyRegistry`
-- ввести проверки:
-  - `require_kyc`
-  - `min_kyc_level`
-  - активность схемы
-  - активность policy
-- покрыть unit/contract tests на позитивные и негативные сценарии
+### Stage 2. Access registries
 
-Definition of Done:
+Delivered:
 
-- запись нельзя создать без выполнения policy/schema/KYC ограничений
-- все governance actions валидируют входные данные и права доступа
+- `issuekyc`, `renewkyc`, `revokekyc`, `suspendkyc`
+- `addschema`, `updateschema`, `deprecate`
+- `setpolicy`, `enablezk`, `disablezk`
 
-### Этап 3. Реализация single-record потока
+### Stage 3. Single-record flow
 
-Цель:
+Delivered:
 
-- собрать основной путь `hash anchoring` для одиночной записи
+- `commitments` table
+- `submit`
+- `supersede`
+- `revokecmmt`
+- `expirecmmt`
+- duplicate protection through deterministic request keys
 
-Задачи:
+### Stage 4. Batch flow
 
-- реализовать `CommitmentRegistry`
-- добавить `submit`, `supersede`, `setstatus`, `linkproof`
-- хранить:
-  - `submitter`
-  - `schema_id`
-  - `policy_id`
-  - `hash`
-  - `external_ref`
-  - `block_num`
-  - `created_at`
-  - `status`
-- определить, кто и когда обновляет `block_num`/status после inclusion/finality
-- добавить защиту от replay/duplicate requests
+Delivered:
 
-Definition of Done:
+- `batches` table
+- `submitroot`
+- `linkmanifest`
+- `closebatch`
 
-- одиночная запись создается, проходит валидации и может быть найдена для последующей верификации
-- supersede/revoke/expire сценарии не ломают audit trail
+### Stage 5. Lifecycle tracking
 
-### Этап 4. Реализация batch anchoring потока
+Delivered:
 
-Цель:
+- explicit lifecycle timestamps
+- `superseded_by` linkage
+- clearer separation between business lifecycle and finality lifecycle
 
-- добавить масштабируемый поток массовой фиксации данных
+### Stage 6. Ingress API
 
-Задачи:
+Delivered:
 
-- реализовать `BatchRegistry`
-- добавить `submitroot`, `closebatch`, `linkmanifest`
-- определить формат batch manifest
-- определить формат Merkle leaf canonicalization
-- зафиксировать off-chain контракт между `Batch Builder` и `Receipt Service`
-- покрыть сценарии:
-  - создание batch
-  - финализация batch
-  - выдача inclusion proof для leaf
+- deterministic canonicalization profile `json-sorted-v1`
+- `POST /v1/single/prepare`
+- `POST /v1/batch/prepare`
+- generated `trace_id`, `request_id`, hashes, root, and manifest
 
-Definition of Done:
+Artifact:
 
-- batch root фиксируется on-chain
-- manifest и inclusion proof воспроизводимы и проверяемы off-chain
+- [docs/denotary-ingress-api.md](/c:/projects/verification-contract/docs/denotary-ingress-api.md:1)
 
-### Этап 5. Жизненный цикл и статусы записей
+### Stage 7. Finality watcher and receipts
 
-Цель:
+Delivered:
 
-- отделить business lifecycle от события включения в irreversible block
+- request registration
+- inclusion updates with `tx_id` and `block_num`
+- finality polling against `/v1/chain/get_info`
+- finalized single and batch receipts
 
-Задачи:
+Artifact:
 
-- реализовать `RecordStatusRegistry` или эквивалентную status-модель
-- закрепить allowed transitions:
-  - `active`
-  - `superseded`
-  - `revoked`
-  - `expired`
-- отдельно описать technical states для off-chain слежения:
-  - `accepted`
-  - `included`
-  - `finalized`
-- решить, записываются ли technical states on-chain или остаются в indexer/audit слое
+- [docs/denotary-finality-services.md](/c:/projects/verification-contract/docs/denotary-finality-services.md:1)
 
-Definition of Done:
+### Stage 8. Audit API
 
-- статусная модель непротиворечива
-- верификатор может отличить business status от finality status
+Delivered:
 
-### Этап 6. Ingress API и Canonicalization Service
+- audit read path over the file-based finality state
+- lookup by `request_id`
+- lookup by `external_ref_hash`
+- lookup by `tx_id`
+- lookup by `commitment_id`
+- lookup by `batch_id`
+- paginated search
+- `jsonl` export
+- combined `record + receipt + proof_chain` response
 
-Цель:
+Artifact:
 
-- стандартизовать входной поток до попадания данных в блокчейн
+- [docs/denotary-audit-api.md](/c:/projects/verification-contract/docs/denotary-audit-api.md:1)
 
-Задачи:
+## Remaining stages
 
-- реализовать `Ingress API` для single и batch режимов
-- реализовать `Canonicalization Service`
-- ввести версионирование canonicalization rules
-- привязать canonicalization profile к `SchemaRegistry`
-- формировать детерминированный hash и request metadata
-- логировать trace id / request id для аудита
+### Stage 9. Security hardening
 
-Definition of Done:
+Goals:
 
-- одинаковые входные данные всегда дают одинаковый canonical form и hash
-- API не отправляет транзакцию без валидных schema/policy/KYC условий
+- review replay protection and idempotency
+- tighten canonicalization and schema enforcement boundaries
+- review metadata leakage in `external_ref`, manifests, and receipts
+- verify governance and submitter permission boundaries
+- prevent ambiguous or weakly verifiable receipts
 
-### Этап 7. Finality Watcher и Receipt Service
+Current baseline already added:
 
-Цель:
+- stricter ingress request validation and payload-size limits
+- safer default ingress responses without raw canonical material
+- watcher-side conflict protection for request re-registration and anchor mutation
+- strict request and transaction identifier validation
 
-- построить ключевой слой "заверения через consensus/finality"
+### Stage 10. Optional proof layer and ZKP
 
-Задачи:
+Goals:
 
-- реализовать `Finality Watcher`
-- отслеживать:
-  - отправку транзакции
-  - inclusion в блок
-  - переход блока в `irreversible`
-- реализовать `Receipt Service` для двух режимов:
-  - single receipt
-  - batch receipt
-- в receipt включать:
-  - hash/root
-  - tx id
-  - block num
-  - finality flag
-  - inclusion proof для batch
+- design `ProofRegistry` separately from the MVP path
+- keep ZKP independent from the core single and batch anchoring flow
 
-Definition of Done:
+### Stage 11. Integration testing and rollout
 
-- receipt выдается только после подтвержденной finality
-- для любой записи можно восстановить цепочку `request -> tx -> block -> irreversible`
+Goals:
 
-### Этап 8. Indexer / Audit API
+- contract integration tests
+- API integration tests
+- finality watcher tests
+- batch and inclusion-proof tests
+- testnet dry run
+- deployment and operations runbooks
 
-Цель:
+Current baseline already added:
 
-- дать внешнему верификатору быстрый и проверяемый способ проверки записи
+- stdlib-based service integration suite
+- in-process tests for ingress, watcher, receipt, and audit services
+- mock chain finality simulation
+- end-to-end single and batch off-chain verification paths
 
-Задачи:
+Artifact:
 
-- реализовать индексатор событий и таблиц контрактов
-- реализовать `Audit API`:
-  - поиск по `commitment_id`
-  - поиск по `external_ref`
-  - получение receipt
-  - проверка статуса
-  - выдача chain of proof
-- добавить аудит-эндпоинты для batch proof
-- добавить pagination, filtering, exportable audit format
+- [docs/denotary-integration-tests.md](/c:/projects/verification-contract/docs/denotary-integration-tests.md:1)
 
-Definition of Done:
+## Recommended implementation order
 
-- внешний клиент может проверить существование записи и ее finality без доступа к исходным данным
+1. Stabilize the on-chain model.
+2. Maintain deterministic ingestion.
+3. Keep finality off-chain and explicit.
+4. Build receipts and audit reads on top of that.
+5. Only then move into security hardening and rollout.
+6. Leave ZKP as a separate release track.
 
-### Этап 9. Security hardening
+## Practical outcome
 
-Цель:
+The repository now already contains a working MVP-shaped contour for:
 
-- закрыть риски, перечисленные в ТЗ, до выхода в testnet/mainnet
+- proof of existence
+- single anchoring
+- batch anchoring
+- irreversible finality verification
+- receipt issuance
+- audit-oriented verification reads
 
-Задачи:
-
-- replay protection и идемпотентность запросов
-- строгая canonicalization и schema enforcement
-- снижение metadata leakage
-- при необходимости добавить `salt`/HMAC слой до хеширования
-- проверить permission boundaries и governance actions
-- ограничить emergency pause только безопасными сценариями
-
-Definition of Done:
-
-- негативные сценарии покрыты тестами
-- нет путей создать двусмысленный или недоверифицируемый receipt
-
-### Этап 10. ProofRegistry и ZKP как отдельная очередь
-
-Цель:
-
-- не блокировать MVP optional-функциональностью
-
-Задачи:
-
-- реализовать `ProofRegistry` после стабилизации core-потока
-- определить типы proof workers
-- зафиксировать интерфейс `submitproof` / `verify`
-- отдельно спроектировать public inputs, verification result и trust assumptions
-
-Definition of Done:
-
-- ZKP не влияет на core flow single/batch anchoring
-- optional proof слой можно разворачивать независимо
-
-### Этап 11. Интеграционное тестирование и rollout
-
-Цель:
-
-- проверить систему end-to-end до production rollout
-
-Задачи:
-
-- собрать test matrix:
-  - unit tests контрактов
-  - contract integration tests
-  - API integration tests
-  - finality watcher tests
-  - batch/inclusion proof tests
-- провести dry run на testnet
-- проверить observability:
-  - service logs
-  - trace ids
-  - alerting по stuck finality
-- обновить runbooks деплоя и эксплуатации
-
-Definition of Done:
-
-- подтверждены single и batch потоки end-to-end
-- команда умеет развернуть, проверить и поддерживать систему по runbook
-
-## 5. Рекомендуемый порядок реализации по спринтам
-
-Если делать без ZKP в первом релизе, последовательность лучше держать такой:
-
-1. Discovery + ADR + backlog
-2. Refactor core контракта
-3. KYC + Schema + Policy
-4. Commitment single flow
-5. Batch flow
-6. Canonicalization Service + Ingress API
-7. Finality Watcher + Receipt Service
-8. Indexer / Audit API
-9. Security hardening
-10. Testnet rollout
-11. Production hardening
-12. ProofRegistry / ZKP как отдельный релиз
-
-## 6. Что можно переиспользовать из текущего репозитория
-
-Можно использовать:
-
-- текущую сборочную структуру `CMakeLists.txt`
-- существующий контракт `verification` как точку входа для нового core
-- текущие deploy/build scripts как основу для обновленных runbooks
-- существующую практику таблиц, secondary indexes и `on_notify("*::transfer")` для платежного слоя
-
-Нужно будет заменить или расширить:
-
-- текущую таблицу `proofs`
-- текущий action `record(...)`, потому что он не знает о schema/policy/finality lifecycle
-- README и deploy docs, потому что они описывают более узкую модель
-
-## 7. Основные риски проекта
-
-- смешение business status и finality status
-- попытка решить finality полностью on-chain
-- отсутствие жесткой canonicalization версии
-- слишком раннее добавление ZKP до стабилизации single/batch модели
-- разрастание контракта без явной auth matrix
-- хранение лишних доказательных данных on-chain вместо вынесения их в receipt/indexer слой
-
-## 8. Практический итог
-
-Оптимальная стратегия разработки:
-
-- сначала стабилизировать on-chain data model
-- затем собрать deterministic ingestion и finality pipeline
-- после этого строить receipt/audit слой
-- ZKP оставить отдельной дорожкой после MVP
-
-Такой порядок минимизирует архитектурные развороты и позволяет рано получить рабочий `Proof of Existence + Hash/Batch Anchoring + Finality Verification` контур.
+The main remaining work is hardening, integration depth, and rollout readiness.

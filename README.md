@@ -1,13 +1,32 @@
-# DeNotary On-Chain Contracts
+# DeNotary Contracts And Services
 
-This repository currently contains two Antelope-compatible smart contracts:
+This repository contains the current DeNotary MVP baseline:
 
-- `verification`: DeNotary L1 on-chain registry and anchoring core
-- `dfs`: DFS registry, stake, pricing, receipts, and settlement scaffold
+- `verification`: the main Antelope on-chain registry and anchoring contract
+- `dfs`: DFS-related economic and settlement scaffold
+- off-chain baseline services for ingestion, finality, receipts, and audit reads
+
+## Current status
+
+Implemented roadmap stages:
+
+- Stage 0: discovery, ADRs, backlog, and test matrix
+- Stage 1: contract-core refactor and clean deployment baseline
+- Stage 2: `KYC`, `Schema`, and `Policy` registries
+- Stage 3: single-record commitment flow
+- Stage 4: batch anchoring flow
+- Stage 5: lifecycle tracking for commitments and batches
+- Stage 6: deterministic ingress API baseline
+- Stage 7: finality watcher and receipt service baseline
+- Stage 8: audit API baseline
+
+Current next step:
+
+- Stage 9: security hardening
 
 ## `verification` scope
 
-`verification` now contains the DeNotary on-chain baseline for:
+The `verification` contract currently covers:
 
 - KYC access control
 - schema registry
@@ -17,25 +36,25 @@ This repository currently contains two Antelope-compatible smart contracts:
 - business lifecycle tracking for commitments and batches
 - legacy paid proof ingestion and treasury handling
 
-## Tables
+## On-chain tables
 
-### Core registry tables
+Core tables:
 
-- `kyc`: KYC state by account
-- `schemas`: canonicalization and hash-policy references
-- `policies`: single/batch/KYC/ZK capability flags
-- `commitments`: single-record anchoring rows
-- `batches`: batch anchoring rows
-- `counters`: monotonic IDs for anchored entities
+- `kyc`
+- `schemas`
+- `policies`
+- `commitments`
+- `batches`
+- `counters`
 
-### Legacy/payment tables
+Legacy/payment tables:
 
-- `proofs`: legacy append-only proof rows used by the paid transfer flow
-- `paytokens`: accepted payment tokens with fixed prices
+- `proofs`
+- `paytokens`
 
-## Actions
+## On-chain actions
 
-### Registry governance
+Registry governance:
 
 - `issuekyc(name account, uint8_t level, string provider, string jurisdiction, time_point_sec expires_at)`
 - `renewkyc(name account, time_point_sec expires_at)`
@@ -48,7 +67,7 @@ This repository currently contains two Antelope-compatible smart contracts:
 - `enablezk(uint64_t id)`
 - `disablezk(uint64_t id)`
 
-### Anchoring core
+Anchoring core:
 
 - `submit(name submitter, uint64_t schema_id, uint64_t policy_id, checksum256 object_hash, checksum256 external_ref)`
 - `supersede(uint64_t id, uint64_t successor_id)`
@@ -58,21 +77,73 @@ This repository currently contains two Antelope-compatible smart contracts:
 - `linkmanifest(uint64_t id, checksum256 manifest_hash)`
 - `closebatch(uint64_t id)`
 
-### Legacy/payment layer
+Legacy/payment layer:
 
 - `record(name submitter, checksum256 object_hash, string canonicalization_profile, string client_reference)`
 - `setpaytoken(name token_contract, asset price)`
 - `rmpaytoken(name token_contract, symbol token_symbol)`
 - `withdraw(name token_contract, name to, asset quantity, string memo)`
-- `*::transfer` notify handler for the paid legacy flow
+- `*::transfer` notify handler for the legacy paid flow
 
-## On-chain model notes
+## Model notes
 
-- `commitments.status` is a business status, not a finality status
-- `batches.status` tracks open/closed business lifecycle only
-- irreversible finality stays in the off-chain read model by design
-- `supersede(...)` now links the original commitment to a successor via `superseded_by`
+- `commitments.status` and `batches.status` are business statuses, not finality statuses
+- irreversible finality is intentionally kept off-chain
+- `supersede(...)` links the original commitment to a successor through `superseded_by`
 - batch closure requires a linked `manifest_hash`
+- batch proof material remains off-chain; on-chain stores `root_hash`, `manifest_hash`, and batch metadata
+
+## Off-chain services
+
+### Ingress API
+
+- [services/ingress_api.py](/c:/projects/verification-contract/services/ingress_api.py:1)
+- [docs/denotary-ingress-api.md](/c:/projects/verification-contract/docs/denotary-ingress-api.md:1)
+
+Capabilities:
+
+- deterministic canonicalization profile `json-sorted-v1`
+- single request preparation for `submit`
+- batch request preparation for `submitroot`
+- generated `trace_id`, `request_id`, and content hashes
+
+### Finality Watcher
+
+- [services/finality_watcher.py](/c:/projects/verification-contract/services/finality_watcher.py:1)
+- [docs/denotary-finality-services.md](/c:/projects/verification-contract/docs/denotary-finality-services.md:1)
+
+Capabilities:
+
+- register a request for watching
+- attach `tx_id` and `block_num` after inclusion
+- attach `commitment_id` or `batch_id` into anchor metadata
+- poll chain finality until irreversible
+
+### Receipt Service
+
+- [services/receipt_service.py](/c:/projects/verification-contract/services/receipt_service.py:1)
+- [docs/denotary-finality-services.md](/c:/projects/verification-contract/docs/denotary-finality-services.md:1)
+
+Capabilities:
+
+- issue finalized single receipts
+- issue finalized batch receipts
+- reject receipt reads before finality
+
+### Audit API
+
+- [services/audit_api.py](/c:/projects/verification-contract/services/audit_api.py:1)
+- [docs/denotary-audit-api.md](/c:/projects/verification-contract/docs/denotary-audit-api.md:1)
+
+Capabilities:
+
+- lookup by `request_id`
+- lookup by `external_ref_hash`
+- lookup by `tx_id`
+- lookup by `commitment_id`
+- lookup by `batch_id`
+- paginated search and `jsonl` export
+- read path returning `record + receipt + proof_chain`
 
 ## Build
 
@@ -97,9 +168,14 @@ Expected artifacts:
 - `dist/dfs/dfs.wasm`
 - `dist/dfs/dfs.abi`
 
-## On-chain smoke test
+## Smoke test
 
-The new registry and anchoring flow can be validated with:
+On-chain smoke coverage:
+
+- [scripts/smoke-test-onchain.sh](/c:/projects/verification-contract/scripts/smoke-test-onchain.sh:1)
+- [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1)
+
+Typical run:
 
 ```bash
 export RPC_URL=https://your-rpc
@@ -109,37 +185,50 @@ export SUBMITTER_ACCOUNT=someuser
 ./scripts/smoke-test-onchain.sh
 ```
 
-The script checks:
+The smoke test covers:
 
-- KYC issuance and renewal path
-- schema and policy creation
-- single commitment creation
-- duplicate single request rejection
-- supersede flow with explicit successor
-- revoke and expire lifecycle transitions
-- batch creation
-- duplicate batch request rejection
-- manifest linking
-- batch close guard before manifest
-- successful batch close after manifest linking
+- KYC issuance and renewal
+- schema and policy setup
+- single commitment submit
+- duplicate single rejection
+- supersede, revoke, and expire transitions
+- batch submit
+- duplicate batch rejection
+- manifest linking and close guards
 
-Detailed usage is documented in [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1).
+## Documentation map
 
-## Off-chain baseline
+Architecture and roadmap:
 
-The stage-6 ingestion scaffold lives in:
+- [docs/denotary-l1-development-plan.md](/c:/projects/verification-contract/docs/denotary-l1-development-plan.md:1)
+- [docs/denotary-l1-discovery.md](/c:/projects/verification-contract/docs/denotary-l1-discovery.md:1)
+- [docs/denotary-l1-contract-core.md](/c:/projects/verification-contract/docs/denotary-l1-contract-core.md:1)
+- [docs/denotary-l1-backlog.md](/c:/projects/verification-contract/docs/denotary-l1-backlog.md:1)
+- [docs/denotary-l1-test-matrix.md](/c:/projects/verification-contract/docs/denotary-l1-test-matrix.md:1)
 
-- [services/ingress_api.py](/c:/projects/verification-contract/services/ingress_api.py:1)
+Service docs:
+
+- [docs/denotary-deploy.md](/c:/projects/verification-contract/docs/denotary-deploy.md:1)
+- [docs/jungle4-deploy.md](/c:/projects/verification-contract/docs/jungle4-deploy.md:1)
 - [docs/denotary-ingress-api.md](/c:/projects/verification-contract/docs/denotary-ingress-api.md:1)
+- [docs/denotary-finality-services.md](/c:/projects/verification-contract/docs/denotary-finality-services.md:1)
+- [docs/denotary-audit-api.md](/c:/projects/verification-contract/docs/denotary-audit-api.md:1)
+- [docs/denotary-integration-tests.md](/c:/projects/verification-contract/docs/denotary-integration-tests.md:1)
+- [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1)
+- [docs/denotary-security-hardening.md](/c:/projects/verification-contract/docs/denotary-security-hardening.md:1)
 
-It currently prepares deterministic single and batch payloads for `submit` and `submitroot`.
+ADRs:
 
-## Legacy note
+- [docs/adr/0001-finality-model.md](/c:/projects/verification-contract/docs/adr/0001-finality-model.md:1)
+- [docs/adr/0002-batch-proof-storage.md](/c:/projects/verification-contract/docs/adr/0002-batch-proof-storage.md:1)
+- [docs/adr/0003-clean-deployment-cutover.md](/c:/projects/verification-contract/docs/adr/0003-clean-deployment-cutover.md:1)
 
-Some older deploy and smoke documents still describe the removed `managementel` flow. Treat the
-current `README`, the `denotary-*` docs, and the updated scripts as the source of truth for the
-current contract model.
+## Notes
+
+- `verification` is the current source of truth for the DeNotary on-chain model
+- the primary network target is `deNotary.io`, with Jungle4 retained as an optional external testnet
+- newer `denotary-*` docs and updated scripts should be preferred over older deployment notes that describe legacy flows
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file.
+This project is licensed under the MIT License. See `LICENSE`.

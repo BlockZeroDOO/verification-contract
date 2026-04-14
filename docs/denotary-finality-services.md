@@ -2,60 +2,70 @@
 
 ## Purpose
 
-Этот этап добавляет минимальный off-chain baseline для:
+This stage adds the off-chain finality baseline required for DeNotary receipts:
 
-- отслеживания перехода `submitted -> included -> finalized`
-- выдачи receipt только после finality
+- track the transition `submitted -> included -> finalized`
+- keep finality outside the on-chain business status model
+- issue receipts only after irreversible finality
 
-Реализация:
+Implementation:
 
 - [services/finality_watcher.py](/c:/projects/verification-contract/services/finality_watcher.py:1)
 - [services/receipt_service.py](/c:/projects/verification-contract/services/receipt_service.py:1)
 - [services/finality_store.py](/c:/projects/verification-contract/services/finality_store.py:1)
 
+Related read path:
+
+- [services/audit_api.py](/c:/projects/verification-contract/services/audit_api.py:1)
+- [docs/denotary-audit-api.md](/c:/projects/verification-contract/docs/denotary-audit-api.md:1)
+
 ## Finality model
 
-Watcher использует pragmatic baseline:
+The watcher uses a pragmatic MVP model:
 
-- request регистрируется через `POST /v1/watch/register`
-- когда появляется `tx_id` и `block_num`, request помечается как `included`
-- watcher опрашивает `v1/chain/get_info`
-- как только `last_irreversible_block_num >= block_num`, request помечается как `finalized`
+- a request is registered through `POST /v1/watch/register`
+- once `tx_id` and `block_num` are known, the request becomes `included`
+- the watcher polls `/v1/chain/get_info`
+- when `last_irreversible_block_num >= block_num`, the request becomes `finalized`
 
-Это соответствует принятому ADR:
+This matches the current ADR:
 
-- business status остается on-chain
-- finality status живет в off-chain read model
+- business lifecycle stays on-chain
+- finality lifecycle stays in an off-chain read model
 
 ## Storage
 
-Состояние хранится в JSON файле:
+State is stored in:
 
-- по умолчанию `runtime/finality-state.json`
+- `runtime/finality-state.json`
 
-Там фиксируются:
+The file currently tracks:
 
 - `request_id`
 - `trace_id`
 - `mode`
+- `submitter`
+- `contract`
 - `tx_id`
 - `block_num`
 - `status`
+- `registered_at`
+- `updated_at`
 - `finalized_at`
 - `chain_state`
-- anchor metadata
+- `anchor` metadata
 
 ## Finality Watcher API
 
 ### `GET /healthz`
 
-Health-check.
+Health check.
 
 ### `POST /v1/watch/register`
 
-Регистрирует request для наблюдения.
+Registers a request for watching.
 
-Пример:
+Example:
 
 ```json
 {
@@ -64,7 +74,7 @@ Health-check.
   "mode": "single",
   "submitter": "alice",
   "contract": "verification",
-  "rpc_url": "https://dev-history.globalforce.io",
+  "rpc_url": "https://history.denotary.io",
   "anchor": {
     "object_hash": "abcd...",
     "external_ref_hash": "ef01..."
@@ -72,11 +82,13 @@ Health-check.
 }
 ```
 
+For batch mode, `anchor` can contain `root_hash`, `manifest_hash`, `leaf_count`, and `external_ref_hash`.
+
 ### `POST /v1/watch/<request_id>/included`
 
-Добавляет `tx_id` и `block_num` после chain inclusion.
+Attaches inclusion metadata after the transaction is accepted into a block.
 
-Пример:
+Example:
 
 ```json
 {
@@ -85,29 +97,61 @@ Health-check.
 }
 ```
 
+### `POST /v1/watch/<request_id>/anchor`
+
+Merges extra anchor metadata into an already registered request.
+
+This is currently used to attach on-chain IDs needed by the Audit API.
+
+Single-mode example:
+
+```json
+{
+  "anchor": {
+    "commitment_id": 42
+  }
+}
+```
+
+Batch-mode example:
+
+```json
+{
+  "anchor": {
+    "batch_id": 7
+  }
+}
+```
+
+Rules:
+
+- `commitment_id` is valid only for `single` mode
+- `batch_id` is valid only for `batch` mode
+- existing anchor IDs and hashes cannot be overwritten with different values
+
 ### `POST /v1/watch/<request_id>/poll`
 
-Принудительно опрашивает chain state для одного request.
+Forces a one-request finality poll.
 
 ### `POST /v1/watch/poll`
 
-Принудительно опрашивает все зарегистрированные requests.
+Forces polling for all registered requests.
 
 ### `GET /v1/watch/<request_id>`
 
-Возвращает текущее watcher state.
+Returns the current watcher state.
 
 ## Receipt API
 
 ### `GET /healthz`
 
-Health-check.
+Health check.
 
 ### `GET /v1/receipts/<request_id>`
 
-Возвращает receipt только если request уже finalized.
+Returns a receipt only when the request is already finalized.
 
-Single receipt содержит:
+Single receipt fields:
 
 - `request_id`
 - `trace_id`
@@ -118,7 +162,7 @@ Single receipt содержит:
 - `finality_flag`
 - `finalized_at`
 
-Batch receipt содержит:
+Batch receipt fields:
 
 - `request_id`
 - `trace_id`
@@ -131,12 +175,36 @@ Batch receipt содержит:
 - `finality_flag`
 - `finalized_at`
 
+## Expected flow
+
+1. The Ingress API prepares `request_id`, hashes, and action payload.
+2. An external broadcaster signs and submits the transaction.
+3. The watcher registers the request.
+4. After inclusion, the watcher receives `tx_id` and `block_num`.
+5. If needed, the watcher is updated with `commitment_id` or `batch_id`.
+6. The watcher waits for irreversible finality.
+7. The Receipt Service starts returning finalized receipts.
+8. The Audit API can expose the record, receipt, and proof chain in one read path.
+
+## Hardening notes
+
+The current watcher baseline now enforces:
+
+- request body size limit
+- strict `request_id` validation as 64-char hex
+- strict `tx_id` validation as 64-char hex
+- Antelope account-name validation for `submitter` and `contract`
+- idempotent `register` behavior for matching requests
+- rejection of conflicting re-use of an existing `request_id`
+- rejection of `tx_id` and `block_num` rewrites once recorded
+- no regression from `finalized` back to `included`
+
 ## Run
 
 Watcher:
 
 ```bash
-scripts/run-finality-watcher.sh --rpc-url https://dev-history.globalforce.io
+scripts/run-finality-watcher.sh --rpc-url https://history.denotary.io
 ```
 
 Receipt service:
@@ -148,23 +216,14 @@ scripts/run-receipt-service.sh
 Windows PowerShell:
 
 ```powershell
-scripts/run-finality-watcher.ps1 -RpcUrl https://dev-history.globalforce.io
+scripts/run-finality-watcher.ps1 -RpcUrl https://history.denotary.io
 scripts/run-receipt-service.ps1
 ```
 
-## Expected flow
-
-1. `Ingress API` готовит `request_id` и action payload.
-2. Внешний broadcaster отправляет tx.
-3. Watcher request регистрируется.
-4. После inclusion вызывается `.../included` с `tx_id` и `block_num`.
-5. Watcher дожидается irreversible finality.
-6. Receipt service начинает отдавать finalized receipt.
-
 ## Next step
 
-После этого baseline логично добавить:
+The natural follow-up after this baseline is:
 
-- tx broadcaster integration
-- автоматическую передачу данных из ingress в watcher
-- indexer и audit read model вместо чисто file-based store
+- broadcaster integration
+- automatic handoff from ingress into watcher registration
+- richer indexed read model beyond the file-based state store

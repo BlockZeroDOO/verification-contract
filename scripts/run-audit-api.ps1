@@ -1,9 +1,7 @@
 param(
     [string]$Host = "127.0.0.1",
-    [int]$Port = 8081,
-    [string]$RpcUrl = "https://history.denotary.io",
-    [string]$StateFile = "runtime/finality-state.json",
-    [int]$PollIntervalSec = 10
+    [int]$Port = 8083,
+    [string]$StateFile = "runtime/finality-state.json"
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,9 +20,7 @@ if (-not $python) {
     throw "Python interpreter not found."
 }
 
-& $python (Join-Path $projectRoot "services\\finality_watcher.py") `
+& $python (Join-Path $projectRoot "services\\audit_api.py") `
     --host $Host `
     --port $Port `
-    --rpc-url $RpcUrl `
-    --state-file $StateFile `
-    --poll-interval-sec $PollIntervalSec
+    --state-file $StateFile

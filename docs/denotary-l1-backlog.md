@@ -1,306 +1,231 @@
 # DeNotary L1 Backlog
 
-## Назначение
+## Status Snapshot (2026-04-14)
 
-Этот backlog переводит TSD v2 в очередность реализации для MVP и для optional-слоя.
+Completed epics:
 
-## Epic 0. Discovery Baseline
+- Epic 0: discovery baseline
+- Epic 1: contract core refactor
+- Epic 2: access registries
+- Epic 3: single anchoring
+- Epic 4: batch anchoring
+- Epic 5: ingestion baseline
+- Epic 6: finality and receipts baseline
+- Epic 7: audit API baseline
 
-### E0-1 Discovery pack
+Current active next epic:
 
-- Описание: собрать entity map, auth matrix, lifecycle model
-- Зависимости: нет
-- Acceptance criteria:
-- есть документ discovery
-- есть backlog
-- есть минимум два ADR
+- Epic 8: security hardening
 
-### E0-2 MVP test outline
+Deferred:
 
-- Описание: зафиксировать минимальную тестовую матрицу по contract/API/finality/batch
-- Зависимости: E0-1
-- Acceptance criteria:
-- тесты сгруппированы по слоям
-- есть release gates для testnet
+- Epic 10: optional proof layer and ZKP
 
-## Epic 1. Contract Core Refactor
+## Epic 0. Discovery baseline
 
-### E1-1 Domain model draft
+Status:
 
-- Описание: спроектировать таблицы и индексы для новых registry сущностей
-- Зависимости: E0-1
-- Acceptance criteria:
-- есть table/action matrix
-- зафиксированы secondary indexes
-- решен вопрос id generation
+- completed
 
-### E1-2 Clean deployment contract cutover
+Delivered:
 
-- Описание: зафиксировать fresh deployment на новых аккаунтах и убрать зависимость от legacy `proofs`
-- Зависимости: E1-1
-- Acceptance criteria:
-- documented clean deploy assumption
-- documented impact on action names and table names
-- обновлены ожидания для deploy docs
+- entity map
+- auth matrix
+- lifecycle model
+- ADR baseline
+- MVP test outline
 
-### E1-3 Contract module split
+## Epic 1. Contract core refactor
 
-- Описание: разложить код `verification` по registry-доменам
-- Зависимости: E1-1
-- Acceptance criteria:
-- структура кода поддерживает дальнейшее расширение
-- действия и таблицы не смешаны хаотично
+Status:
 
-## Epic 2. Access Registries
+- completed
 
-### E2-1 KYC registry
+Delivered:
 
-- Описание: реализовать таблицу и actions для KYC
-- Зависимости: E1-3
-- Acceptance criteria:
-- есть `issuekyc`, `renewkyc`, `revoke`, `suspend`
-- есть проверки active/expiry
+- table and action matrix
+- monotonic ID strategy
+- clean deployment assumption
+- updated contract baseline
 
-### E2-2 Schema registry
+## Epic 2. Access registries
 
-- Описание: реализовать schema rules registry
-- Зависимости: E1-3
-- Acceptance criteria:
-- есть `addschema`, `updateschema`, `deprecate`
-- схема проверяется при submit
+Status:
 
-### E2-3 Policy registry
+- completed
 
-- Описание: реализовать policy rules registry
-- Зависимости: E1-3
-- Acceptance criteria:
-- есть `allow_single`, `allow_batch`, `require_kyc`, `min_kyc_level`, `allow_zk`
-- policy проверяется при submit
+Delivered:
 
-## Epic 3. Single Anchoring
+- `issuekyc`
+- `renewkyc`
+- `revokekyc`
+- `suspendkyc`
+- `addschema`
+- `updateschema`
+- `deprecate`
+- `setpolicy`
+- `enablezk`
+- `disablezk`
 
-### E3-1 Commitment table and indexes
+## Epic 3. Single anchoring
 
-- Описание: реализовать storage model для single record
-- Зависимости: E2-1, E2-2, E2-3
-- Acceptance criteria:
-- запись создается с `submitter`, `schema_id`, `policy_id`, `hash`
-- есть индексы по `submitter`, `schema_id`, `policy_id`, `status`
+Status:
 
-### E3-2 Submit validation path
+- completed
 
-- Описание: собрать full validation path для single submit
-- Зависимости: E3-1
-- Acceptance criteria:
-- неактивная schema отклоняется
-- policy без `allow_single` отклоняется
-- KYC policy enforced
+Delivered:
 
-### E3-3 Lifecycle actions
+- `commitments` storage
+- `submit`
+- `supersede`
+- `revokecmmt`
+- `expirecmmt`
+- replay and duplicate protection
 
-- Описание: реализовать безопасные переходы `supersede/revoke/expire`
-- Зависимости: E3-1
-- Acceptance criteria:
-- недопустимые переходы запрещены
-- audit trail не теряется
+## Epic 4. Batch anchoring
 
-### E3-4 Idempotency and duplicate protection
+Status:
 
-- Описание: ввести canonical request key
-- Зависимости: E3-2
-- Acceptance criteria:
-- повторный submit того же запроса детерминированно обрабатывается
-- replay path покрыт тестами
+- completed
 
-## Epic 4. Batch Anchoring
+Delivered:
 
-### E4-1 Batch table and indexes
+- `batches` storage
+- `submitroot`
+- `linkmanifest`
+- `closebatch`
+- batch lifecycle guards
 
-- Описание: реализовать on-chain модель batch
-- Зависимости: E2-2, E2-3
-- Acceptance criteria:
-- есть `root_hash`, `leaf_count`, `manifest_hash`, `schema_id`, `policy_id`
-- есть индексирование по submitter/policy/schema
+## Epic 5. Ingestion services
 
-### E4-2 Batch submit flow
+Status:
 
-- Описание: реализовать `submitroot`
-- Зависимости: E4-1
-- Acceptance criteria:
-- batch policy enforced
-- root сохраняется детерминированно
+- completed as baseline
 
-### E4-3 Manifest linking and close flow
+Delivered:
 
-- Описание: реализовать `linkmanifest` и `closebatch`
-- Зависимости: E4-2
-- Acceptance criteria:
-- manifest immutable по hash
-- закрытый batch нельзя менять
+- deterministic canonicalization profile `json-sorted-v1`
+- single and batch prepare endpoints
+- Merkle root and manifest generation
+- trace metadata generation
 
-## Epic 5. Ingestion Services
+Open follow-ups:
 
-### E5-1 Canonicalization rules contract
+- on-chain or indexed lookup for schema, policy, and KYC
+- tx assembly, signing, and broadcasting
 
-- Описание: определить вход/выход canonicalization service
-- Зависимости: E0-1
-- Acceptance criteria:
-- одинаковый input дает одинаковый canonical form
-- output version-linked to schema
+## Epic 6. Finality and receipts
 
-### E5-2 Ingress API single flow
+Status:
 
-- Описание: принять данные, канонизировать и отправить single tx
-- Зависимости: E3-2, E5-1
-- Acceptance criteria:
-- API не отправляет tx без валидных prechecks
-- request traceable end-to-end
+- completed as baseline
 
-### E5-3 Batch builder flow
+Delivered:
 
-- Описание: собрать leafs, Merkle root и manifest
-- Зависимости: E4-2, E5-1
-- Acceptance criteria:
-- root воспроизводим
-- inclusion proof воспроизводим
+- finality watcher
+- request registration
+- inclusion updates
+- irreversible polling
+- single and batch finalized receipts
 
-## Epic 6. Finality and Receipts
+Open follow-ups:
 
-### E6-1 Finality watcher
+- broadcaster integration
+- automatic handoff from ingress into watcher
 
-- Описание: отслеживать `submitted -> included -> finalized`
-- Зависимости: E3-2, E4-2
-- Acceptance criteria:
-- watcher связывает request id с tx id и block num
-- finality определяется только после irreversible
+## Epic 7. Audit API
 
-### E6-2 Receipt service single
+Status:
 
-- Описание: выдавать receipt для single anchoring
-- Зависимости: E6-1
-- Acceptance criteria:
-- receipt содержит `hash`, `tx_id`, `block_num`, `finality_flag`
-- receipt не выдается до finality
+- completed as baseline
 
-### E6-3 Receipt service batch
+Delivered:
 
-- Описание: выдавать receipt для batch leaf
-- Зависимости: E5-3, E6-1
-- Acceptance criteria:
-- receipt содержит `root`, `inclusion_proof`, `tx_id`
-- leaf proof сверяется с `manifest_hash`
+- lookup by `request_id`
+- lookup by `external_ref_hash`
+- lookup by `tx_id`
+- lookup by `commitment_id`
+- lookup by `batch_id`
+- paginated search
+- `jsonl` export
+- `record + receipt + proof_chain` response shape
 
-## Epic 7. Indexer and Audit API
+Open follow-ups:
 
-### E7-1 Indexer baseline
+- direct chain-table indexer
+- batch inclusion-proof retrieval
+- read model beyond file-based state
 
-- Описание: индексировать chain tables и tx events
-- Зависимости: E3-1, E4-1, E6-1
-- Acceptance criteria:
-- single и batch сущности доступны в read model
-- запросы работают без обращения к raw node вручную
+## Epic 8. Security hardening
 
-### E7-2 Audit API
+Status:
 
-- Описание: реализовать внешнюю проверку записей и receipts
-- Зависимости: E7-1, E6-2, E6-3
-- Acceptance criteria:
-- есть поиск по `commitment_id`
-- есть поиск по `external_ref`
-- есть выдача receipt и verification chain
+- in progress
 
-## Epic 8. Security Hardening
+Planned work:
 
-### E8-1 Replay protection
+- replay and idempotency review
+- canonicalization and schema enforcement review
+- metadata leakage review
+- governance and permission boundary review
+- receipt ambiguity review
 
-- Описание: проверить и усилить идемпотентность
-- Зависимости: E3-4, E4-3
-- Acceptance criteria:
-- replay single и batch сценариев покрыт тестами
+Already added in the current pass:
 
-### E8-2 Metadata leakage review
+- stricter ingress validation and size limits
+- safer ingress defaults without raw canonical material
+- watcher conflict protection for request re-registration
+- watcher protection against conflicting `tx_id`, `block_num`, and anchor-ID rewrites
 
-- Описание: оценить, какие поля светят лишние данные
-- Зависимости: E3-1, E4-1
-- Acceptance criteria:
-- зафиксированы safe defaults для `external_ref` и manifest metadata
+## Epic 9. Testnet rollout
 
-### E8-3 Permission boundary review
+Status:
 
-- Описание: проверить governance и submitter authority model
-- Зависимости: E2-1, E2-2, E2-3, E3-3, E4-3
-- Acceptance criteria:
-- нет generic status mutation path без строгих правил
-- роли и полномочия документированы
+- in progress as baseline
 
-## Epic 9. Testnet Rollout
+Planned work:
 
-### E9-1 Test matrix
+- contract integration tests
+- API integration tests
+- finality tests
+- dry run on testnet
+- deploy and operations runbooks
 
-- Описание: сформировать test matrix по уровням
-- Зависимости: E3-4, E4-3, E6-3, E7-2
-- Acceptance criteria:
-- есть contract tests
-- есть API tests
-- есть finality tests
+Already added in the current pass:
 
-### E9-2 Testnet deployment runbook
+- local service integration suite
+- mock-chain finality tests
+- end-to-end single and batch off-chain pipeline coverage
 
-- Описание: обновить шаги сборки, деплоя и smoke test
-- Зависимости: E9-1
-- Acceptance criteria:
-- команда может развернуть стенд без чтения исходников
+## Epic 10. Optional proof layer
 
-## Epic 10. Optional Proof Layer
+Status:
 
-### E10-1 Proof registry
+- deferred
 
-- Описание: реализовать optional proof storage
-- Зависимости: E7-2
-- Acceptance criteria:
-- core flow не зависит от ZK
-- proof layer подключается отдельно
+Planned work:
 
-### E10-2 ZK verification path
-
-- Описание: определить proof worker interface и verify flow
-- Зависимости: E10-1
-- Acceptance criteria:
-- trusted path и ограничения documented
+- separate `ProofRegistry`
+- optional ZKP verification path
 
 ## Release slices
 
 ### Release A. On-chain foundation
 
-- E1-1
-- E1-2
-- E1-3
-- E2-1
-- E2-2
-- E2-3
-- E3-1
-- E3-2
+- contract core refactor
+- access registries
+- single anchoring baseline
 
 ### Release B. End-to-end anchoring
 
-- E3-3
-- E3-4
-- E4-1
-- E4-2
-- E4-3
-- E5-1
-- E5-2
-- E5-3
+- batch anchoring
+- ingress baseline
+- lifecycle model
 
 ### Release C. Verification pipeline
 
-- E6-1
-- E6-2
-- E6-3
-- E7-1
-- E7-2
-- E8-1
-- E8-2
-- E8-3
-- E9-1
-- E9-2
+- finality watcher
+- receipt service
+- audit API
+- security hardening
+- rollout readiness

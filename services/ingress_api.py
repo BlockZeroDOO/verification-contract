@@ -3,11 +3,21 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, List
+
+MAX_REQUEST_BODY_BYTES = 1024 * 1024
+MAX_EXTERNAL_REF_LENGTH = 256
+MAX_EXTERNAL_LEAF_REF_LENGTH = 128
+MAX_BATCH_ITEMS = 2048
+MAX_CANONICAL_FORM_BYTES = 256 * 1024
+MAX_BATCH_MANIFEST_BYTES = 1024 * 1024
+
+ACCOUNT_NAME_RE = re.compile(r"^[a-z1-5.]{1,12}$")
 
 
 def sha256_hex_bytes(payload: bytes) -> str:
@@ -90,6 +100,40 @@ def require_list(mapping: Dict[str, Any], field_name: str) -> List[Any]:
     return value
 
 
+def require_optional_bool(mapping: Dict[str, Any], field_name: str, default: bool = False) -> bool:
+    value = mapping.get(field_name, default)
+    if not isinstance(value, bool):
+        raise ValueError(f"{field_name} must be boolean")
+    return value
+
+
+def validate_account_name(value: str, field_name: str) -> str:
+    if not ACCOUNT_NAME_RE.fullmatch(value):
+        raise ValueError(f"{field_name} must be a valid Antelope account name")
+    return value
+
+
+def validate_limited_text(value: str, field_name: str, max_length: int) -> str:
+    if len(value) > max_length:
+        raise ValueError(f"{field_name} is too long")
+    for character in value:
+        code = ord(character)
+        if code < 32 or code == 127:
+            raise ValueError(f"{field_name} must not contain control characters")
+    return value
+
+
+def validate_json_payload(payload: Any, field_name: str) -> None:
+    if payload is None:
+        raise ValueError(f"{field_name} must not be null")
+
+
+def validate_canonical_size(canonical_form: str, field_name: str, limit_bytes: int) -> None:
+    encoded = canonical_form.encode("utf-8")
+    if len(encoded) > limit_bytes:
+        raise ValueError(f"{field_name} exceeds maximum allowed size")
+
+
 def validate_schema_context(schema: Dict[str, Any]) -> str:
     if not require_bool(schema, "active"):
         raise ValueError("schema is inactive")
@@ -143,26 +187,32 @@ def build_trace_metadata(submitter: str, external_ref_hash: str, content_hash: s
 
 
 def build_single_response(body: Dict[str, Any], contract_account: str) -> Dict[str, Any]:
-    submitter = require_string(body, "submitter")
-    external_ref = require_string(body, "external_ref")
+    submitter = validate_account_name(require_string(body, "submitter"), "submitter")
+    external_ref = validate_limited_text(
+        require_string(body, "external_ref"),
+        "external_ref",
+        MAX_EXTERNAL_REF_LENGTH,
+    )
     schema = require_mapping(body, "schema")
     policy = require_mapping(body, "policy")
+    include_debug_material = require_optional_bool(body, "include_debug_material")
 
     canonicalization_profile = validate_schema_context(schema)
     validate_policy_context(policy, "single")
     validate_kyc_context(policy, body)
 
     payload = body.get("payload")
+    validate_json_payload(payload, "payload")
     canonical_form = canonicalize_json(payload)
+    validate_canonical_size(canonical_form, "canonical_form", MAX_CANONICAL_FORM_BYTES)
     object_hash = sha256_hex_text(canonical_form)
     external_ref_hash = sha256_hex_text(external_ref)
     metadata = build_trace_metadata(submitter, external_ref_hash, object_hash, "single")
 
-    return {
+    response = {
         **metadata,
         "mode": "single",
         "canonicalization_profile": canonicalization_profile,
-        "canonical_form": canonical_form,
         "object_hash": object_hash,
         "external_ref_hash": external_ref_hash,
         "prepared_action": {
@@ -177,6 +227,9 @@ def build_single_response(body: Dict[str, Any], contract_account: str) -> Dict[s
             },
         },
     }
+    if include_debug_material:
+        response["canonical_form"] = canonical_form
+    return response
 
 
 def build_batch_manifest(
@@ -201,52 +254,71 @@ def build_batch_manifest(
 
 
 def build_batch_response(body: Dict[str, Any], contract_account: str) -> Dict[str, Any]:
-    submitter = require_string(body, "submitter")
-    external_ref = require_string(body, "external_ref")
+    submitter = validate_account_name(require_string(body, "submitter"), "submitter")
+    external_ref = validate_limited_text(
+        require_string(body, "external_ref"),
+        "external_ref",
+        MAX_EXTERNAL_REF_LENGTH,
+    )
     schema = require_mapping(body, "schema")
     policy = require_mapping(body, "policy")
+    include_debug_material = require_optional_bool(body, "include_debug_material")
 
     canonicalization_profile = validate_schema_context(schema)
     validate_policy_context(policy, "batch")
     validate_kyc_context(policy, body)
 
     items = require_list(body, "items")
-    leafs: List[Dict[str, Any]] = []
+    if len(items) > MAX_BATCH_ITEMS:
+        raise ValueError("items exceeds maximum batch size")
+    manifest_leafs: List[Dict[str, Any]] = []
+    response_leafs: List[Dict[str, Any]] = []
     leaf_hashes: List[str] = []
 
     for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise ValueError("each batch item must be an object")
         payload = item.get("payload") if isinstance(item, dict) else item
+        validate_json_payload(payload, f"items[{index}].payload")
         canonical_form = canonicalize_json(payload)
+        validate_canonical_size(canonical_form, f"items[{index}].canonical_form", MAX_CANONICAL_FORM_BYTES)
         leaf_hash = sha256_hex_text(canonical_form)
         leaf_ref = item.get("external_leaf_ref") if isinstance(item, dict) else None
-        leaf_entry = {
+        manifest_leaf = {
             "index": index,
             "leaf_hash": leaf_hash,
             "canonical_form": canonical_form,
         }
+        response_leaf = {
+            "index": index,
+            "leaf_hash": leaf_hash,
+        }
         if isinstance(leaf_ref, str) and leaf_ref:
-            leaf_entry["external_leaf_ref"] = leaf_ref
-        leafs.append(leaf_entry)
+            validate_limited_text(leaf_ref, "external_leaf_ref", MAX_EXTERNAL_LEAF_REF_LENGTH)
+            manifest_leaf["external_leaf_ref"] = leaf_ref
+            response_leaf["external_leaf_ref"] = leaf_ref
+        if include_debug_material:
+            response_leaf["canonical_form"] = canonical_form
+        manifest_leafs.append(manifest_leaf)
+        response_leafs.append(response_leaf)
         leaf_hashes.append(leaf_hash)
 
     root_hash = merkle_root_hex(leaf_hashes)
     external_ref_hash = sha256_hex_text(external_ref)
-    manifest = build_batch_manifest(submitter, schema, policy, external_ref_hash, leafs, root_hash)
+    manifest = build_batch_manifest(submitter, schema, policy, external_ref_hash, manifest_leafs, root_hash)
     manifest_canonical_form = canonicalize_json(manifest)
+    validate_canonical_size(manifest_canonical_form, "manifest_canonical_form", MAX_BATCH_MANIFEST_BYTES)
     manifest_hash = sha256_hex_text(manifest_canonical_form)
     metadata = build_trace_metadata(submitter, external_ref_hash, root_hash, "batch")
 
-    return {
+    response = {
         **metadata,
         "mode": "batch",
         "canonicalization_profile": canonicalization_profile,
-        "leaf_count": len(leafs),
-        "leaf_hashes": leaf_hashes,
+        "leaf_count": len(manifest_leafs),
         "root_hash": root_hash,
         "external_ref_hash": external_ref_hash,
         "manifest_hash": manifest_hash,
-        "manifest": manifest,
-        "manifest_canonical_form": manifest_canonical_form,
         "prepared_action": {
             "contract": contract_account,
             "action": "submitroot",
@@ -255,11 +327,19 @@ def build_batch_response(body: Dict[str, Any], contract_account: str) -> Dict[st
                 "schema_id": schema["id"],
                 "policy_id": policy["id"],
                 "root_hash": root_hash,
-                "leaf_count": len(leafs),
+                "leaf_count": len(manifest_leafs),
                 "external_ref": external_ref_hash,
             },
         },
     }
+    if include_debug_material:
+        response["leaf_hashes"] = leaf_hashes
+        response["manifest"] = {
+            **manifest,
+            "leafs": response_leafs,
+        }
+        response["manifest_canonical_form"] = manifest_canonical_form
+    return response
 
 
 class IngressApiHandler(BaseHTTPRequestHandler):
@@ -275,6 +355,9 @@ class IngressApiHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         try:
             content_length = int(self.headers.get("Content-Length", "0"))
+            if content_length < 0 or content_length > MAX_REQUEST_BODY_BYTES:
+                self.write_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "request body is too large"})
+                return
             body = self.rfile.read(content_length)
             payload = json.loads(body.decode("utf-8")) if body else {}
 
@@ -287,10 +370,10 @@ class IngressApiHandler(BaseHTTPRequestHandler):
                 return
 
             self.write_json(HTTPStatus.OK, response)
-        except ValueError as exc:
-            self.write_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
         except json.JSONDecodeError:
             self.write_json(HTTPStatus.BAD_REQUEST, {"error": "request body must be valid JSON"})
+        except ValueError as exc:
+            self.write_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
 
     def log_message(self, format: str, *args: Any) -> None:
         return

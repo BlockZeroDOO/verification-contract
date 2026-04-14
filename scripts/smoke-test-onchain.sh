@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-RPC_URL="${RPC_URL:-https://dev-history.globalforce.io}"
+RPC_URL="${RPC_URL:-https://history.denotary.io}"
 VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
 SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"

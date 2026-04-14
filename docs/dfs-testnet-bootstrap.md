@@ -76,7 +76,7 @@ Expected artifacts:
 ## Deploy
 
 ```powershell
-cleos -u https://dev-history.globalforce.io set contract dfs ./dist/dfs -p dfs@active
+cleos -u https://history.denotary.io set contract dfs ./dist/dfs -p dfs@active
 ```
 
 ## Add `eosio.code`
@@ -89,7 +89,7 @@ cleos -u https://dev-history.globalforce.io set contract dfs ./dist/dfs -p dfs@a
 So `dfs` must allow `eosio.code` on `active`.
 
 ```powershell
-cleos -u https://dev-history.globalforce.io set account permission dfs active --add-code -p dfs@active
+cleos -u https://history.denotary.io set account permission dfs active --add-code -p dfs@active
 ```
 
 ## Configure policy
@@ -97,7 +97,7 @@ cleos -u https://dev-history.globalforce.io set account permission dfs active --
 Example baseline policy:
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action dfs setpolicy '[
+cleos -u https://history.denotary.io push action dfs setpolicy '[
   "eosio.token",
   "100000.0000 GFT",
   "trimmedmed",
@@ -130,7 +130,7 @@ Operational recommendation:
 Example:
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action dfs settoken '[
+cleos -u https://history.denotary.io push action dfs settoken '[
   "eosio.token",
   "4,GFT",
   true
@@ -147,7 +147,7 @@ This token must be accepted both for:
 Example metadata-capable node:
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action dfs regnode '[
+cleos -u https://history.denotary.io push action dfs regnode '[
   "metadata-node-1",
   "nodeowner1111",
   "both",
@@ -178,7 +178,7 @@ stake|<node_id>
 Example:
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action eosio.token transfer '[
+cleos -u https://history.denotary.io push action eosio.token transfer '[
   "nodeowner1111",
   "dfs",
   "100000.0000 GFT",
@@ -196,7 +196,7 @@ Operational note:
 Example:
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action dfs setprice '[
+cleos -u https://history.denotary.io push action dfs setprice '[
   "metadata-node-1",
   "eosio.token",
   "0.2500 GFT",
@@ -215,7 +215,7 @@ storage|<payment_reference>|<manifest_hash>
 Example:
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action eosio.token transfer '[
+cleos -u https://history.denotary.io push action eosio.token transfer '[
   "retail.user",
   "dfs",
   "5.0000 GFT",
@@ -234,7 +234,7 @@ This should create a `receipts` row with:
 Example:
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action dfs settle '[
+cleos -u https://history.denotary.io push action dfs settle '[
   "settlement-0001",
   "file-0001",
   "quote-0001",
@@ -261,7 +261,7 @@ Expected result:
 Example:
 
 ```powershell
-cleos -u https://dev-history.globalforce.io push action dfs claimrevenue '[
+cleos -u https://history.denotary.io push action dfs claimrevenue '[
   "nodeowner1111",
   "eosio.token",
   "2.5000 GFT"
@@ -271,14 +271,14 @@ cleos -u https://dev-history.globalforce.io push action dfs claimrevenue '[
 ## Verify on-chain state
 
 ```powershell
-cleos -u https://dev-history.globalforce.io get table dfs dfs pricepolicy
-cleos -u https://dev-history.globalforce.io get table dfs dfs acpttokens
-cleos -u https://dev-history.globalforce.io get table dfs dfs nodes
-cleos -u https://dev-history.globalforce.io get table dfs dfs stakes
-cleos -u https://dev-history.globalforce.io get table dfs dfs priceoffers
-cleos -u https://dev-history.globalforce.io get table dfs dfs receipts
-cleos -u https://dev-history.globalforce.io get table dfs dfs settlements
-cleos -u https://dev-history.globalforce.io get table dfs dfs balances
+cleos -u https://history.denotary.io get table dfs dfs pricepolicy
+cleos -u https://history.denotary.io get table dfs dfs acpttokens
+cleos -u https://history.denotary.io get table dfs dfs nodes
+cleos -u https://history.denotary.io get table dfs dfs stakes
+cleos -u https://history.denotary.io get table dfs dfs priceoffers
+cleos -u https://history.denotary.io get table dfs dfs receipts
+cleos -u https://history.denotary.io get table dfs dfs settlements
+cleos -u https://history.denotary.io get table dfs dfs balances
 ```
 
 ## Resource notes

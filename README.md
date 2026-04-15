@@ -202,6 +202,7 @@ PowerShell:
 Off-chain deployment defaults now assume:
 
 - `WATCHER_AUTH_TOKEN` is mandatory
+- `SQLite` is the recommended watcher state backend
 - `Finality Watcher` stays private behind localhost or a trusted internal network
 - public exposure of `Receipt Service` and `Audit API` should be a deliberate choice
 

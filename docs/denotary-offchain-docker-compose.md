@@ -11,7 +11,12 @@ The compose stack runs:
 - `receipt` on `127.0.0.1:8082`
 - `audit` on `127.0.0.1:8083`
 
-`finality`, `receipt`, and `audit` share one named Docker volume for `finality-state.json`.
+`finality`, `receipt`, and `audit` share one named Docker volume for the durable watcher state.
+
+Recommended runtime:
+
+- `FINALITY_STATE_BACKEND=sqlite`
+- `FINALITY_STATE_DB=/data/finality-state.sqlite3`
 
 ## 1. Prepare the env file
 
@@ -24,6 +29,8 @@ Adjust values if needed:
 ```bash
 CONTRACT_ACCOUNT=verification
 RPC_URL=https://history.denotary.io
+FINALITY_STATE_BACKEND=sqlite
+FINALITY_STATE_DB=/data/finality-state.sqlite3
 INGRESS_WATCHER_URL=http://finality:8081
 INGRESS_WATCHER_AUTH_TOKEN=replace-with-shared-secret
 INGRESS_WATCHER_RPC_URL=https://history.denotary.io
@@ -84,6 +91,16 @@ To also remove the shared state volume:
 
 ```bash
 docker compose --env-file .env.offchain -f docker-compose.offchain.yml down -v
+```
+
+If you are migrating from an older JSON watcher state file, use:
+
+```bash
+python scripts/migrate-finality-state.py \
+  --source-backend file \
+  --source-file runtime/finality-state.json \
+  --target-backend sqlite \
+  --target-db runtime/finality-state.sqlite3
 ```
 
 ## 6. Practical local workflow

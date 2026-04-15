@@ -291,6 +291,12 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertIn("text/html", audit_headers.get("Content-Type", ""))
         self.assertIn("swagger-ui", audit_docs.lower())
 
+        status, watcher_health = request_json(f"http://127.0.0.1:{self.watcher_port}/healthz")
+        self.assertEqual(status, 200)
+        self.assertEqual(watcher_health["store"]["backend"], "file")
+        self.assertIn("startup_checks", watcher_health)
+        self.assertIn("startup_recovery", watcher_health)
+
     def test_ingress_can_auto_register_in_watcher(self) -> None:
         payload = self._single_prepare_payload("single-auto-register")
         payload["watcher"] = {
@@ -711,6 +717,71 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("indexed transaction", response["error"])
 
+    def test_watcher_uses_fallback_rpc_provider_for_inclusion_verification(self) -> None:
+        status, prepared = request_json(
+            f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
+            method="POST",
+            payload=self._single_prepare_payload("single-fallback-provider"),
+        )
+        self.assertEqual(status, 200)
+
+        request_id = prepared["request_id"]
+        tx_id = "4" * 64
+        block_num = 145
+        self._mock_transaction(
+            tx_id,
+            block_num,
+            [
+                {
+                    "block_num": block_num,
+                    "act": {
+                        "account": "verification",
+                        "name": "submit",
+                        "data": {
+                            "submitter": "alice",
+                            "object_hash": prepared["object_hash"],
+                            "external_ref": prepared["external_ref_hash"],
+                        },
+                    },
+                }
+            ],
+        )
+
+        status, _ = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/register",
+            method="POST",
+            payload={
+                "request_id": request_id,
+                "trace_id": prepared["trace_id"],
+                "mode": "single",
+                "submitter": "alice",
+                "contract": "verification",
+                "anchor": {
+                    "object_hash": prepared["object_hash"],
+                    "external_ref_hash": prepared["external_ref_hash"],
+                },
+                "rpc_urls": [
+                    "http://127.0.0.1:1",
+                    self.mock_chain_url,
+                ],
+            },
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+
+        status, included = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/included",
+            method="POST",
+            payload={"tx_id": tx_id, "block_num": block_num},
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(included["inclusion_verified"])
+        self.assertIsNotNone(included["verification_state"])
+        self.assertEqual(included["verification_state"]["consensus"]["provider_count_ok"], 1)
+        self.assertEqual(included["verification_state"]["consensus"]["provider_count_total"], 2)
+        self.assertFalse(included["provider_disagreement"])
+
     def test_failed_request_blocks_receipt_and_is_visible_in_audit(self) -> None:
         status, prepared = request_json(
             f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
@@ -826,6 +897,92 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(audit_chain["proof_chain"][-1]["stage"], "block_finalized")
         self.assertEqual(audit_chain["proof_chain"][-1]["status"], "completed")
         self.assertFalse(audit_chain["proof_chain"][-1]["details"]["verification_gate_satisfied"])
+
+    def test_startup_recovery_replays_included_request_from_sqlite_store(self) -> None:
+        request_id = "7" * 64
+        tx_id = "8" * 64
+        block_num = 150
+        self._mock_transaction(
+            tx_id,
+            block_num,
+            [
+                {
+                    "block_num": block_num,
+                    "act": {
+                        "account": "verification",
+                        "name": "submit",
+                        "data": {
+                            "submitter": "alice",
+                            "object_hash": "a" * 64,
+                            "external_ref": "b" * 64,
+                        },
+                    },
+                }
+            ],
+        )
+        self.mock_chain_server.chain_state = {
+            "head_block_num": 151,
+            "last_irreversible_block_num": 151,
+        }
+
+        sqlite_path = str(Path(self.temp_dir.name) / "startup-recovery.sqlite3")
+        sqlite_store = finality_watcher.build_finality_store(
+            state_backend="sqlite",
+            state_db=sqlite_path,
+        )
+        sqlite_store.upsert_request(
+            request_id,
+            {
+                "request_id": request_id,
+                "trace_id": "startup-recovery",
+                "mode": "single",
+                "submitter": "alice",
+                "contract": "verification",
+                "rpc_url": self.mock_chain_url,
+                "anchor": {
+                    "object_hash": "a" * 64,
+                    "external_ref_hash": "b" * 64,
+                },
+                "tx_id": tx_id,
+                "block_num": block_num,
+                "status": "included",
+                "registered_at": "2026-04-15T00:00:00Z",
+                "included_at": "2026-04-15T00:01:00Z",
+                "updated_at": "2026-04-15T00:01:00Z",
+                "finalized_at": None,
+                "failed_at": None,
+                "failure_reason": None,
+                "failure_details": None,
+                "inclusion_verified": False,
+                "inclusion_verified_at": None,
+                "inclusion_verification_error": None,
+                "verified_action": None,
+                "chain_state": {
+                    "head_block_num": None,
+                    "last_irreversible_block_num": None,
+                },
+            },
+        )
+
+        port = find_free_port()
+        recovery_server = finality_watcher.FinalityWatcherServer(
+            ("127.0.0.1", port),
+            finality_watcher.FinalityWatcherHandler,
+            sqlite_store,
+            self.mock_chain_url,
+            3600,
+            self.WATCHER_AUTH_TOKEN,
+        )
+        try:
+            recovered = sqlite_store.get_request(request_id)
+            self.assertEqual(recovered["status"], "finalized")
+            self.assertTrue(recovered["inclusion_verified"])
+            self.assertEqual(recovery_server.startup_checks["recoverable_request_count"], 1)
+            self.assertEqual(recovery_server.startup_recovery["attempted"], 1)
+            self.assertEqual(recovery_server.startup_recovery["finalized"], 1)
+            self.assertEqual(recovery_server.store.describe()["backend"], "sqlite")
+        finally:
+            recovery_server.server_close()
 
 
 if __name__ == "__main__":

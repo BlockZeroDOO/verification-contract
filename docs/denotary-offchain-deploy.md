@@ -22,7 +22,8 @@ Default binding:
 
 Shared runtime state:
 
-- `STATE_FILE=/var/lib/denotary/finality-state.json`
+- `FINALITY_STATE_BACKEND=sqlite`
+- `FINALITY_STATE_DB=/var/lib/denotary/finality-state.sqlite3`
 
 Default deNotary chain settings:
 
@@ -69,14 +70,14 @@ AUDIT_PORT=8083
 
 CONTRACT_ACCOUNT=verification
 RPC_URL=https://history.denotary.io
+FINALITY_STATE_BACKEND=sqlite
+FINALITY_STATE_DB=/var/lib/denotary/finality-state.sqlite3
 CHAIN_ID=9714ab662f0899c3ac4c5a02220f3d7ab61aacae311974239cc75f22c999cc48
 POLL_INTERVAL_SEC=10
 WATCHER_AUTH_TOKEN=replace-with-shared-secret
 INGRESS_WATCHER_URL=http://127.0.0.1:8081
 INGRESS_WATCHER_AUTH_TOKEN=replace-with-shared-secret
 INGRESS_WATCHER_RPC_URL=https://history.denotary.io
-
-STATE_FILE=/var/lib/denotary/finality-state.json
 PID_DIR=/var/run/denotary
 LOG_DIR=/var/log/denotary
 ```
@@ -107,6 +108,16 @@ export OFFCHAIN_ENV_FILE=/etc/denotary/offchain.env
 ```
 
 Logs are written into `${LOG_DIR}` from the environment file.
+
+If you already have an older JSON watcher state file, migrate it before switching runtime:
+
+```bash
+python scripts/migrate-finality-state.py \
+  --source-backend file \
+  --source-file /var/lib/denotary/finality-state.json \
+  --target-backend sqlite \
+  --target-db /var/lib/denotary/finality-state.sqlite3
+```
 
 If you want `Ingress API` to auto-register prepared requests into the local watcher, keep:
 

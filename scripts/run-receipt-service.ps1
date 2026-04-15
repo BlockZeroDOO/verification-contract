@@ -1,7 +1,7 @@
 param(
     [string]$ListenHost = "127.0.0.1",
     [int]$Port = 8082,
-    [string]$StateBackend = "file",
+    [string]$StateBackend = "sqlite",
     [string]$StateFile = "runtime/finality-state.json",
     [string]$StateDb = "runtime/finality-state.sqlite3"
 )

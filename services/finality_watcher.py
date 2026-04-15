@@ -93,6 +93,29 @@ def require_account_name(mapping: Dict[str, Any], field_name: str) -> str:
     return value
 
 
+def normalize_rpc_urls(value: Any, fallback: str) -> list[str]:
+    if isinstance(value, list):
+        raw_values = value
+    elif isinstance(value, str):
+        raw_values = value.split(",")
+    elif value is None:
+        raw_values = fallback.split(",")
+    else:
+        raise ValueError("rpc_url or rpc_urls must be string or list of strings")
+
+    normalized: list[str] = []
+    for item in raw_values:
+        if not isinstance(item, str):
+            raise ValueError("rpc_urls entries must be strings")
+        candidate = item.strip()
+        if candidate:
+            normalized.append(candidate)
+
+    if not normalized:
+        raise ValueError("at least one rpc url must be configured")
+    return normalized
+
+
 def read_json_body(handler: BaseHTTPRequestHandler) -> Dict[str, Any]:
     content_length = int(handler.headers.get("Content-Length", "0"))
     if content_length < 0 or content_length > MAX_REQUEST_BODY_BYTES:
@@ -133,8 +156,11 @@ def rpc_post_json(url: str, path: str, payload: Dict[str, Any]) -> Dict[str, Any
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=10) as response:
-        return json.loads(response.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except OSError as exc:
+        raise urllib.error.URLError(str(exc)) from exc
 
 
 def rpc_get_json(url: str, path: str, query: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -146,12 +172,29 @@ def rpc_get_json(url: str, path: str, query: Optional[Dict[str, Any]] = None) ->
         headers={"Accept": "application/json"},
         method="GET",
     )
-    with urllib.request.urlopen(request, timeout=10) as response:
-        return json.loads(response.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except OSError as exc:
+        raise urllib.error.URLError(str(exc)) from exc
 
 
 def fetch_chain_info(rpc_url: str) -> Dict[str, Any]:
     return rpc_post_json(rpc_url, "/v1/chain/get_info", {})
+
+
+def fetch_chain_info_any(rpc_urls: list[str]) -> tuple[str, Dict[str, Any]]:
+    last_error: Optional[Exception] = None
+    for rpc_url in rpc_urls:
+        try:
+            return rpc_url, fetch_chain_info(rpc_url)
+        except (urllib.error.URLError, urllib.error.HTTPError) as exc:
+            last_error = exc
+            continue
+
+    if last_error is not None:
+        raise urllib.error.URLError(str(last_error))
+    raise urllib.error.URLError("no rpc urls configured")
 
 
 def sha256_hex_text(payload: str) -> str:
@@ -250,9 +293,8 @@ def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[
     if tx_id is None and block_num is not None:
         raise ValueError("block_num requires tx_id")
 
-    rpc_url = body.get("rpc_url", default_rpc_url)
-    if not isinstance(rpc_url, str) or not rpc_url:
-        raise ValueError("rpc_url must be a non-empty string")
+    rpc_urls = normalize_rpc_urls(body.get("rpc_urls", body.get("rpc_url")), default_rpc_url)
+    rpc_url = rpc_urls[0]
 
     status = "included" if tx_id and block_num else "submitted"
     timestamp = iso_now()
@@ -264,6 +306,7 @@ def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[
         "submitter": submitter,
         "contract": contract,
         "rpc_url": rpc_url,
+        "rpc_urls": rpc_urls,
         "anchor": anchor,
         "tx_id": tx_id,
         "block_num": block_num,
@@ -279,6 +322,10 @@ def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[
         "inclusion_verified_at": None,
         "inclusion_verification_error": None,
         "verified_action": None,
+        "verification_policy": "single-provider",
+        "verification_min_success": 1,
+        "verification_state": None,
+        "provider_disagreement": False,
         "chain_state": {
             "head_block_num": None,
             "last_irreversible_block_num": None,
@@ -447,26 +494,88 @@ def matches_batch_action(request_payload: Dict[str, Any], action: Dict[str, Any]
 def verify_inclusion(request_payload: Dict[str, Any]) -> Dict[str, Any]:
     tx_id = request_payload.get("tx_id")
     block_num = request_payload.get("block_num")
-    rpc_url = request_payload.get("rpc_url")
-    if not tx_id or not block_num or not rpc_url:
+    rpc_urls = normalize_rpc_urls(request_payload.get("rpc_urls", request_payload.get("rpc_url")), "")
+    if not tx_id or not block_num or not rpc_urls:
         raise TransactionLookupPending("transaction metadata is incomplete")
 
-    tx_payload = fetch_transaction_details(rpc_url, tx_id, block_num)
-    actual_block_num = extract_transaction_block_num(tx_payload)
-
     matcher = matches_single_action if request_payload.get("mode") == "single" else matches_batch_action
-    for action in iter_transaction_actions(tx_payload):
-        if matcher(request_payload, action):
-            return {
-                "verified_at": iso_now(),
-                "verified_block_num": actual_block_num or block_num,
-                "verified_action": {
-                    "account": action.get("account"),
-                    "name": action.get("name"),
-                    "data": action.get("data", {}),
-                },
-            }
+    providers_checked: list[Dict[str, Any]] = []
+    matched_results: list[Dict[str, Any]] = []
+    had_mismatch = False
+    pending_messages: list[str] = []
 
+    for rpc_url in rpc_urls:
+        provider_result = {
+            "rpc_url": rpc_url,
+            "ok": False,
+            "block_num": None,
+            "action_name": None,
+            "verified_at": iso_now(),
+            "error": None,
+        }
+        try:
+            tx_payload = fetch_transaction_details(rpc_url, tx_id, block_num)
+            actual_block_num = extract_transaction_block_num(tx_payload)
+            matched_action = None
+            for action in iter_transaction_actions(tx_payload):
+                if matcher(request_payload, action):
+                    matched_action = action
+                    break
+
+            if matched_action is None:
+                had_mismatch = True
+                provider_result["error"] = "indexed transaction does not match request anchor"
+                providers_checked.append(provider_result)
+                continue
+
+            provider_result["ok"] = True
+            provider_result["block_num"] = actual_block_num or block_num
+            provider_result["action_name"] = matched_action.get("name")
+            providers_checked.append(provider_result)
+            matched_results.append(
+                {
+                    "rpc_url": rpc_url,
+                    "verified_block_num": actual_block_num or block_num,
+                    "verified_action": {
+                        "account": matched_action.get("account"),
+                        "name": matched_action.get("name"),
+                        "data": matched_action.get("data", {}),
+                    },
+                }
+            )
+        except TransactionLookupPending as exc:
+            pending_messages.append(str(exc))
+            provider_result["error"] = str(exc)
+            providers_checked.append(provider_result)
+        except ValueError as exc:
+            had_mismatch = True
+            provider_result["error"] = str(exc)
+            providers_checked.append(provider_result)
+        except (urllib.error.URLError, urllib.error.HTTPError) as exc:
+            provider_result["error"] = str(exc)
+            providers_checked.append(provider_result)
+
+    if matched_results:
+        primary_match = matched_results[0]
+        return {
+            "verified_at": iso_now(),
+            "verified_block_num": primary_match["verified_block_num"],
+            "verified_action": primary_match["verified_action"],
+            "verification_state": {
+                "policy": request_payload.get("verification_policy", "single-provider"),
+                "providers_checked": providers_checked,
+                "consensus": {
+                    "verified": True,
+                    "provider_count_ok": len(matched_results),
+                    "provider_count_total": len(providers_checked),
+                    "provider_disagreement": had_mismatch,
+                },
+            },
+            "provider_disagreement": had_mismatch,
+        }
+
+    if pending_messages and not had_mismatch:
+        raise TransactionLookupPending(pending_messages[-1])
     raise ValueError("indexed transaction does not match request anchor")
 
 
@@ -474,6 +583,8 @@ def refresh_inclusion_verification(existing: Dict[str, Any], strict: bool = Fals
     if not existing.get("tx_id") or not existing.get("block_num"):
         existing["inclusion_verified"] = False
         existing["verified_action"] = None
+        existing["verification_state"] = None
+        existing["provider_disagreement"] = False
         return existing
 
     try:
@@ -482,11 +593,15 @@ def refresh_inclusion_verification(existing: Dict[str, Any], strict: bool = Fals
         existing["inclusion_verified"] = False
         existing["inclusion_verification_error"] = str(exc)
         existing["verified_action"] = None
+        existing["verification_state"] = None
+        existing["provider_disagreement"] = False
         return existing
     except ValueError:
         existing["inclusion_verified"] = False
         existing["verified_action"] = None
         existing["inclusion_verification_error"] = "indexed transaction does not match request anchor"
+        existing["verification_state"] = None
+        existing["provider_disagreement"] = False
         if strict:
             raise
         return existing
@@ -499,6 +614,8 @@ def refresh_inclusion_verification(existing: Dict[str, Any], strict: bool = Fals
         existing["block_num"] = verified_block_num
     existing["inclusion_verification_error"] = None
     existing["verified_action"] = verification["verified_action"]
+    existing["verification_state"] = verification.get("verification_state")
+    existing["provider_disagreement"] = verification.get("provider_disagreement", False)
     return existing
 
 
@@ -510,9 +627,10 @@ def update_to_included(existing: Dict[str, Any], body: Dict[str, Any]) -> Dict[s
     block_num = require_int(body, "block_num")
     if block_num <= 0:
         raise ValueError("block_num must be positive integer")
+    existing_rpc_config = existing.get("rpc_urls", existing.get("rpc_url"))
     rpc_url = body.get("rpc_url", existing.get("rpc_url"))
-    if not isinstance(rpc_url, str) or not rpc_url:
-        raise ValueError("rpc_url must be a non-empty string")
+    rpc_urls = normalize_rpc_urls(body.get("rpc_urls", existing_rpc_config), existing.get("rpc_url") or "")
+    rpc_url = rpc_urls[0]
 
     if existing.get("tx_id") and existing["tx_id"] != tx_id:
         raise ValueError("tx_id cannot be changed once recorded")
@@ -522,6 +640,7 @@ def update_to_included(existing: Dict[str, Any], body: Dict[str, Any]) -> Dict[s
     existing["tx_id"] = tx_id
     existing["block_num"] = block_num
     existing["rpc_url"] = rpc_url
+    existing["rpc_urls"] = rpc_urls
     if not existing.get("included_at"):
         existing["included_at"] = iso_now()
     if existing.get("status") != "finalized":
@@ -597,6 +716,8 @@ def ensure_registration_compatible(existing: Dict[str, Any], incoming: Dict[str,
 
     if existing.get("rpc_url") != incoming.get("rpc_url"):
         raise ValueError("rpc_url does not match existing request")
+    if existing.get("rpc_urls") != incoming.get("rpc_urls"):
+        raise ValueError("rpc_urls do not match existing request")
 
     return existing
 
@@ -606,18 +727,19 @@ def poll_request(existing: Dict[str, Any]) -> Dict[str, Any]:
         return existing
 
     block_num = existing.get("block_num")
-    rpc_url = existing.get("rpc_url")
-    if not block_num or not rpc_url:
+    rpc_urls = normalize_rpc_urls(existing.get("rpc_urls", existing.get("rpc_url")), "")
+    if not block_num or not rpc_urls:
         existing["updated_at"] = iso_now()
         return existing
 
     refresh_inclusion_verification(existing, strict=False)
 
-    chain_info = fetch_chain_info(rpc_url)
+    rpc_url, chain_info = fetch_chain_info_any(rpc_urls)
     head_block_num = chain_info.get("head_block_num")
     last_irreversible_block_num = chain_info.get("last_irreversible_block_num")
 
     existing["chain_state"] = {
+        "provider": rpc_url,
         "head_block_num": head_block_num,
         "last_irreversible_block_num": last_irreversible_block_num,
     }
@@ -637,6 +759,14 @@ def poll_request(existing: Dict[str, Any]) -> Dict[str, Any]:
     return existing
 
 
+def should_attempt_startup_recovery(payload: Dict[str, Any]) -> bool:
+    if payload.get("status") == "failed":
+        return False
+    if payload.get("tx_id") and payload.get("block_num"):
+        return True
+    return False
+
+
 class FinalityWatcherHandler(BaseHTTPRequestHandler):
     server_version = "DeNotaryFinalityWatcher/0.2"
 
@@ -649,6 +779,9 @@ class FinalityWatcherHandler(BaseHTTPRequestHandler):
                     "service": "finality-watcher",
                     "auth_required": bool(self.server.auth_token),
                     "insecure_dev_mode": self.server.insecure_dev_mode,
+                    "store": self.server.store.describe(),
+                    "startup_checks": self.server.startup_checks,
+                    "startup_recovery": self.server.startup_recovery,
                 },
             )
             return
@@ -775,6 +908,8 @@ class FinalityWatcherServer(ThreadingHTTPServer):
         self.insecure_dev_mode = insecure_dev_mode
         self._stop_event = threading.Event()
         self._poller = threading.Thread(target=self._poll_loop, daemon=True)
+        self.startup_checks = self.run_startup_checks()
+        self.startup_recovery = self.recover_requests_once()
 
     def start_background_polling(self) -> None:
         self._poller.start()
@@ -789,6 +924,54 @@ class FinalityWatcherServer(ThreadingHTTPServer):
             self.store.upsert_request(request_id, updated)
             results[request_id] = updated["status"]
         return results
+
+    def run_startup_checks(self) -> Dict[str, Any]:
+        requests = self.store.list_requests()
+        status_counts: Dict[str, int] = {}
+        recoverable = 0
+        for payload in requests.values():
+            status = str(payload.get("status") or "unknown")
+            status_counts[status] = status_counts.get(status, 0) + 1
+            if should_attempt_startup_recovery(payload):
+                recoverable += 1
+        return {
+            "checked_at": iso_now(),
+            "request_count": len(requests),
+            "recoverable_request_count": recoverable,
+            "status_counts": status_counts,
+        }
+
+    def recover_requests_once(self) -> Dict[str, Any]:
+        summary = {
+            "started_at": iso_now(),
+            "attempted": 0,
+            "updated": 0,
+            "finalized": 0,
+            "failed": 0,
+            "errors": [],
+        }
+        for request_id, payload in self.store.list_requests().items():
+            if not should_attempt_startup_recovery(payload):
+                continue
+            summary["attempted"] += 1
+            before_status = payload.get("status")
+            try:
+                updated = poll_request(payload)
+                self.store.upsert_request(request_id, updated)
+                if updated != payload:
+                    summary["updated"] += 1
+                if before_status != "finalized" and updated.get("status") == "finalized":
+                    summary["finalized"] += 1
+            except Exception as exc:
+                summary["failed"] += 1
+                summary["errors"].append(
+                    {
+                        "request_id": request_id,
+                        "error": str(exc),
+                    }
+                )
+        summary["completed_at"] = iso_now()
+        return summary
 
     def _poll_loop(self) -> None:
         while not self._stop_event.wait(self.poll_interval_sec):

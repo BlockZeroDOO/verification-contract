@@ -6,6 +6,10 @@ from typing import Any, Dict
 
 class FinalityStoreBase(ABC):
     @abstractmethod
+    def describe(self) -> Dict[str, Any]:
+        raise NotImplementedError
+
+    @abstractmethod
     def read(self) -> Dict[str, Any]:
         raise NotImplementedError
 

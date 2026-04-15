@@ -14,6 +14,13 @@ class FileFinalityStore(FinalityStoreBase):
         self.path = path
         self._lock = threading.Lock()
 
+    def describe(self) -> Dict[str, Any]:
+        return {
+            "backend": "file",
+            "path": self.path,
+            "exists": os.path.exists(self.path),
+        }
+
     def read(self) -> Dict[str, Any]:
         with self._lock:
             return self._read_unlocked()

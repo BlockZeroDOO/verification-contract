@@ -17,6 +17,19 @@ class SQLiteFinalityStore(FinalityStoreBase):
         self._lock = threading.RLock()
         self._initialize()
 
+    def describe(self) -> Dict[str, Any]:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT value FROM store_meta WHERE key = 'schema_version'"
+            ).fetchone()
+            schema_version = row["value"] if row else None
+        return {
+            "backend": "sqlite",
+            "path": self.path,
+            "exists": os.path.exists(self.path),
+            "schema_version": schema_version,
+        }
+
     def read(self) -> Dict[str, Any]:
         return self.export_state()
 

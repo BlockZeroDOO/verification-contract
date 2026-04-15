@@ -1,0 +1,62 @@
+{
+  "sequence": 10,
+  "event": "ingress_single_prepare_debug",
+  "timestamp": "2026-04-15T07:37:56Z",
+  "payload": {
+    "request": {
+      "submitter": "vadim1111111",
+      "external_ref": "svc-single-1776238673",
+      "schema": {
+        "id": 1776242673,
+        "version": "1.0.0",
+        "active": true,
+        "canonicalization_profile": "json-sorted-v1"
+      },
+      "policy": {
+        "id": 1776243673,
+        "active": true,
+        "allow_single": true,
+        "allow_batch": false,
+        "require_kyc": false,
+        "min_kyc_level": 0
+      },
+      "kyc": {
+        "active": true,
+        "level": 2,
+        "expires_at": "2030-01-01T00:00:00"
+      },
+      "payload": {
+        "doc_id": "svc-single-1776238673",
+        "kind": "invoice",
+        "amount": 42
+      },
+      "include_debug_material": true
+    },
+    "status_code": 200,
+    "response": {
+      "trace_id": "69ed694e-af6e-4446-a7b3-062dafdc8a09",
+      "request_id": "bf250efe4065ad3648c58c16b0671c57cd9aec62023b00ea43481eb43f54921f",
+      "received_at": "2026-04-15T07:37:56Z",
+      "mode": "single",
+      "canonicalization_profile": "json-sorted-v1",
+      "object_hash": "6c1383f1151a328672a91aad86e056b20601c0d7987d57b417e74b7a04f5508d",
+      "external_ref_hash": "5142792d839cbe17b74177504b9ffdd2bcb8be94aaee1e1b9480d32c55cf0b49",
+      "prepared_action": {
+        "contract": "verification",
+        "action": "submit",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": 1776242673,
+          "policy_id": 1776243673,
+          "object_hash": "6c1383f1151a328672a91aad86e056b20601c0d7987d57b417e74b7a04f5508d",
+          "external_ref": "5142792d839cbe17b74177504b9ffdd2bcb8be94aaee1e1b9480d32c55cf0b49"
+        }
+      },
+      "canonical_form": "{\"amount\":42,\"doc_id\":\"svc-single-1776238673\",\"kind\":\"invoice\"}"
+    }
+  },
+  "request_kind": "ingress-probe",
+  "request_label": "svc-single-1776238673",
+  "stage_summary": "Probe single prepare with debug material.",
+  "comment": "The same single request is executed with include_debug_material=true to return canonical_form and verify stable request_id and object_hash."
+}

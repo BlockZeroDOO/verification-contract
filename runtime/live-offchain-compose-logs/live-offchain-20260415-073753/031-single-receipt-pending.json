@@ -1,0 +1,22 @@
+{
+  "sequence": 31,
+  "event": "single_receipt_pending",
+  "timestamp": "2026-04-15T07:37:56Z",
+  "payload": {
+    "request_id": "30e345e479f88d2bcfef676a57d2abb4b426790a8ec1fbccfc3f7d3236a982f5",
+    "status_code": 409,
+    "response": {
+      "request_id": "30e345e479f88d2bcfef676a57d2abb4b426790a8ec1fbccfc3f7d3236a982f5",
+      "status": "submitted",
+      "trust_state": "submitted",
+      "receipt_available": false,
+      "inclusion_verified": false,
+      "error": "receipt is not available before finality",
+      "inclusion_verification_error": null
+    }
+  },
+  "request_kind": "live-single",
+  "request_label": "30e345e479f88d2bcfef676a57d2abb4b426790a8ec1fbccfc3f7d3236a982f5",
+  "stage_summary": "Check pending receipt before finality.",
+  "comment": "Receipt Service does not return a full receipt yet because the transaction is not finalized and the request is still in an early trust state."
+}

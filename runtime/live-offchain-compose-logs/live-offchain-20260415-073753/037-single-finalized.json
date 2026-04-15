@@ -1,0 +1,53 @@
+{
+  "sequence": 37,
+  "event": "single_finalized",
+  "timestamp": "2026-04-15T07:37:59Z",
+  "payload": {
+    "request_id": "30e345e479f88d2bcfef676a57d2abb4b426790a8ec1fbccfc3f7d3236a982f5",
+    "response": {
+      "anchor": {
+        "commitment_id": 10,
+        "external_ref_hash": "27edbc3451505981dadec2cdab7a8efd490a284dbe6f608f69b7bc6ac47ce9c9",
+        "object_hash": "b7c565f07eaaeffe6c935ac4827814e0192831578a4d377bb779415cbeb411ab"
+      },
+      "block_num": 260759873,
+      "chain_state": {
+        "head_block_num": 260759877,
+        "last_irreversible_block_num": 260759875
+      },
+      "contract": "verification",
+      "failed_at": null,
+      "failure_details": null,
+      "failure_reason": null,
+      "finalized_at": "2026-04-15T07:37:58Z",
+      "included_at": "2026-04-15T07:37:57Z",
+      "inclusion_verification_error": null,
+      "inclusion_verified": true,
+      "inclusion_verified_at": "2026-04-15T07:37:57Z",
+      "mode": "single",
+      "registered_at": "2026-04-15T07:37:56Z",
+      "request_id": "30e345e479f88d2bcfef676a57d2abb4b426790a8ec1fbccfc3f7d3236a982f5",
+      "rpc_url": "https://jungle4.cryptolions.io",
+      "status": "finalized",
+      "submitter": "vadim1111111",
+      "trace_id": "d004b1dc-3161-40b0-b394-c0fa48525da6",
+      "tx_id": "fbb46839f3233a2b52dc742d19afa73b5d8f775a3f8de9ed04daf6e9f88a2b76",
+      "updated_at": "2026-04-15T07:37:59Z",
+      "verified_action": {
+        "account": "verification",
+        "name": "submit",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": "1776242673",
+          "policy_id": "1776243673",
+          "object_hash": "B7C565F07EAAEFFE6C935AC4827814E0192831578A4D377BB779415CBEB411AB",
+          "external_ref": "27EDBC3451505981DADEC2CDAB7A8EFD490A284DBE6F608F69B7BC6AC47CE9C9"
+        }
+      }
+    }
+  },
+  "request_kind": "live-single",
+  "request_label": "30e345e479f88d2bcfef676a57d2abb4b426790a8ec1fbccfc3f7d3236a982f5",
+  "stage_summary": "The single request reached finalized_verified.",
+  "comment": "This file captures the moment when the single request passed inclusion verification and reached irreversible finality."
+}

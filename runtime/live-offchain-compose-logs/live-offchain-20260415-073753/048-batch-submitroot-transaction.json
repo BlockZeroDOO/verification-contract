@@ -1,0 +1,90 @@
+{
+  "sequence": 48,
+  "event": "batch_submitroot_transaction",
+  "timestamp": "2026-04-15T07:38:00Z",
+  "payload": {
+    "request_id": "8ae2bdd0b79aa27024a241e562a942c90f9e499f82744fb58c9a78d701160775",
+    "transaction": {
+      "transaction_id": "9550450f13ea070a82006efc2735b19fbd36b297e4cc4d2aa7715563fe041b50",
+      "processed": {
+        "id": "9550450f13ea070a82006efc2735b19fbd36b297e4cc4d2aa7715563fe041b50",
+        "block_num": 260759880,
+        "block_time": "2026-04-15T07:38:02.500",
+        "producer_block_id": null,
+        "receipt": {
+          "status": "executed",
+          "cpu_usage_us": 265,
+          "net_usage_words": 23
+        },
+        "elapsed": 265,
+        "net_usage": 184,
+        "scheduled": false,
+        "action_traces": [
+          {
+            "action_ordinal": 1,
+            "creator_action_ordinal": 0,
+            "closest_unnotified_ancestor_action_ordinal": 0,
+            "receipt": {
+              "receiver": "verification",
+              "act_digest": "dbea77bc32fd31b3e984091959036e37dd00098c1d429801b4816cde6b832dcd",
+              "global_sequence": 338444785,
+              "recv_sequence": 129,
+              "auth_sequence": [
+                [
+                  "vadim1111111",
+                  39
+                ]
+              ],
+              "code_sequence": 2,
+              "abi_sequence": 2
+            },
+            "receiver": "verification",
+            "act": {
+              "account": "verification",
+              "name": "submitroot",
+              "authorization": [
+                {
+                  "actor": "vadim1111111",
+                  "permission": "active"
+                }
+              ],
+              "data": {
+                "submitter": "vadim1111111",
+                "schema_id": 1776242673,
+                "policy_id": 1776243674,
+                "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+                "leaf_count": 2,
+                "external_ref": "ca861790428037d7035424c3e1ea51327407c43797a2b9d10e9251f3966738c3"
+              },
+              "hex_data": "1042082104e992d9f14fdf6900000000da53df6900000000cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa02000000ca861790428037d7035424c3e1ea51327407c43797a2b9d10e9251f3966738c3"
+            },
+            "context_free": false,
+            "elapsed": 177,
+            "console": "",
+            "trx_id": "9550450f13ea070a82006efc2735b19fbd36b297e4cc4d2aa7715563fe041b50",
+            "block_num": 260759880,
+            "block_time": "2026-04-15T07:38:02.500",
+            "producer_block_id": null,
+            "account_ram_deltas": [
+              {
+                "account": "verification",
+                "delta": 1125
+              }
+            ],
+            "except": null,
+            "error_code": null,
+            "return_value_hex_data": ""
+          }
+        ],
+        "account_ram_delta": null,
+        "except": null,
+        "error_code": null
+      }
+    },
+    "tx_id": "9550450f13ea070a82006efc2735b19fbd36b297e4cc4d2aa7715563fe041b50"
+  },
+  "request_kind": "live-batch",
+  "request_label": "8ae2bdd0b79aa27024a241e562a942c90f9e499f82744fb58c9a78d701160775",
+  "stage_summary": "Broadcast the real on-chain submitroot transaction for the batch flow.",
+  "comment": "This file contains the cleos push action result and real tx metadata for submitroot on Jungle4."
+}

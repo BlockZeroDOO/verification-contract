@@ -1,0 +1,87 @@
+{
+  "sequence": 6,
+  "event": "governance_addschema",
+  "timestamp": "2026-04-15T07:37:55Z",
+  "payload": {
+    "result": {
+      "transaction_id": "cbae23fc915ee81e10140d59858d03338499b1ca0c398e1c5f550b513e73ff9c",
+      "processed": {
+        "id": "cbae23fc915ee81e10140d59858d03338499b1ca0c398e1c5f550b513e73ff9c",
+        "block_num": 260759869,
+        "block_time": "2026-04-15T07:37:57.000",
+        "producer_block_id": null,
+        "receipt": {
+          "status": "executed",
+          "cpu_usage_us": 254,
+          "net_usage_words": 22
+        },
+        "elapsed": 254,
+        "net_usage": 176,
+        "scheduled": false,
+        "action_traces": [
+          {
+            "action_ordinal": 1,
+            "creator_action_ordinal": 0,
+            "closest_unnotified_ancestor_action_ordinal": 0,
+            "receipt": {
+              "receiver": "verification",
+              "act_digest": "6e21726ce19c0565f8990e1094bb00797ce7285e0a78e2548ccf52beacd0317b",
+              "global_sequence": 338444769,
+              "recv_sequence": 125,
+              "auth_sequence": [
+                [
+                  "verification",
+                  144
+                ]
+              ],
+              "code_sequence": 2,
+              "abi_sequence": 2
+            },
+            "receiver": "verification",
+            "act": {
+              "account": "verification",
+              "name": "addschema",
+              "authorization": [
+                {
+                  "actor": "verification",
+                  "permission": "active"
+                }
+              ],
+              "data": {
+                "id": 1776242673,
+                "version": "1.0.0",
+                "canonicalization_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "hash_policy": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "hex_data": "f14fdf690000000005312e302e30aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "context_free": false,
+            "elapsed": 138,
+            "console": "",
+            "trx_id": "cbae23fc915ee81e10140d59858d03338499b1ca0c398e1c5f550b513e73ff9c",
+            "block_num": 260759869,
+            "block_time": "2026-04-15T07:37:57.000",
+            "producer_block_id": null,
+            "account_ram_deltas": [
+              {
+                "account": "verification",
+                "delta": 199
+              }
+            ],
+            "except": null,
+            "error_code": null,
+            "return_value_hex_data": ""
+          }
+        ],
+        "account_ram_delta": null,
+        "except": null,
+        "error_code": null
+      }
+    },
+    "schema_id": 1776242673
+  },
+  "request_kind": "governance-setup",
+  "request_label": "verification-governance",
+  "stage_summary": "Create the test schema for the compose live suite.",
+  "comment": "This on-chain step creates the schema that is later used by the single and batch live flows."
+}

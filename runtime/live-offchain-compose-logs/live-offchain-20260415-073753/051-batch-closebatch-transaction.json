@@ -1,0 +1,81 @@
+{
+  "sequence": 51,
+  "event": "batch_closebatch_transaction",
+  "timestamp": "2026-04-15T07:38:01Z",
+  "payload": {
+    "request_id": "8ae2bdd0b79aa27024a241e562a942c90f9e499f82744fb58c9a78d701160775",
+    "transaction": {
+      "transaction_id": "348ebb101af82f2c41cc7e6268c9b095be53bbbaba85d965aa1ff3c8556f8712",
+      "processed": {
+        "id": "348ebb101af82f2c41cc7e6268c9b095be53bbbaba85d965aa1ff3c8556f8712",
+        "block_num": 260759883,
+        "block_time": "2026-04-15T07:38:04.000",
+        "producer_block_id": null,
+        "receipt": {
+          "status": "executed",
+          "cpu_usage_us": 177,
+          "net_usage_words": 13
+        },
+        "elapsed": 177,
+        "net_usage": 104,
+        "scheduled": false,
+        "action_traces": [
+          {
+            "action_ordinal": 1,
+            "creator_action_ordinal": 0,
+            "closest_unnotified_ancestor_action_ordinal": 0,
+            "receipt": {
+              "receiver": "verification",
+              "act_digest": "30f19f7214c6ac1e8656abb3395f0217436cb24dcc2b0ca41d5b090e447723ea",
+              "global_sequence": 338444790,
+              "recv_sequence": 131,
+              "auth_sequence": [
+                [
+                  "vadim1111111",
+                  41
+                ]
+              ],
+              "code_sequence": 2,
+              "abi_sequence": 2
+            },
+            "receiver": "verification",
+            "act": {
+              "account": "verification",
+              "name": "closebatch",
+              "authorization": [
+                {
+                  "actor": "vadim1111111",
+                  "permission": "active"
+                }
+              ],
+              "data": {
+                "id": 5
+              },
+              "hex_data": "0500000000000000"
+            },
+            "context_free": false,
+            "elapsed": 81,
+            "console": "",
+            "trx_id": "348ebb101af82f2c41cc7e6268c9b095be53bbbaba85d965aa1ff3c8556f8712",
+            "block_num": 260759883,
+            "block_time": "2026-04-15T07:38:04.000",
+            "producer_block_id": null,
+            "account_ram_deltas": [],
+            "except": null,
+            "error_code": null,
+            "return_value_hex_data": ""
+          }
+        ],
+        "account_ram_delta": null,
+        "except": null,
+        "error_code": null
+      }
+    },
+    "tx_id": "348ebb101af82f2c41cc7e6268c9b095be53bbbaba85d965aa1ff3c8556f8712",
+    "block_num": 260759883
+  },
+  "request_kind": "live-batch",
+  "request_label": "8ae2bdd0b79aa27024a241e562a942c90f9e499f82744fb58c9a78d701160775",
+  "stage_summary": "Broadcast the real on-chain closebatch transaction for the batch flow.",
+  "comment": "Closebatch completes the on-chain batch lifecycle and produces the final tx_id that watcher then verifies."
+}

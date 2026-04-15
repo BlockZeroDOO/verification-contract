@@ -1,0 +1,90 @@
+{
+  "sequence": 32,
+  "event": "single_submit_transaction",
+  "timestamp": "2026-04-15T07:37:56Z",
+  "payload": {
+    "request_id": "30e345e479f88d2bcfef676a57d2abb4b426790a8ec1fbccfc3f7d3236a982f5",
+    "transaction": {
+      "transaction_id": "fbb46839f3233a2b52dc742d19afa73b5d8f775a3f8de9ed04daf6e9f88a2b76",
+      "processed": {
+        "id": "fbb46839f3233a2b52dc742d19afa73b5d8f775a3f8de9ed04daf6e9f88a2b76",
+        "block_num": 260759873,
+        "block_time": "2026-04-15T07:37:59.000",
+        "producer_block_id": null,
+        "receipt": {
+          "status": "executed",
+          "cpu_usage_us": 334,
+          "net_usage_words": 23
+        },
+        "elapsed": 334,
+        "net_usage": 184,
+        "scheduled": false,
+        "action_traces": [
+          {
+            "action_ordinal": 1,
+            "creator_action_ordinal": 0,
+            "closest_unnotified_ancestor_action_ordinal": 0,
+            "receipt": {
+              "receiver": "verification",
+              "act_digest": "45a9821a582aa16fdd3a5f5653a3fec45a269d190c56b054580e815d53748f3c",
+              "global_sequence": 338444776,
+              "recv_sequence": 128,
+              "auth_sequence": [
+                [
+                  "vadim1111111",
+                  38
+                ]
+              ],
+              "code_sequence": 2,
+              "abi_sequence": 2
+            },
+            "receiver": "verification",
+            "act": {
+              "account": "verification",
+              "name": "submit",
+              "authorization": [
+                {
+                  "actor": "vadim1111111",
+                  "permission": "active"
+                }
+              ],
+              "data": {
+                "submitter": "vadim1111111",
+                "schema_id": 1776242673,
+                "policy_id": 1776243673,
+                "object_hash": "b7c565f07eaaeffe6c935ac4827814e0192831578a4d377bb779415cbeb411ab",
+                "external_ref": "27edbc3451505981dadec2cdab7a8efd490a284dbe6f608f69b7bc6ac47ce9c9"
+              },
+              "hex_data": "1042082104e992d9f14fdf6900000000d953df6900000000b7c565f07eaaeffe6c935ac4827814e0192831578a4d377bb779415cbeb411ab27edbc3451505981dadec2cdab7a8efd490a284dbe6f608f69b7bc6ac47ce9c9"
+            },
+            "context_free": false,
+            "elapsed": 213,
+            "console": "",
+            "trx_id": "fbb46839f3233a2b52dc742d19afa73b5d8f775a3f8de9ed04daf6e9f88a2b76",
+            "block_num": 260759873,
+            "block_time": "2026-04-15T07:37:59.000",
+            "producer_block_id": null,
+            "account_ram_deltas": [
+              {
+                "account": "verification",
+                "delta": 1093
+              }
+            ],
+            "except": null,
+            "error_code": null,
+            "return_value_hex_data": ""
+          }
+        ],
+        "account_ram_delta": null,
+        "except": null,
+        "error_code": null
+      }
+    },
+    "tx_id": "fbb46839f3233a2b52dc742d19afa73b5d8f775a3f8de9ed04daf6e9f88a2b76",
+    "block_num": 260759873
+  },
+  "request_kind": "live-single",
+  "request_label": "30e345e479f88d2bcfef676a57d2abb4b426790a8ec1fbccfc3f7d3236a982f5",
+  "stage_summary": "Broadcast the real on-chain submit transaction for the single flow.",
+  "comment": "This file contains the cleos push action result and the real tx_id/block_num from Jungle4."
+}

@@ -1,0 +1,27 @@
+{
+  "sequence": 17,
+  "event": "watcher_register_unauthorized",
+  "timestamp": "2026-04-15T07:37:56Z",
+  "payload": {
+    "request": {
+      "request_id": "c89bee0b949e339948ec337084183513673e9d4a00a98cc30978ae2ed4356a23",
+      "trace_id": "28a79a69-31bf-4543-8144-21fcf8c4c50d",
+      "mode": "single",
+      "submitter": "vadim1111111",
+      "contract": "verification",
+      "anchor": {
+        "object_hash": "8b62a14722f19beb57e1db0254cb75414cfbc5ed947b60ef699a544815261d42",
+        "external_ref_hash": "f02ae4e49d7dc0e57bfdaa33a727cde7eb18c544c5f8cc92aef89a7d6bd253e4"
+      },
+      "rpc_url": "https://jungle4.cryptolions.io"
+    },
+    "status_code": 401,
+    "response": {
+      "error": "watcher mutation endpoint requires valid auth token"
+    }
+  },
+  "request_kind": "failed-request",
+  "request_label": "c89bee0b949e339948ec337084183513673e9d4a00a98cc30978ae2ed4356a23",
+  "stage_summary": "Verify that watcher rejects mutation without auth token.",
+  "comment": "This step confirms that protected watcher mutation endpoints do not accept register without a valid X-DeNotary-Token."
+}

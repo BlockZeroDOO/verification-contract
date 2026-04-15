@@ -1,0 +1,44 @@
+{
+  "sequence": 55,
+  "event": "batch_receipt_finalized",
+  "timestamp": "2026-04-15T07:38:08Z",
+  "payload": {
+    "request_id": "8ae2bdd0b79aa27024a241e562a942c90f9e499f82744fb58c9a78d701160775",
+    "status_code": 200,
+    "response": {
+      "issued_at": "2026-04-15T07:38:08Z",
+      "request_id": "8ae2bdd0b79aa27024a241e562a942c90f9e499f82744fb58c9a78d701160775",
+      "trace_id": "72b1ffb7-627b-4c18-87ee-4a6a11312e1f",
+      "mode": "batch",
+      "submitter": "vadim1111111",
+      "contract": "verification",
+      "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+      "manifest_hash": "e5c5e4dbbf217801d84c4e370ef0d0b39feee57cdda6de061148d1ce998b97db",
+      "external_ref_hash": "ca861790428037d7035424c3e1ea51327407c43797a2b9d10e9251f3966738c3",
+      "leaf_count": 2,
+      "tx_id": "348ebb101af82f2c41cc7e6268c9b095be53bbbaba85d965aa1ff3c8556f8712",
+      "block_num": 260759883,
+      "finality_flag": true,
+      "finalized_at": "2026-04-15T07:38:08Z",
+      "trust_state": "finalized_verified",
+      "receipt_available": true,
+      "inclusion_verified": true,
+      "inclusion_verified_at": "2026-04-15T07:38:08Z",
+      "verified_action": {
+        "account": "verification",
+        "data": {
+          "id": "5"
+        },
+        "name": "closebatch"
+      },
+      "chain_state": {
+        "head_block_num": 260759892,
+        "last_irreversible_block_num": 260759890
+      }
+    }
+  },
+  "request_kind": "live-batch",
+  "request_label": "8ae2bdd0b79aa27024a241e562a942c90f9e499f82744fb58c9a78d701160775",
+  "stage_summary": "Retrieve the finalized batch receipt.",
+  "comment": "Receipt Service issues the full batch receipt only after the batch request reaches finalized_verified state."
+}

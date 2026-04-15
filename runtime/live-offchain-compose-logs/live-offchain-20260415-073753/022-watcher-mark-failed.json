@@ -1,0 +1,45 @@
+{
+  "sequence": 22,
+  "event": "watcher_mark_failed",
+  "timestamp": "2026-04-15T07:37:56Z",
+  "payload": {
+    "request_id": "c89bee0b949e339948ec337084183513673e9d4a00a98cc30978ae2ed4356a23",
+    "status_code": 200,
+    "response": {
+      "anchor": {
+        "external_ref_hash": "f02ae4e49d7dc0e57bfdaa33a727cde7eb18c544c5f8cc92aef89a7d6bd253e4",
+        "object_hash": "8b62a14722f19beb57e1db0254cb75414cfbc5ed947b60ef699a544815261d42"
+      },
+      "block_num": null,
+      "chain_state": {
+        "head_block_num": null,
+        "last_irreversible_block_num": null
+      },
+      "contract": "verification",
+      "failed_at": "2026-04-15T07:37:56Z",
+      "failure_details": {
+        "note": "manual live test failure path"
+      },
+      "failure_reason": "tx_dropped",
+      "finalized_at": null,
+      "included_at": null,
+      "inclusion_verification_error": null,
+      "inclusion_verified": false,
+      "inclusion_verified_at": null,
+      "mode": "single",
+      "registered_at": "2026-04-15T07:37:56Z",
+      "request_id": "c89bee0b949e339948ec337084183513673e9d4a00a98cc30978ae2ed4356a23",
+      "rpc_url": "https://jungle4.cryptolions.io",
+      "status": "failed",
+      "submitter": "vadim1111111",
+      "trace_id": "28a79a69-31bf-4543-8144-21fcf8c4c50d",
+      "tx_id": null,
+      "updated_at": "2026-04-15T07:37:56Z",
+      "verified_action": null
+    }
+  },
+  "request_kind": "failed-request",
+  "request_label": "c89bee0b949e339948ec337084183513673e9d4a00a98cc30978ae2ed4356a23",
+  "stage_summary": "Move the request into failed status.",
+  "comment": "The request is marked failed with reason tx_dropped so that all read services can be tested against the failure path."
+}

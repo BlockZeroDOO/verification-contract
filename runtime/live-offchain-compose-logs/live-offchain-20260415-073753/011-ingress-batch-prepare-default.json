@@ -1,0 +1,74 @@
+{
+  "sequence": 11,
+  "event": "ingress_batch_prepare_default",
+  "timestamp": "2026-04-15T07:37:56Z",
+  "payload": {
+    "request": {
+      "submitter": "vadim1111111",
+      "external_ref": "svc-batch-1776238673",
+      "schema": {
+        "id": 1776242673,
+        "version": "1.0.0",
+        "active": true,
+        "canonicalization_profile": "json-sorted-v1"
+      },
+      "policy": {
+        "id": 1776243674,
+        "active": true,
+        "allow_single": false,
+        "allow_batch": true,
+        "require_kyc": false,
+        "min_kyc_level": 0
+      },
+      "kyc": {
+        "active": true,
+        "level": 2,
+        "expires_at": "2030-01-01T00:00:00"
+      },
+      "items": [
+        {
+          "external_leaf_ref": "svc-batch-1776238673-leaf-a",
+          "payload": {
+            "doc_id": "a",
+            "amount": 1
+          }
+        },
+        {
+          "external_leaf_ref": "svc-batch-1776238673-leaf-b",
+          "payload": {
+            "doc_id": "b",
+            "amount": 2
+          }
+        }
+      ]
+    },
+    "status_code": 200,
+    "response": {
+      "trace_id": "955c2279-5b83-4c20-a9ed-b381a2c731c6",
+      "request_id": "d7f0c45a3a30c13354136a9b54b4f9923f17512b2a66b828f5e6958efaa6da67",
+      "received_at": "2026-04-15T07:37:56Z",
+      "mode": "batch",
+      "canonicalization_profile": "json-sorted-v1",
+      "leaf_count": 2,
+      "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+      "external_ref_hash": "6b383e8a390e3e9bbd924a152a8a0672b2036041cd64e9fc9b0dabe162723892",
+      "manifest_hash": "6c8ad57df71a14bc2ee7b2d95869de176f82fd2257b4905a93544f150aed3e50",
+      "prepared_action": {
+        "contract": "verification",
+        "action": "submitroot",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": 1776242673,
+          "policy_id": 1776243674,
+          "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+          "leaf_count": 2,
+          "external_ref": "6b383e8a390e3e9bbd924a152a8a0672b2036041cd64e9fc9b0dabe162723892"
+        }
+      }
+    }
+  },
+  "request_kind": "ingress-probe",
+  "request_label": "svc-batch-1776238673",
+  "stage_summary": "Probe batch prepare without debug material.",
+  "comment": "Ingress API prepares a batch request and redacts manifest and leaf_hashes by default."
+}

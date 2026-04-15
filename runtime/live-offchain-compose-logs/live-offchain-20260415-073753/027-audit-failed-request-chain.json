@@ -1,0 +1,73 @@
+{
+  "sequence": 27,
+  "event": "audit_failed_request_chain",
+  "timestamp": "2026-04-15T07:37:56Z",
+  "payload": {
+    "request_id": "c89bee0b949e339948ec337084183513673e9d4a00a98cc30978ae2ed4356a23",
+    "status_code": 200,
+    "response": {
+      "record": {
+        "request_id": "c89bee0b949e339948ec337084183513673e9d4a00a98cc30978ae2ed4356a23",
+        "trace_id": "28a79a69-31bf-4543-8144-21fcf8c4c50d",
+        "mode": "single",
+        "submitter": "vadim1111111",
+        "contract": "verification",
+        "status": "failed",
+        "commitment_id": null,
+        "batch_id": null,
+        "external_ref_hash": "f02ae4e49d7dc0e57bfdaa33a727cde7eb18c544c5f8cc92aef89a7d6bd253e4",
+        "tx_id": null,
+        "block_num": null,
+        "registered_at": "2026-04-15T07:37:56Z",
+        "updated_at": "2026-04-15T07:37:56Z",
+        "finalized_at": null,
+        "failed_at": "2026-04-15T07:37:56Z",
+        "failure_reason": "tx_dropped",
+        "failure_details": {
+          "note": "manual live test failure path"
+        },
+        "trust_state": "failed",
+        "receipt_available": false,
+        "inclusion_verified": false,
+        "inclusion_verified_at": null,
+        "inclusion_verification_error": null,
+        "verified_action": null,
+        "anchor": {
+          "external_ref_hash": "f02ae4e49d7dc0e57bfdaa33a727cde7eb18c544c5f8cc92aef89a7d6bd253e4",
+          "object_hash": "8b62a14722f19beb57e1db0254cb75414cfbc5ed947b60ef699a544815261d42"
+        },
+        "chain_state": {
+          "head_block_num": null,
+          "last_irreversible_block_num": null
+        }
+      },
+      "receipt": null,
+      "proof_chain": [
+        {
+          "stage": "request_registered",
+          "status": "completed",
+          "timestamp": "2026-04-15T07:37:56Z",
+          "details": {
+            "request_id": "c89bee0b949e339948ec337084183513673e9d4a00a98cc30978ae2ed4356a23",
+            "trace_id": "28a79a69-31bf-4543-8144-21fcf8c4c50d",
+            "mode": "single",
+            "submitter": "vadim1111111"
+          }
+        },
+        {
+          "stage": "block_finalized",
+          "status": "pending",
+          "timestamp": null,
+          "details": {
+            "head_block_num": null,
+            "last_irreversible_block_num": null
+          }
+        }
+      ]
+    }
+  },
+  "request_kind": "failed-request",
+  "request_label": "c89bee0b949e339948ec337084183513673e9d4a00a98cc30978ae2ed4356a23",
+  "stage_summary": "Read the failed request through the audit chain endpoint.",
+  "comment": "Audit chain shows the proof chain for the failed request and the absence of a finalized receipt."
+}

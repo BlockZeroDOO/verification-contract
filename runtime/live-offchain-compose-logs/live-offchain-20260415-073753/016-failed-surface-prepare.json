@@ -1,0 +1,60 @@
+{
+  "sequence": 16,
+  "event": "failed_surface_prepare",
+  "timestamp": "2026-04-15T07:37:56Z",
+  "payload": {
+    "request": {
+      "submitter": "vadim1111111",
+      "external_ref": "svc-failed-1776238673",
+      "schema": {
+        "id": 1776242673,
+        "version": "1.0.0",
+        "active": true,
+        "canonicalization_profile": "json-sorted-v1"
+      },
+      "policy": {
+        "id": 1776243673,
+        "active": true,
+        "allow_single": true,
+        "allow_batch": false,
+        "require_kyc": false,
+        "min_kyc_level": 0
+      },
+      "kyc": {
+        "active": true,
+        "level": 2,
+        "expires_at": "2030-01-01T00:00:00"
+      },
+      "payload": {
+        "doc_id": "svc-failed-1776238673",
+        "kind": "invoice",
+        "amount": 42
+      }
+    },
+    "status_code": 200,
+    "response": {
+      "trace_id": "28a79a69-31bf-4543-8144-21fcf8c4c50d",
+      "request_id": "c89bee0b949e339948ec337084183513673e9d4a00a98cc30978ae2ed4356a23",
+      "received_at": "2026-04-15T07:37:56Z",
+      "mode": "single",
+      "canonicalization_profile": "json-sorted-v1",
+      "object_hash": "8b62a14722f19beb57e1db0254cb75414cfbc5ed947b60ef699a544815261d42",
+      "external_ref_hash": "f02ae4e49d7dc0e57bfdaa33a727cde7eb18c544c5f8cc92aef89a7d6bd253e4",
+      "prepared_action": {
+        "contract": "verification",
+        "action": "submit",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": 1776242673,
+          "policy_id": 1776243673,
+          "object_hash": "8b62a14722f19beb57e1db0254cb75414cfbc5ed947b60ef699a544815261d42",
+          "external_ref": "f02ae4e49d7dc0e57bfdaa33a727cde7eb18c544c5f8cc92aef89a7d6bd253e4"
+        }
+      }
+    }
+  },
+  "request_kind": "failed-request",
+  "request_label": "svc-failed-1776238673",
+  "stage_summary": "Prepare a single request for the failure-path scenario.",
+  "comment": "This is an intentionally created single request that is later moved to failed in order to test auth, receipt, and audit behavior."
+}

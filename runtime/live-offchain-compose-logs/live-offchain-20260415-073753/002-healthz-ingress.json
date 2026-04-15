@@ -1,0 +1,17 @@
+{
+  "sequence": 2,
+  "event": "healthz_ingress",
+  "timestamp": "2026-04-15T07:37:53Z",
+  "payload": {
+    "url": "http://127.0.0.1:8080/healthz",
+    "status_code": 200,
+    "response": {
+      "status": "ok",
+      "service": "ingress-api"
+    }
+  },
+  "request_kind": "health-check",
+  "request_label": "ingress",
+  "stage_summary": "Availability check for the ingress service in the docker-compose stack.",
+  "comment": "This file confirms that the /healthz endpoint for ingress responded successfully before the live tests."
+}

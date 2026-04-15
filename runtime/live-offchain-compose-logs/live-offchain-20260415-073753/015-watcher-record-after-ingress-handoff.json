@@ -1,0 +1,43 @@
+{
+  "sequence": 15,
+  "event": "watcher_record_after_ingress_handoff",
+  "timestamp": "2026-04-15T07:37:56Z",
+  "payload": {
+    "request_id": "bf250efe4065ad3648c58c16b0671c57cd9aec62023b00ea43481eb43f54921f",
+    "status_code": 200,
+    "response": {
+      "anchor": {
+        "external_ref_hash": "5142792d839cbe17b74177504b9ffdd2bcb8be94aaee1e1b9480d32c55cf0b49",
+        "object_hash": "6c1383f1151a328672a91aad86e056b20601c0d7987d57b417e74b7a04f5508d"
+      },
+      "block_num": null,
+      "chain_state": {
+        "head_block_num": null,
+        "last_irreversible_block_num": null
+      },
+      "contract": "verification",
+      "failed_at": null,
+      "failure_details": null,
+      "failure_reason": null,
+      "finalized_at": null,
+      "included_at": null,
+      "inclusion_verification_error": null,
+      "inclusion_verified": false,
+      "inclusion_verified_at": null,
+      "mode": "single",
+      "registered_at": "2026-04-15T07:37:56Z",
+      "request_id": "bf250efe4065ad3648c58c16b0671c57cd9aec62023b00ea43481eb43f54921f",
+      "rpc_url": "https://jungle4.cryptolions.io",
+      "status": "submitted",
+      "submitter": "vadim1111111",
+      "trace_id": "e358440a-6d7a-42c8-acf8-2f75551f2982",
+      "tx_id": null,
+      "updated_at": "2026-04-15T07:37:56Z",
+      "verified_action": null
+    }
+  },
+  "request_kind": "ingress-handoff",
+  "request_label": "bf250efe4065ad3648c58c16b0671c57cd9aec62023b00ea43481eb43f54921f",
+  "stage_summary": "Read watcher record after a successful ingress handoff.",
+  "comment": "This lookup confirms that the request appeared in watcher immediately after prepare with handoff enabled."
+}

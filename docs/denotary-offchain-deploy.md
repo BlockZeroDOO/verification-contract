@@ -11,6 +11,10 @@ For local development and the fastest all-in-one launch, prefer Docker Compose:
 
 - [docs/denotary-offchain-docker-compose.md](/c:/projects/verification-contract/docs/denotary-offchain-docker-compose.md:1)
 
+For a production-oriented rollout path, see:
+
+- [docs/denotary-production-rollout.md](/c:/projects/verification-contract/docs/denotary-production-rollout.md:1)
+
 ## Services and ports
 
 Default binding:
@@ -24,10 +28,10 @@ Shared runtime state:
 
 - `FINALITY_STATE_BACKEND=sqlite`
 - `FINALITY_STATE_DB=/var/lib/denotary/finality-state.sqlite3`
-- `WATCHER_VERIFICATION_POLICY=single-provider`
-- `WATCHER_VERIFICATION_MIN_SUCCESS=1`
-- `RECEIPT_PRIVACY_MODE=full`
-- `AUDIT_PRIVACY_MODE=full`
+- `WATCHER_VERIFICATION_POLICY=quorum`
+- `WATCHER_VERIFICATION_MIN_SUCCESS=2`
+- `RECEIPT_PRIVACY_MODE=public`
+- `AUDIT_PRIVACY_MODE=public`
 
 Default deNotary chain settings:
 
@@ -74,18 +78,19 @@ AUDIT_PORT=8083
 
 CONTRACT_ACCOUNT=verification
 RPC_URL=https://history.denotary.io
+WATCHER_RPC_URLS=https://history.denotary.io,https://backup-history.denotary.io
 FINALITY_STATE_BACKEND=sqlite
 FINALITY_STATE_DB=/var/lib/denotary/finality-state.sqlite3
-WATCHER_VERIFICATION_POLICY=single-provider
-WATCHER_VERIFICATION_MIN_SUCCESS=1
-RECEIPT_PRIVACY_MODE=full
-AUDIT_PRIVACY_MODE=full
+WATCHER_VERIFICATION_POLICY=quorum
+WATCHER_VERIFICATION_MIN_SUCCESS=2
+RECEIPT_PRIVACY_MODE=public
+AUDIT_PRIVACY_MODE=public
 CHAIN_ID=9714ab662f0899c3ac4c5a02220f3d7ab61aacae311974239cc75f22c999cc48
 POLL_INTERVAL_SEC=10
 WATCHER_AUTH_TOKEN=replace-with-shared-secret
 INGRESS_WATCHER_URL=http://127.0.0.1:8081
 INGRESS_WATCHER_AUTH_TOKEN=replace-with-shared-secret
-INGRESS_WATCHER_RPC_URL=https://history.denotary.io
+INGRESS_WATCHER_RPC_URLS=https://history.denotary.io,https://backup-history.denotary.io
 PID_DIR=/var/run/denotary
 LOG_DIR=/var/log/denotary
 ```
@@ -131,7 +136,7 @@ If you want `Ingress API` to auto-register prepared requests into the local watc
 
 - `INGRESS_WATCHER_URL` pointed at the watcher endpoint
 - `INGRESS_WATCHER_AUTH_TOKEN` aligned with `WATCHER_AUTH_TOKEN`
-- `INGRESS_WATCHER_RPC_URL` aligned with the chain RPC used by the watcher
+- `INGRESS_WATCHER_RPC_URLS` aligned with the provider set used by the watcher
 
 ## 4. systemd deployment
 
@@ -197,6 +202,8 @@ Operational policy:
 - prefer binding all services to `127.0.0.1` and exposing only proxied endpoints
 - set `RECEIPT_PRIVACY_MODE=public` and `AUDIT_PRIVACY_MODE=public` if the services are internet-facing
 - use `full` privacy mode only for trusted internal deployments
+- prefer at least two independent providers through `WATCHER_RPC_URLS`
+- prefer `WATCHER_VERIFICATION_POLICY=quorum` with `WATCHER_VERIFICATION_MIN_SUCCESS=2` for production
 
 ## 6. Health checks
 

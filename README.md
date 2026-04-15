@@ -333,6 +333,7 @@ Service docs:
 
 - [docs/denotary-deploy.md](/c:/projects/verification-contract/docs/denotary-deploy.md:1)
 - [docs/denotary-offchain-deploy.md](/c:/projects/verification-contract/docs/denotary-offchain-deploy.md:1)
+- [docs/denotary-production-rollout.md](/c:/projects/verification-contract/docs/denotary-production-rollout.md:1)
 - [docs/jungle4-deploy.md](/c:/projects/verification-contract/docs/jungle4-deploy.md:1)
 - [docs/denotary-ingress-api.md](/c:/projects/verification-contract/docs/denotary-ingress-api.md:1)
 - [docs/denotary-finality-services.md](/c:/projects/verification-contract/docs/denotary-finality-services.md:1)
@@ -347,7 +348,9 @@ Service docs:
 Operational helpers:
 
 - [config/offchain.env.example](/c:/projects/verification-contract/config/offchain.env.example:1)
+- [config/offchain.production.env.example](/c:/projects/verification-contract/config/offchain.production.env.example:1)
 - [config/offchain.compose.env.example](/c:/projects/verification-contract/config/offchain.compose.env.example:1)
+- [config/offchain.compose.production.env.example](/c:/projects/verification-contract/config/offchain.compose.production.env.example:1)
 - [Dockerfile.offchain](/c:/projects/verification-contract/Dockerfile.offchain:1)
 - [docker-compose.offchain.yml](/c:/projects/verification-contract/docker-compose.offchain.yml:1)
 - [scripts/run-offchain-service.sh](/c:/projects/verification-contract/scripts/run-offchain-service.sh:1)

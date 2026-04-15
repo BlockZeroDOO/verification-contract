@@ -17,10 +17,14 @@ Recommended runtime:
 
 - `FINALITY_STATE_BACKEND=sqlite`
 - `FINALITY_STATE_DB=/data/finality-state.sqlite3`
-- `WATCHER_VERIFICATION_POLICY=single-provider`
-- `WATCHER_VERIFICATION_MIN_SUCCESS=1`
-- `RECEIPT_PRIVACY_MODE=full`
-- `AUDIT_PRIVACY_MODE=full`
+- `WATCHER_VERIFICATION_POLICY=quorum`
+- `WATCHER_VERIFICATION_MIN_SUCCESS=2`
+- `RECEIPT_PRIVACY_MODE=public`
+- `AUDIT_PRIVACY_MODE=public`
+
+For a production-oriented rollout path, see:
+
+- [docs/denotary-production-rollout.md](/c:/projects/verification-contract/docs/denotary-production-rollout.md:1)
 
 ## 1. Prepare the env file
 
@@ -33,15 +37,16 @@ Adjust values if needed:
 ```bash
 CONTRACT_ACCOUNT=verification
 RPC_URL=https://history.denotary.io
+WATCHER_RPC_URLS=https://history.denotary.io,https://backup-history.denotary.io
 FINALITY_STATE_BACKEND=sqlite
 FINALITY_STATE_DB=/data/finality-state.sqlite3
-WATCHER_VERIFICATION_POLICY=single-provider
-WATCHER_VERIFICATION_MIN_SUCCESS=1
-RECEIPT_PRIVACY_MODE=full
-AUDIT_PRIVACY_MODE=full
+WATCHER_VERIFICATION_POLICY=quorum
+WATCHER_VERIFICATION_MIN_SUCCESS=2
+RECEIPT_PRIVACY_MODE=public
+AUDIT_PRIVACY_MODE=public
 INGRESS_WATCHER_URL=http://finality:8081
 INGRESS_WATCHER_AUTH_TOKEN=replace-with-shared-secret
-INGRESS_WATCHER_RPC_URL=https://history.denotary.io
+INGRESS_WATCHER_RPC_URLS=https://history.denotary.io,https://backup-history.denotary.io
 CHAIN_ID=9714ab662f0899c3ac4c5a02220f3d7ab61aacae311974239cc75f22c999cc48
 POLL_INTERVAL_SEC=10
 WATCHER_AUTH_TOKEN=replace-with-shared-secret

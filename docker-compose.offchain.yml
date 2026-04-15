@@ -19,12 +19,12 @@ services:
       - --watcher-auth-token
       - ${INGRESS_WATCHER_AUTH_TOKEN:-${WATCHER_AUTH_TOKEN:?WATCHER_AUTH_TOKEN is required for the finality watcher}}
       - --watcher-rpc-url
-      - ${INGRESS_WATCHER_RPC_URL:-${RPC_URL:-https://history.denotary.io}}
+      - ${INGRESS_WATCHER_RPC_URLS:-${INGRESS_WATCHER_RPC_URL:-${WATCHER_RPC_URLS:-${RPC_URL:-https://history.denotary.io}}}}
     environment:
       CONTRACT_ACCOUNT: ${CONTRACT_ACCOUNT:-verification}
       INGRESS_WATCHER_URL: ${INGRESS_WATCHER_URL:-http://finality:8081}
       INGRESS_WATCHER_AUTH_TOKEN: ${INGRESS_WATCHER_AUTH_TOKEN:-${WATCHER_AUTH_TOKEN:?WATCHER_AUTH_TOKEN is required for the finality watcher}}
-      INGRESS_WATCHER_RPC_URL: ${INGRESS_WATCHER_RPC_URL:-${RPC_URL:-https://history.denotary.io}}
+      INGRESS_WATCHER_RPC_URL: ${INGRESS_WATCHER_RPC_URLS:-${INGRESS_WATCHER_RPC_URL:-${WATCHER_RPC_URLS:-${RPC_URL:-https://history.denotary.io}}}}
     ports:
       - "${INGRESS_BIND:-127.0.0.1}:${INGRESS_PORT:-8080}:8080"
     healthcheck:
@@ -53,7 +53,7 @@ services:
       - --port
       - "8081"
       - --rpc-url
-      - ${RPC_URL:-https://history.denotary.io}
+      - ${WATCHER_RPC_URLS:-${RPC_URL:-https://history.denotary.io}}
       - --state-backend
       - ${FINALITY_STATE_BACKEND:-sqlite}
       - --state-file
@@ -69,7 +69,7 @@ services:
       - --verification-min-success
       - ${WATCHER_VERIFICATION_MIN_SUCCESS:-1}
     environment:
-      RPC_URL: ${RPC_URL:-https://history.denotary.io}
+      RPC_URL: ${WATCHER_RPC_URLS:-${RPC_URL:-https://history.denotary.io}}
       FINALITY_STATE_BACKEND: ${FINALITY_STATE_BACKEND:-sqlite}
       FINALITY_STATE_DB: ${FINALITY_STATE_DB:-/data/finality-state.sqlite3}
       POLL_INTERVAL_SEC: ${POLL_INTERVAL_SEC:-10}

@@ -80,14 +80,18 @@ Operational action:
 Linux / WSL:
 
 ```bash
+./scripts/build-enterprise.sh
 ./scripts/build-testnet.sh
+./scripts/build-retail.sh
 ./scripts/build-release.sh
 ```
 
 PowerShell:
 
 ```powershell
+./scripts/build-enterprise.ps1
 ./scripts/build-testnet.ps1
+./scripts/build-retail.ps1
 ./scripts/build-release.ps1
 ```
 
@@ -100,21 +104,29 @@ Expected artifacts:
 
 deNotary:
 
+- [docs/enterprise-deploy.md](/c:/projects/verification-contract/docs/enterprise-deploy.md:1)
 - [docs/denotary-deploy.md](/c:/projects/verification-contract/docs/denotary-deploy.md:1)
+- [scripts/deploy-enterprise-denotary.sh](/c:/projects/verification-contract/scripts/deploy-enterprise-denotary.sh:1)
 - [scripts/deploy-denotary.sh](/c:/projects/verification-contract/scripts/deploy-denotary.sh:1)
 - [docs/retail-deploy.md](/c:/projects/verification-contract/docs/retail-deploy.md:1)
 - [scripts/deploy-retail-denotary.sh](/c:/projects/verification-contract/scripts/deploy-retail-denotary.sh:1)
 
 Jungle4:
 
+- [docs/enterprise-deploy.md](/c:/projects/verification-contract/docs/enterprise-deploy.md:1)
 - [docs/jungle4-deploy.md](/c:/projects/verification-contract/docs/jungle4-deploy.md:1)
+- [scripts/deploy-enterprise-jungle4.sh](/c:/projects/verification-contract/scripts/deploy-enterprise-jungle4.sh:1)
 - [scripts/deploy-jungle4.sh](/c:/projects/verification-contract/scripts/deploy-jungle4.sh:1)
 - [scripts/deploy-retail-jungle4.sh](/c:/projects/verification-contract/scripts/deploy-retail-jungle4.sh:1)
 
 ## On-chain smoke
 
 - [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1)
+- [docs/enterprise-onchain-smoke.md](/c:/projects/verification-contract/docs/enterprise-onchain-smoke.md:1)
 - [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)
+- [scripts/smoke-test-enterprise.sh](/c:/projects/verification-contract/scripts/smoke-test-enterprise.sh:1)
+- [scripts/smoke-test-enterprise-jungle4.sh](/c:/projects/verification-contract/scripts/smoke-test-enterprise-jungle4.sh:1)
+- [scripts/smoke-test-enterprise-denotary.sh](/c:/projects/verification-contract/scripts/smoke-test-enterprise-denotary.sh:1)
 - [scripts/smoke-test-onchain.sh](/c:/projects/verification-contract/scripts/smoke-test-onchain.sh:1)
 - [scripts/smoke-test-jungle4.sh](/c:/projects/verification-contract/scripts/smoke-test-jungle4.sh:1)
 - [scripts/smoke-test.sh](/c:/projects/verification-contract/scripts/smoke-test.sh:1)

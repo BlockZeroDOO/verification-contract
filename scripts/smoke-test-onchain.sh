@@ -3,6 +3,7 @@
 set -euo pipefail
 
 RPC_URL="${RPC_URL:-https://history.denotary.io}"
+READ_RPC_URL="${READ_RPC_URL:-${RPC_URL}}"
 VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
 SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
@@ -10,7 +11,7 @@ KYC_PROVIDER="${KYC_PROVIDER:-denotary-kyc}"
 KYC_JURISDICTION="${KYC_JURISDICTION:-EU}"
 KYC_LEVEL="${KYC_LEVEL:-2}"
 KYC_EXPIRES_AT="${KYC_EXPIRES_AT:-2030-01-01T00:00:00}"
-WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-30}"
+WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the verification contract authority account.}"
@@ -50,7 +51,7 @@ get_table_json() {
     local code="$1"
     local scope="$2"
     local table="$3"
-    cleos -u "${RPC_URL}" get table "${code}" "${scope}" "${table}"
+    cleos -u "${READ_RPC_URL}" get table "${code}" "${scope}" "${table}" --limit 1000
 }
 
 kyc_row_exists() {

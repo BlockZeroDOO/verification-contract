@@ -11,4 +11,4 @@ export VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
 export SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 export WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 
-bash "${script_dir}/smoke-test-onchain.sh"
+"${script_dir}/smoke-test-onchain.sh"

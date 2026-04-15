@@ -12,6 +12,7 @@ These smoke tests validate the current on-chain production paths for:
 
 Scripts:
 
+- [scripts/smoke-test-enterprise.sh](/c:/projects/verification-contract/scripts/smoke-test-enterprise.sh:1)
 - [scripts/smoke-test-onchain.sh](/c:/projects/verification-contract/scripts/smoke-test-onchain.sh:1)
 - [scripts/smoke-test-retail.sh](/c:/projects/verification-contract/scripts/smoke-test-retail.sh:1)
 
@@ -28,6 +29,7 @@ Scripts:
 
 ```bash
 export RPC_URL=https://your-rpc
+export READ_RPC_URL=${RPC_URL}
 export VERIFICATION_ACCOUNT=verification
 export OWNER_ACCOUNT=verification
 export SUBMITTER_ACCOUNT=someuser
@@ -54,6 +56,12 @@ Use:
 ## Run
 
 Verification smoke:
+
+```bash
+./scripts/smoke-test-enterprise.sh
+```
+
+Canonical underlying enterprise smoke:
 
 ```bash
 ./scripts/smoke-test-onchain.sh
@@ -98,4 +106,6 @@ Retail smoke:
 - run these scripts against a dedicated test account or test deployment
 - `schema_id` and `policy_id` are timestamp-derived to avoid collisions between runs
 - `commitment` and `batch` IDs are discovered by `external_ref`, so the scripts are not pinned to `id = 1`
+- table polling uses `get table --limit 1000` to avoid missing rows on larger registries
+- enterprise wrappers are documented separately in [docs/enterprise-onchain-smoke.md](/c:/projects/verification-contract/docs/enterprise-onchain-smoke.md:1)
 - retail smoke is documented separately in [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)

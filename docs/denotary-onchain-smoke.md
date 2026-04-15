@@ -13,6 +13,7 @@ These smoke tests validate the current on-chain production paths for:
 Scripts:
 
 - [scripts/smoke-test-onchain.sh](/c:/projects/verification-contract/scripts/smoke-test-onchain.sh:1)
+- [scripts/smoke-test-retail.sh](/c:/projects/verification-contract/scripts/smoke-test-retail.sh:1)
 
 ## Prerequisites
 
@@ -67,6 +68,12 @@ Legacy compatibility wrapper:
 It now delegates to `smoke-test-onchain.sh`, because the legacy proof-payment path in
 `verification` is intentionally disabled.
 
+Retail smoke:
+
+```bash
+./scripts/smoke-test-retail.sh
+```
+
 ## What the verification smoke validates
 
 - `issuekyc`
@@ -91,3 +98,4 @@ It now delegates to `smoke-test-onchain.sh`, because the legacy proof-payment pa
 - run these scripts against a dedicated test account or test deployment
 - `schema_id` and `policy_id` are timestamp-derived to avoid collisions between runs
 - `commitment` and `batch` IDs are discovered by `external_ref`, so the scripts are not pinned to `id = 1`
+- retail smoke is documented separately in [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)

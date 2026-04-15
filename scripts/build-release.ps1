@@ -29,6 +29,17 @@ foreach ($name in $ContractName) {
     if (-not (Test-Path $sourceFile)) {
         throw "Source file not found for contract '$name': $sourceFile"
     }
+    $sourceArgs = @("src/$name.cpp")
+    $compilerArgs = @()
+    if ($name -eq "verification") {
+        $compilerArgs += "-DVERIFICATION_ENTERPRISE_BUILD"
+        $sourceArgs += "src/verification_enterprise.cpp"
+        $sourceArgs += "src/verification_core.cpp"
+    }
+    elseif ($name -eq "verification_retail") {
+        $compilerArgs += "-DVERIFICATION_RETAIL_BUILD"
+        $sourceArgs = @("src/verification_retail_entry.cpp", "src/verification_retail.cpp", "src/verification_core.cpp")
+    }
 
     $distDir = Join-Path $projectRoot "dist\$name"
     $wasmFile = Join-Path $distDir "$name.wasm"
@@ -46,7 +57,8 @@ foreach ($name in $ContractName) {
             -O3 `
             --abigen `
             --abigen_output $abiFile `
-            "src/$name.cpp" `
+            $compilerArgs `
+            $sourceArgs `
             -o $wasmFile
     }
     finally {

@@ -1,6 +1,9 @@
 # DeNotary Verification Contract
 
-This repository is the canonical home of the on-chain `verification` contract.
+This repository is the canonical home of the on-chain verification contracts:
+
+- `verification`
+- `verification_retail`
 
 Repository boundary:
 
@@ -10,7 +13,7 @@ Repository boundary:
 
 ## Scope
 
-The `verification` contract covers:
+The enterprise `verification` contract covers:
 
 - KYC access control
 - schema registry
@@ -19,6 +22,13 @@ The `verification` contract covers:
 - batch anchoring
 - commitment and batch lifecycle tracking
 - explicit disablement of the legacy paid proof path
+
+The retail `verification_retail` contract covers:
+
+- the same verification core model
+- wallet-first `atomic pay + submit`
+- exact tariff-governed retail payment receipts
+- no deposit model
 
 ## On-chain tables
 
@@ -92,19 +102,24 @@ deNotary:
 
 - [docs/denotary-deploy.md](/c:/projects/verification-contract/docs/denotary-deploy.md:1)
 - [scripts/deploy-denotary.sh](/c:/projects/verification-contract/scripts/deploy-denotary.sh:1)
+- [docs/retail-deploy.md](/c:/projects/verification-contract/docs/retail-deploy.md:1)
+- [scripts/deploy-retail-denotary.sh](/c:/projects/verification-contract/scripts/deploy-retail-denotary.sh:1)
 
 Jungle4:
 
 - [docs/jungle4-deploy.md](/c:/projects/verification-contract/docs/jungle4-deploy.md:1)
 - [scripts/deploy-jungle4.sh](/c:/projects/verification-contract/scripts/deploy-jungle4.sh:1)
+- [scripts/deploy-retail-jungle4.sh](/c:/projects/verification-contract/scripts/deploy-retail-jungle4.sh:1)
 
 ## On-chain smoke
 
 - [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1)
+- [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)
 - [scripts/smoke-test-onchain.sh](/c:/projects/verification-contract/scripts/smoke-test-onchain.sh:1)
 - [scripts/smoke-test-jungle4.sh](/c:/projects/verification-contract/scripts/smoke-test-jungle4.sh:1)
 - [scripts/smoke-test.sh](/c:/projects/verification-contract/scripts/smoke-test.sh:1)
 - [scripts/smoke-test-denotary.sh](/c:/projects/verification-contract/scripts/smoke-test-denotary.sh:1)
+- [scripts/smoke-test-retail.sh](/c:/projects/verification-contract/scripts/smoke-test-retail.sh:1)
 
 ## Contract docs
 

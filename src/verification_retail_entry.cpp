@@ -1,4 +1,4 @@
-#include <verification_enterprise.hpp>
+#include <verification_retail.hpp>
 
 #include <eosio/dispatcher.hpp>
 
@@ -8,20 +8,20 @@ extern "C" {
         if (code == receiver) {
             switch (action) {
                 EOSIO_DISPATCH_HELPER(
-                    verification_enterprise,
+                    verification_retail,
                     (issuekyc)(renewkyc)(revokekyc)(suspendkyc)
                     (addschema)(updateschema)(deprecate)
                     (setpolicy)(enablezk)(disablezk)
                     (submit)(supersede)(revokecmmt)(expirecmmt)
                     (submitroot)(linkmanifest)(closebatch)
-                    (record)(setpaytoken)(rmpaytoken)(withdraw)
+                    (settoken)(rmtoken)(setprice)(withdraw)
                 )
             }
             return;
         }
 
         if (action == "transfer"_n.value) {
-            eosio::execute_action(name(receiver), name(code), &verification_enterprise::ontransfer);
+            eosio::execute_action(name(receiver), name(code), &verification_retail::ontransfer);
         }
     }
 }

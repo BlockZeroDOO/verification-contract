@@ -28,6 +28,8 @@ echo "Using compiler: ${compiler}"
 build_contract() {
     local contract_name="$1"
     local source_file="src/${contract_name}.cpp"
+    local source_args=("${source_file}")
+    local compiler_args=()
     local dist_dir="${project_root}/dist/${contract_name}"
     local wasm_file="${dist_dir}/${contract_name}.wasm"
     local abi_file="${dist_dir}/${contract_name}.abi"
@@ -35,6 +37,15 @@ build_contract() {
     if [[ ! -f "${project_root}/${source_file}" ]]; then
         echo "Source file not found for contract '${contract_name}': ${source_file}" >&2
         exit 1
+    fi
+
+    if [[ "${contract_name}" == "verification" ]]; then
+        compiler_args+=("-DVERIFICATION_ENTERPRISE_BUILD")
+        source_args+=("src/verification_enterprise.cpp")
+        source_args+=("src/verification_core.cpp")
+    elif [[ "${contract_name}" == "verification_retail" ]]; then
+        compiler_args+=("-DVERIFICATION_RETAIL_BUILD")
+        source_args=("src/verification_retail_entry.cpp" "src/verification_retail.cpp" "src/verification_core.cpp")
     fi
 
     mkdir -p "${dist_dir}"
@@ -48,7 +59,8 @@ build_contract() {
         -O3 \
         --abigen \
         --abigen_output "${abi_file}" \
-        "${source_file}" \
+        "${compiler_args[@]}" \
+        "${source_args[@]}" \
         -o "${wasm_file}"
     popd >/dev/null
 

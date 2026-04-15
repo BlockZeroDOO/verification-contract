@@ -1,0 +1,76 @@
+{
+  "sequence": 57,
+  "event": "compose_restart_included_before_restart",
+  "timestamp": "2026-04-15T15:10:57Z",
+  "payload": {
+    "request_id": "f491d6b70de5edcede2e9fa11e496bb8abe15ccb7e38f31c4f42c57b69f9c13e",
+    "status_code": 200,
+    "response": {
+      "anchor": {
+        "commitment_id": 29,
+        "external_ref_hash": "ee833bfcaaea62090841addba79365b4823220263f728fd9e372a3ed4859488e",
+        "object_hash": "c3cb1431f0615113f630c89d944c9d41a55c06db56d9ca50f074da6eecd9d937"
+      },
+      "block_num": 260814222,
+      "chain_state": {
+        "head_block_num": null,
+        "last_irreversible_block_num": null
+      },
+      "contract": "verification",
+      "failed_at": null,
+      "failure_details": null,
+      "failure_reason": null,
+      "finalized_at": null,
+      "included_at": "2026-04-15T15:10:57Z",
+      "inclusion_verification_error": null,
+      "inclusion_verified": true,
+      "inclusion_verified_at": "2026-04-15T15:10:57Z",
+      "mode": "single",
+      "provider_disagreement": false,
+      "registered_at": "2026-04-15T15:10:53Z",
+      "request_id": "f491d6b70de5edcede2e9fa11e496bb8abe15ccb7e38f31c4f42c57b69f9c13e",
+      "rpc_url": "https://jungle4.cryptolions.io",
+      "rpc_urls": [
+        "https://jungle4.cryptolions.io"
+      ],
+      "status": "included",
+      "submitter": "vadim1111111",
+      "trace_id": "da36f8a3-bed4-4512-824d-27e26a88264c",
+      "tx_id": "f2a4560a7b91dad6d3f417adf488bf2e248f32274f9cd514181c4951df45f363",
+      "updated_at": "2026-04-15T15:10:57Z",
+      "verification_min_success": 1,
+      "verification_policy": "single-provider",
+      "verification_state": {
+        "policy": "single-provider",
+        "min_success": 1,
+        "providers_checked": [
+          {
+            "rpc_url": "https://jungle4.cryptolions.io",
+            "ok": true,
+            "block_num": 260814222,
+            "action_name": "submit",
+            "verified_at": "2026-04-15T15:10:57Z",
+            "error": null
+          }
+        ],
+        "consensus": {
+          "verified": true,
+          "provider_count_ok": 1,
+          "provider_count_total": 1,
+          "provider_disagreement": false
+        }
+      },
+      "verified_action": {
+        "account": "verification",
+        "name": "submit",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": "1776269832",
+          "policy_id": "1776270832",
+          "object_hash": "C3CB1431F0615113F630C89D944C9D41A55C06DB56D9CA50F074DA6EECD9D937",
+          "external_ref": "EE833BFCAAEA62090841ADDBA79365B4823220263F728FD9E372A3ED4859488E"
+        }
+      }
+    }
+  }
+}

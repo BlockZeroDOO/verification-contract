@@ -1,0 +1,57 @@
+{
+  "sequence": 30,
+  "event": "single_watcher_register",
+  "timestamp": "2026-04-15T15:10:34Z",
+  "payload": {
+    "request": {
+      "request_id": "0d0354aea7a297aae021cd2891a447c2ed25efa6588bb8d7e1bc9595d384d81f",
+      "trace_id": "3577ad1a-fabc-4106-9efe-64936150d27c",
+      "mode": "single",
+      "submitter": "vadim1111111",
+      "contract": "verification",
+      "anchor": {
+        "object_hash": "f7c55cc1cb1d41a5a02d1112a217f78806ebb6838add9ef5cc1b982dea9cd327",
+        "external_ref_hash": "4ff3e7eddf0fa35d82a9ad247af430dacaf8564fbfc140f9de8f057e7a95cb9e"
+      },
+      "rpc_url": "https://jungle4.cryptolions.io"
+    },
+    "status_code": 200,
+    "response": {
+      "request_id": "0d0354aea7a297aae021cd2891a447c2ed25efa6588bb8d7e1bc9595d384d81f",
+      "trace_id": "3577ad1a-fabc-4106-9efe-64936150d27c",
+      "mode": "single",
+      "submitter": "vadim1111111",
+      "contract": "verification",
+      "rpc_url": "https://jungle4.cryptolions.io",
+      "rpc_urls": [
+        "https://jungle4.cryptolions.io"
+      ],
+      "anchor": {
+        "object_hash": "f7c55cc1cb1d41a5a02d1112a217f78806ebb6838add9ef5cc1b982dea9cd327",
+        "external_ref_hash": "4ff3e7eddf0fa35d82a9ad247af430dacaf8564fbfc140f9de8f057e7a95cb9e"
+      },
+      "tx_id": null,
+      "block_num": null,
+      "status": "submitted",
+      "registered_at": "2026-04-15T15:10:34Z",
+      "included_at": null,
+      "updated_at": "2026-04-15T15:10:34Z",
+      "finalized_at": null,
+      "failed_at": null,
+      "failure_reason": null,
+      "failure_details": null,
+      "inclusion_verified": false,
+      "inclusion_verified_at": null,
+      "inclusion_verification_error": null,
+      "verified_action": null,
+      "verification_policy": "single-provider",
+      "verification_min_success": 1,
+      "verification_state": null,
+      "provider_disagreement": false,
+      "chain_state": {
+        "head_block_num": null,
+        "last_irreversible_block_num": null
+      }
+    }
+  }
+}

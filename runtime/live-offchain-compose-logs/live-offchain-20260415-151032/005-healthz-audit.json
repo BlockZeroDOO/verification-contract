@@ -1,0 +1,14 @@
+{
+  "sequence": 5,
+  "event": "healthz_audit",
+  "timestamp": "2026-04-15T15:10:32Z",
+  "payload": {
+    "url": "http://127.0.0.1:8083/healthz",
+    "status_code": 200,
+    "response": {
+      "status": "ok",
+      "service": "audit-api",
+      "privacy_mode": "full"
+    }
+  }
+}

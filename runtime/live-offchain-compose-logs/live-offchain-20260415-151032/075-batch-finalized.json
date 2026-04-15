@@ -1,0 +1,74 @@
+{
+  "sequence": 75,
+  "event": "batch_finalized",
+  "timestamp": "2026-04-15T15:11:26Z",
+  "payload": {
+    "request_id": "191ad010ba1e78634babc66a5dbfba5c6c97b33c134aaa5adc56b4ed0ff99196",
+    "response": {
+      "anchor": {
+        "batch_id": 7,
+        "external_ref_hash": "562ed3e1ab10dd21de5459f28610c036b130d1534b067033f6125f2302b40ad6",
+        "leaf_count": 2,
+        "manifest_hash": "93c879d71c098efa00ba5499d72ac5a2d2346d124e5530f834ba90be9c389c12",
+        "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa"
+      },
+      "block_num": 260814280,
+      "chain_state": {
+        "provider": "https://jungle4.cryptolions.io",
+        "head_block_num": 260814287,
+        "last_irreversible_block_num": 260814285
+      },
+      "contract": "verification",
+      "failed_at": null,
+      "failure_details": null,
+      "failure_reason": null,
+      "finalized_at": "2026-04-15T15:11:26Z",
+      "included_at": "2026-04-15T15:11:22Z",
+      "inclusion_verification_error": null,
+      "inclusion_verified": true,
+      "inclusion_verified_at": "2026-04-15T15:11:22Z",
+      "mode": "batch",
+      "provider_disagreement": false,
+      "registered_at": "2026-04-15T15:11:20Z",
+      "request_id": "191ad010ba1e78634babc66a5dbfba5c6c97b33c134aaa5adc56b4ed0ff99196",
+      "rpc_url": "https://jungle4.cryptolions.io",
+      "rpc_urls": [
+        "https://jungle4.cryptolions.io"
+      ],
+      "status": "finalized",
+      "submitter": "vadim1111111",
+      "trace_id": "f6aeba94-ef9d-469a-9d53-57b94be3282c",
+      "tx_id": "5e1fcb045a9c546d89485ed0b7df2f4753d933e3aae42a7acdbb578613155f74",
+      "updated_at": "2026-04-15T15:11:26Z",
+      "verification_min_success": 1,
+      "verification_policy": "single-provider",
+      "verification_state": {
+        "policy": "single-provider",
+        "min_success": 1,
+        "providers_checked": [
+          {
+            "rpc_url": "https://jungle4.cryptolions.io",
+            "ok": true,
+            "block_num": 260814280,
+            "action_name": "closebatch",
+            "verified_at": "2026-04-15T15:11:26Z",
+            "error": null
+          }
+        ],
+        "consensus": {
+          "verified": true,
+          "provider_count_ok": 1,
+          "provider_count_total": 1,
+          "provider_disagreement": false
+        }
+      },
+      "verified_action": {
+        "account": "verification",
+        "name": "closebatch",
+        "data": {
+          "id": "7"
+        }
+      }
+    }
+  }
+}

@@ -851,6 +851,68 @@ def should_attempt_startup_recovery(payload: Dict[str, Any]) -> bool:
     return False
 
 
+def _status_rank(status: Any) -> int:
+    ranks = {
+        "submitted": 0,
+        "included": 1,
+        "finalized": 2,
+        "failed": 3,
+    }
+    return ranks.get(str(status or "submitted"), -1)
+
+
+def reconcile_request_progress(current: Dict[str, Any], candidate: Dict[str, Any]) -> Dict[str, Any]:
+    reconciled = dict(candidate)
+
+    current_anchor = current.get("anchor")
+    candidate_anchor = reconciled.get("anchor")
+    if isinstance(current_anchor, dict):
+        merged_anchor = dict(current_anchor)
+        if isinstance(candidate_anchor, dict):
+            merged_anchor.update(candidate_anchor)
+        reconciled["anchor"] = merged_anchor
+
+    preserve_if_missing = (
+        "tx_id",
+        "block_num",
+        "included_at",
+        "finalized_at",
+        "failed_at",
+        "failure_reason",
+        "failure_details",
+        "inclusion_verified_at",
+        "inclusion_verification_error",
+        "verified_action",
+        "verification_state",
+    )
+    for field_name in preserve_if_missing:
+        if reconciled.get(field_name) in (None, "") and current.get(field_name) not in (None, ""):
+            reconciled[field_name] = current[field_name]
+
+    if current.get("inclusion_verified") and not reconciled.get("inclusion_verified"):
+        reconciled["inclusion_verified"] = True
+
+    if current.get("provider_disagreement") and not reconciled.get("provider_disagreement"):
+        reconciled["provider_disagreement"] = True
+
+    current_status = current.get("status")
+    candidate_status = reconciled.get("status")
+    if _status_rank(current_status) > _status_rank(candidate_status):
+        reconciled["status"] = current_status
+
+    if not reconciled.get("chain_state") and current.get("chain_state"):
+        reconciled["chain_state"] = current["chain_state"]
+
+    if reconciled.get("status") == "included" and not reconciled.get("included_at") and current.get("included_at"):
+        reconciled["included_at"] = current["included_at"]
+    if reconciled.get("status") == "finalized" and not reconciled.get("finalized_at") and current.get("finalized_at"):
+        reconciled["finalized_at"] = current["finalized_at"]
+    if reconciled.get("status") == "failed" and not reconciled.get("failed_at") and current.get("failed_at"):
+        reconciled["failed_at"] = current["failed_at"]
+
+    return reconciled
+
+
 class FinalityWatcherHandler(BaseHTTPRequestHandler):
     server_version = "DeNotaryFinalityWatcher/0.2"
 
@@ -1016,8 +1078,13 @@ class FinalityWatcherServer(ThreadingHTTPServer):
         results: Dict[str, str] = {}
         for request_id, payload in self.store.list_requests().items():
             updated = poll_request(payload)
-            self.store.upsert_request(request_id, updated)
-            results[request_id] = updated["status"]
+            try:
+                current = self.store.get_request(request_id)
+            except KeyError:
+                current = payload
+            reconciled = reconcile_request_progress(current, updated)
+            self.store.upsert_request(request_id, reconciled)
+            results[request_id] = reconciled["status"]
         return results
 
     def run_startup_checks(self) -> Dict[str, Any]:
@@ -1052,10 +1119,15 @@ class FinalityWatcherServer(ThreadingHTTPServer):
             before_status = payload.get("status")
             try:
                 updated = poll_request(payload)
-                self.store.upsert_request(request_id, updated)
-                if updated != payload:
+                try:
+                    current = self.store.get_request(request_id)
+                except KeyError:
+                    current = payload
+                reconciled = reconcile_request_progress(current, updated)
+                self.store.upsert_request(request_id, reconciled)
+                if reconciled != payload:
                     summary["updated"] += 1
-                if before_status != "finalized" and updated.get("status") == "finalized":
+                if before_status != "finalized" and reconciled.get("status") == "finalized":
                     summary["finalized"] += 1
             except Exception as exc:
                 summary["failed"] += 1

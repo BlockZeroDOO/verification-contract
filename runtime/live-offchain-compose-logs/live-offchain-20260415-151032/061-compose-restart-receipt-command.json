@@ -1,0 +1,9 @@
+{
+  "sequence": 61,
+  "event": "compose_restart_receipt_command",
+  "timestamp": "2026-04-15T15:11:12Z",
+  "payload": {
+    "stdout": "",
+    "stderr": " Container denotary-receipt Restarting \n Container denotary-receipt Started \n"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "sequence": 62,
+  "event": "compose_restart_receipt_health",
+  "timestamp": "2026-04-15T15:11:15Z",
+  "payload": {
+    "response": {
+      "status": "ok",
+      "service": "receipt-service",
+      "privacy_mode": "full"
+    }
+  }
+}

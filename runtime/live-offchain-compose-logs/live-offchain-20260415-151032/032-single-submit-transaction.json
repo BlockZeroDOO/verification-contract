@@ -1,0 +1,86 @@
+{
+  "sequence": 32,
+  "event": "single_submit_transaction",
+  "timestamp": "2026-04-15T15:10:35Z",
+  "payload": {
+    "request_id": "0d0354aea7a297aae021cd2891a447c2ed25efa6588bb8d7e1bc9595d384d81f",
+    "transaction": {
+      "transaction_id": "0a49e4baa99fb1ca2cc0f22735e04b76357d8a34d0f79c8491394ee216fed6e5",
+      "processed": {
+        "id": "0a49e4baa99fb1ca2cc0f22735e04b76357d8a34d0f79c8491394ee216fed6e5",
+        "block_num": 260814186,
+        "block_time": "2026-04-15T15:10:36.000",
+        "producer_block_id": null,
+        "receipt": {
+          "status": "executed",
+          "cpu_usage_us": 320,
+          "net_usage_words": 23
+        },
+        "elapsed": 320,
+        "net_usage": 184,
+        "scheduled": false,
+        "action_traces": [
+          {
+            "action_ordinal": 1,
+            "creator_action_ordinal": 0,
+            "closest_unnotified_ancestor_action_ordinal": 0,
+            "receipt": {
+              "receiver": "verification",
+              "act_digest": "3e45d0a8cbc38428a9198d917c6541789f3d7bb034d94eab34b3f7a3656b40f9",
+              "global_sequence": 338507547,
+              "recv_sequence": 183,
+              "auth_sequence": [
+                [
+                  "vadim1111111",
+                  61
+                ]
+              ],
+              "code_sequence": 2,
+              "abi_sequence": 2
+            },
+            "receiver": "verification",
+            "act": {
+              "account": "verification",
+              "name": "submit",
+              "authorization": [
+                {
+                  "actor": "vadim1111111",
+                  "permission": "active"
+                }
+              ],
+              "data": {
+                "submitter": "vadim1111111",
+                "schema_id": 1776269832,
+                "policy_id": 1776270832,
+                "object_hash": "f7c55cc1cb1d41a5a02d1112a217f78806ebb6838add9ef5cc1b982dea9cd327",
+                "external_ref": "4ff3e7eddf0fa35d82a9ad247af430dacaf8564fbfc140f9de8f057e7a95cb9e"
+              },
+              "hex_data": "1042082104e992d908badf6900000000f0bddf6900000000f7c55cc1cb1d41a5a02d1112a217f78806ebb6838add9ef5cc1b982dea9cd3274ff3e7eddf0fa35d82a9ad247af430dacaf8564fbfc140f9de8f057e7a95cb9e"
+            },
+            "context_free": false,
+            "elapsed": 193,
+            "console": "",
+            "trx_id": "0a49e4baa99fb1ca2cc0f22735e04b76357d8a34d0f79c8491394ee216fed6e5",
+            "block_num": 260814186,
+            "block_time": "2026-04-15T15:10:36.000",
+            "producer_block_id": null,
+            "account_ram_deltas": [
+              {
+                "account": "verification",
+                "delta": 1093
+              }
+            ],
+            "except": null,
+            "error_code": null,
+            "return_value_hex_data": ""
+          }
+        ],
+        "account_ram_delta": null,
+        "except": null,
+        "error_code": null
+      }
+    },
+    "tx_id": "0a49e4baa99fb1ca2cc0f22735e04b76357d8a34d0f79c8491394ee216fed6e5",
+    "block_num": 260814186
+  }
+}

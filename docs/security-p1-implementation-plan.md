@@ -9,28 +9,50 @@ This plan expands the two `P1` follow-up items from `docs/security-next-steps.md
 
 The plan is intentionally incremental so the current system can keep working while the new backend and verification model are introduced behind stable APIs.
 
+## Status
+
+This implementation plan is now mostly complete.
+
+Implemented:
+
+- store abstraction
+- file and `SQLite` backends
+- migration tooling
+- shared backend factory for watcher / receipt / audit
+- startup checks and recovery pass
+- provider fallback
+- provider policy support
+- health exposure for store and verification state
+
+What remains is not the original `P1` build-out anymore. The remaining work is mostly:
+
+- production rollout with multiple real providers
+- environment-specific provider policy tuning
+- further failure-injection coverage against flaky public backends
+
 ## Current State
 
 Current implementation:
 
 - `services/finality_store.py`
-  - JSON file storage
-  - whole-state read/write model
+  - backend factory
+- `services/finality_store_file.py`
+  - compatibility JSON backend
+- `services/finality_store_sqlite.py`
+  - durable `SQLite` backend
 - `services/finality_watcher.py`
-  - directly depends on `FinalityStore`
-  - directly calls chain/history endpoints via `rpc_post_json()` and `rpc_get_json()`
+  - uses the shared store factory
+  - supports provider fallback and provider policy
 - `services/receipt_service.py`
-  - reads watcher state through the same file-backed store
+  - reads watcher state through the shared backend
 - `services/audit_api.py`
-  - reads watcher state through the same file-backed store
+  - reads watcher state through the shared backend
 
 Current limitations:
 
-- no durable indexed store
-- no structured migration path
-- no backend failover
-- no explicit provider trust model
-- no detection of provider disagreement
+- production correctness still depends on actual provider configuration
+- public-testnet history backends may still disagree or degrade
+- live compose failure-injection coverage is still thinner than healthy-path coverage
 
 ## Target Architecture
 

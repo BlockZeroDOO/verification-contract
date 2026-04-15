@@ -1,0 +1,41 @@
+{
+  "sequence": 59,
+  "event": "compose_restart_finality_health",
+  "timestamp": "2026-04-15T15:11:09Z",
+  "payload": {
+    "response": {
+      "status": "ok",
+      "service": "finality-watcher",
+      "auth_required": true,
+      "insecure_dev_mode": false,
+      "verification_policy": "single-provider",
+      "verification_min_success": 1,
+      "store": {
+        "backend": "sqlite",
+        "path": "/data/finality-state.sqlite3",
+        "exists": true,
+        "schema_version": "1"
+      },
+      "startup_checks": {
+        "checked_at": "2026-04-15T15:11:00Z",
+        "request_count": 36,
+        "recoverable_request_count": 18,
+        "status_counts": {
+          "finalized": 11,
+          "submitted": 10,
+          "failed": 8,
+          "included": 7
+        }
+      },
+      "startup_recovery": {
+        "started_at": "2026-04-15T15:11:00Z",
+        "attempted": 18,
+        "updated": 0,
+        "finalized": 1,
+        "failed": 0,
+        "errors": [],
+        "completed_at": "2026-04-15T15:11:09Z"
+      }
+    }
+  }
+}

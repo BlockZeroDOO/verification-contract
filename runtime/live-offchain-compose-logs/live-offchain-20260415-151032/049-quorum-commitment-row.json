@@ -1,0 +1,22 @@
+{
+  "sequence": 49,
+  "event": "quorum_commitment_row",
+  "timestamp": "2026-04-15T15:10:52Z",
+  "payload": {
+    "request_id": "58e4159c3981c8ded098e62aefbf3255e9ef9f73f9c6d14afa68deac85199fcc",
+    "row": {
+      "id": 28,
+      "submitter": "vadim1111111",
+      "schema_id": 1776269832,
+      "policy_id": 1776270832,
+      "object_hash": "8d05da25754bd9ed884d53b72e8c8d3ca98ee033d946b50338b32594181e9e8a",
+      "external_ref": "6486759fd2504e31b9deae4feee0e810dde2bfa55209e91c6a6277e0f8e46394",
+      "request_key": "0a41b6f81d67dc76bf3584fb8a51ffc33e35dc0860307ac2deb7ac40ae45c17c",
+      "block_num": 46464,
+      "created_at": "2026-04-15T15:10:49",
+      "status_changed_at": "2026-04-15T15:10:49",
+      "status": 0,
+      "superseded_by": 0
+    }
+  }
+}

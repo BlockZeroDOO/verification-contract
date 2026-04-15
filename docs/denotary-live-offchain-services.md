@@ -133,6 +133,9 @@ Available options:
 - `--watcher-base-url`
 - `--receipt-base-url`
 - `--audit-base-url`
+- `--compose-file`
+- `--compose-env-file`
+- `--compose-project-dir`
 
 ## Full logs
 
@@ -155,5 +158,20 @@ If `--print-json-events` is also enabled, the same structured events are printed
 - use `run-live-chain-integration` as the compact end-to-end gate
 - use `run-live-offchain-services` when you want service-surface confidence before rollout or environment changes
 - when `--use-external-services` is set, the suite targets an already running Docker Compose stack
-- this external-services path now validates both normal finalized flow and a live degraded-provider `quorum` scenario
+- this external-services path now validates normal finalized flow, a live degraded-provider `quorum` scenario, and compose-level restart/recovery when `--compose-file` is provided
 - restart/recovery validation runs only in the local in-process stack because it needs direct lifecycle control over services
+
+To enable compose restart validation in external-services mode, pass the same compose inputs you used to start the stack, for example:
+
+```bash
+./scripts/run-live-offchain-services.sh \
+  --use-external-services \
+  --compose-file docker-compose.offchain.yml \
+  --compose-env-file runtime/offchain.compose.jungle4.env \
+  --compose-project-dir . \
+  --rpc-url https://jungle4.cryptolions.io \
+  --expected-chain-id 73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d \
+  --network-label Jungle4 \
+  --owner-account verification \
+  --submitter-account vadim1111111
+```

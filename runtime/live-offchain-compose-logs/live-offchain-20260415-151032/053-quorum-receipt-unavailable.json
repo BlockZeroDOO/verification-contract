@@ -1,0 +1,21 @@
+{
+  "sequence": 53,
+  "event": "quorum_receipt_unavailable",
+  "timestamp": "2026-04-15T15:10:53Z",
+  "payload": {
+    "request_id": "58e4159c3981c8ded098e62aefbf3255e9ef9f73f9c6d14afa68deac85199fcc",
+    "status_code": 409,
+    "response": {
+      "request_id": "58e4159c3981c8ded098e62aefbf3255e9ef9f73f9c6d14afa68deac85199fcc",
+      "status": "included",
+      "trust_state": "included_unverified",
+      "receipt_available": false,
+      "inclusion_verified": false,
+      "verification_policy": "quorum",
+      "verification_min_success": 2,
+      "provider_disagreement": false,
+      "error": "receipt is not available before finality",
+      "inclusion_verification_error": "verification policy 'quorum' requires 2 successful providers, got 1"
+    }
+  }
+}

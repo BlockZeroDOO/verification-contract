@@ -1,0 +1,23 @@
+{
+  "sequence": 1,
+  "event": "run_context",
+  "timestamp": "2026-04-15T15:10:32Z",
+  "payload": {
+    "rpc_url": "https://jungle4.cryptolions.io",
+    "expected_chain_id": "73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d",
+    "network_label": "Jungle4",
+    "verification_account": "verification",
+    "owner_account": "verification",
+    "submitter_account": "vadim1111111",
+    "watcher_auth_token_enabled": true,
+    "wait_timeout_sec": 180,
+    "poll_interval_sec": 3.0,
+    "use_external_services": true,
+    "service_urls": {
+      "ingress": "http://127.0.0.1:8080",
+      "watcher": "http://127.0.0.1:8081",
+      "receipt": "http://127.0.0.1:8082",
+      "audit": "http://127.0.0.1:8083"
+    }
+  }
+}

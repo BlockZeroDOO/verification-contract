@@ -1357,6 +1357,90 @@ class ServiceIntegrationTest(unittest.TestCase):
         finally:
             recovery_server.server_close()
 
+    def test_reconcile_request_progress_prevents_stale_submitted_overwrite(self) -> None:
+        current = {
+            "request_id": "9" * 64,
+            "trace_id": "stale-race",
+            "mode": "single",
+            "submitter": "alice",
+            "contract": "verification",
+            "rpc_url": self.mock_chain_url,
+            "anchor": {
+                "object_hash": "a" * 64,
+                "external_ref_hash": "b" * 64,
+                "commitment_id": 55,
+            },
+            "tx_id": "c" * 64,
+            "block_num": 321,
+            "status": "included",
+            "registered_at": "2026-04-15T00:00:00Z",
+            "included_at": "2026-04-15T00:01:00Z",
+            "updated_at": "2026-04-15T00:01:05Z",
+            "finalized_at": None,
+            "failed_at": None,
+            "failure_reason": None,
+            "failure_details": None,
+            "inclusion_verified": True,
+            "inclusion_verified_at": "2026-04-15T00:01:05Z",
+            "inclusion_verification_error": None,
+            "verified_action": {
+                "account": "verification",
+                "name": "submit",
+                "data": {
+                    "submitter": "alice",
+                    "object_hash": "a" * 64,
+                    "external_ref": "b" * 64,
+                },
+            },
+            "verification_state": {
+                "policy": "single-provider",
+            },
+            "provider_disagreement": False,
+            "chain_state": {
+                "head_block_num": 322,
+                "last_irreversible_block_num": 320,
+            },
+        }
+        stale_candidate = {
+            "request_id": "9" * 64,
+            "trace_id": "stale-race",
+            "mode": "single",
+            "submitter": "alice",
+            "contract": "verification",
+            "rpc_url": self.mock_chain_url,
+            "anchor": {
+                "object_hash": "a" * 64,
+                "external_ref_hash": "b" * 64,
+            },
+            "tx_id": None,
+            "block_num": None,
+            "status": "submitted",
+            "registered_at": "2026-04-15T00:00:00Z",
+            "included_at": None,
+            "updated_at": "2026-04-15T00:01:06Z",
+            "finalized_at": None,
+            "failed_at": None,
+            "failure_reason": None,
+            "failure_details": None,
+            "inclusion_verified": False,
+            "inclusion_verified_at": None,
+            "inclusion_verification_error": None,
+            "verified_action": None,
+            "verification_state": None,
+            "provider_disagreement": False,
+            "chain_state": None,
+        }
+
+        reconciled = finality_watcher.reconcile_request_progress(current, stale_candidate)
+
+        self.assertEqual(reconciled["status"], "included")
+        self.assertEqual(reconciled["tx_id"], current["tx_id"])
+        self.assertEqual(reconciled["block_num"], current["block_num"])
+        self.assertEqual(reconciled["included_at"], current["included_at"])
+        self.assertTrue(reconciled["inclusion_verified"])
+        self.assertEqual(reconciled["anchor"]["commitment_id"], 55)
+        self.assertEqual(reconciled["verified_action"], current["verified_action"])
+
 
 if __name__ == "__main__":
     unittest.main()

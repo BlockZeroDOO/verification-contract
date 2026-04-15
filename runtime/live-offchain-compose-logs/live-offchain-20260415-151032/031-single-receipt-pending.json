@@ -1,0 +1,21 @@
+{
+  "sequence": 31,
+  "event": "single_receipt_pending",
+  "timestamp": "2026-04-15T15:10:34Z",
+  "payload": {
+    "request_id": "0d0354aea7a297aae021cd2891a447c2ed25efa6588bb8d7e1bc9595d384d81f",
+    "status_code": 409,
+    "response": {
+      "request_id": "0d0354aea7a297aae021cd2891a447c2ed25efa6588bb8d7e1bc9595d384d81f",
+      "status": "submitted",
+      "trust_state": "submitted",
+      "receipt_available": false,
+      "inclusion_verified": false,
+      "verification_policy": "single-provider",
+      "verification_min_success": 1,
+      "provider_disagreement": false,
+      "error": "receipt is not available before finality",
+      "inclusion_verification_error": null
+    }
+  }
+}

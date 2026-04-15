@@ -11,11 +11,24 @@ These items are not treated as currently open critical vulnerabilities. They are
 
 ## P1. Highest Priority
 
+Status:
+
+- durable watcher state is now implemented with `SQLite` as the recommended runtime backend
+- file backend remains only as compatibility/dev mode
+- migration tooling and startup recovery are already in place
+- multi-backend verification, provider fallback, and provider-policy support are already implemented
+
+Remaining follow-up:
+
+- production deployments should use at least two independent history/RPC providers
+- provider policy should be reviewed per environment instead of relying on the default everywhere
+
 ### 1. Replace file-based watcher state with a durable backend
 
 Current state:
 
-- `Finality Watcher`, `Receipt Service`, and `Audit API` still depend on file-based state.
+- `Finality Watcher`, `Receipt Service`, and `Audit API` support `SQLite` and use it as the recommended runtime backend.
+- file-backed JSON state remains only for compatibility and local/dev scenarios.
 
 Risk:
 
@@ -26,21 +39,22 @@ Risk:
 
 Recommended direction:
 
-- move watcher state to a durable indexed backend
-- add explicit migration/export tooling
-- support restart-safe recovery and replay
+- keep `SQLite` as the baseline durable backend for current deployments
+- use migration/export tooling during upgrades and environment moves
+- keep restart-safe recovery and replay validation in the release gate
 
 Success criteria:
 
 - state survives restarts cleanly
 - receipt and audit data remain consistent after recovery
-- concurrent updates do not risk state corruption
+- deployments no longer rely on file-only state for normal production runtime
 
 ### 2. Add multi-backend chain verification
 
 Current state:
 
-- inclusion verification depends on a single configured history/RPC backend
+- watcher supports multiple history/RPC providers
+- provider fallback, disagreement tracking, and policy-level verification are implemented
 
 Risk:
 
@@ -49,28 +63,31 @@ Risk:
 
 Recommended direction:
 
-- support at least two independent chain/history backends
-- cross-check critical transaction metadata
-- define fallback and mismatch policy
+- configure at least two independent chain/history backends in production
+- use explicit provider policy per environment:
+  - `single-provider`
+  - `quorum`
+- monitor provider disagreement and fallback behavior in operations
 
 Success criteria:
 
 - watcher can fail over between providers
 - mismatch between providers is surfaced explicitly
-- verified finality does not depend on one backend only
+- production verification does not rely on one backend only
 
 ## P2. Important
 
 Status:
 
-- reverse proxy templates and public privacy modes are now available for `Receipt Service` and `Audit API`
+- reverse proxy templates are available
+- `Receipt Service` and `Audit API` support `full` and `public` privacy modes
 - remaining follow-up is operational rollout and field-level policy tuning per deployment
 
 ### 3. Harden public API exposure through reverse proxy patterns
 
 Current state:
 
-- docs require cautious deployment, but enforcement is mostly operational
+- deploy-time guidance and proxy templates exist, but enforcement still depends on real environment configuration
 
 Risk:
 
@@ -94,7 +111,8 @@ Success criteria:
 
 Current state:
 
-- `Audit API` and `Receipt Service` intentionally expose correlation metadata
+- `Audit API` and `Receipt Service` intentionally expose correlation metadata in `full` mode
+- `public` mode already redacts the most correlation-heavy fields
 
 Risk:
 
@@ -102,9 +120,9 @@ Risk:
 
 Recommended direction:
 
-- define public mode vs restricted mode response policy
-- review whether some fields should be redacted, delayed, or role-gated
-- document privacy tradeoffs explicitly
+- review whether current `public` mode is sufficient for your production posture
+- decide whether some fields should be further redacted, delayed, or role-gated
+- document deployment-specific privacy tradeoffs explicitly
 
 Success criteria:
 
@@ -158,17 +176,18 @@ Success criteria:
 
 Status:
 
-- restart/recovery coverage is now implemented for the local live off-chain suite with `SQLite` watcher state
-- remaining work is mostly compose-level failure injection and provider-flake scenarios against public testnets
+- restart/recovery coverage is implemented for the local live off-chain suite with `SQLite` watcher state
+- compose-level restart/recovery validation is now available in the external live off-chain suite
+- remaining work is mostly provider-flake scenarios and broader partial-failure matrices against public testnets
 
 ## Suggested Execution Order
 
 1. Durable watcher backend
 2. Multi-backend chain verification
-3. Reverse proxy and public deployment templates
-4. Privacy and metadata policy
+3. Reverse proxy rollout in the target environment
+4. Privacy policy tuning for public deployments
 5. DFS settlement trust review
-6. Expanded resilience testing
+6. Expanded resilience testing against degraded live providers
 
 ## Summary
 

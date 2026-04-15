@@ -1,0 +1,212 @@
+{
+  "sequence": 28,
+  "event": "audit_failed_search",
+  "timestamp": "2026-04-15T15:10:34Z",
+  "payload": {
+    "query": "status=failed&mode=single&limit=5&offset=0",
+    "status_code": 200,
+    "response": {
+      "count": 5,
+      "total": 8,
+      "limit": 5,
+      "offset": 0,
+      "results": [
+        {
+          "request_id": "c5c6acd016ceca6a8e1e44cc82e85d0f440b80dfba4d3836b46315cb2bfdd93e",
+          "trace_id": "266aae3a-9fd9-4a1c-9bf2-72c4b6de72b7",
+          "mode": "single",
+          "submitter": "vadim1111111",
+          "contract": "verification",
+          "status": "failed",
+          "commitment_id": null,
+          "batch_id": null,
+          "external_ref_hash": "22945083b73f7a5695aa87c044c5e421ef4e64aa7de842fb994bd596e0b96dd2",
+          "tx_id": null,
+          "block_num": null,
+          "registered_at": "2026-04-15T15:10:34Z",
+          "updated_at": "2026-04-15T15:10:34Z",
+          "finalized_at": null,
+          "failed_at": "2026-04-15T15:10:34Z",
+          "failure_reason": "tx_dropped",
+          "failure_details": {
+            "note": "manual live test failure path"
+          },
+          "trust_state": "failed",
+          "receipt_available": false,
+          "inclusion_verified": false,
+          "inclusion_verified_at": null,
+          "inclusion_verification_error": null,
+          "verification_policy": "single-provider",
+          "verification_min_success": 1,
+          "provider_disagreement": false,
+          "verification_state": null,
+          "verified_action": null,
+          "anchor": {
+            "external_ref_hash": "22945083b73f7a5695aa87c044c5e421ef4e64aa7de842fb994bd596e0b96dd2",
+            "object_hash": "2e184a936a12eb08e925de7a9c853097bee72737cb27a2d0bf5fb115d5afb366"
+          },
+          "chain_state": {
+            "head_block_num": null,
+            "last_irreversible_block_num": null
+          }
+        },
+        {
+          "request_id": "ed8cc5021b08508f7fc1309a017c363597a137a46942b09175f4ba5b190cbc9c",
+          "trace_id": "5acfe5de-ed1c-47df-b187-a3df63a2be0f",
+          "mode": "single",
+          "submitter": "vadim1111111",
+          "contract": "verification",
+          "status": "failed",
+          "commitment_id": null,
+          "batch_id": null,
+          "external_ref_hash": "a72631c8534f061b7bd91cf6a05fac6f6cc4facb3fff8a5889977b922632bbb2",
+          "tx_id": null,
+          "block_num": null,
+          "registered_at": "2026-04-15T15:09:15Z",
+          "updated_at": "2026-04-15T15:09:15Z",
+          "finalized_at": null,
+          "failed_at": "2026-04-15T15:09:15Z",
+          "failure_reason": "tx_dropped",
+          "failure_details": {
+            "note": "manual live test failure path"
+          },
+          "trust_state": "failed",
+          "receipt_available": false,
+          "inclusion_verified": false,
+          "inclusion_verified_at": null,
+          "inclusion_verification_error": null,
+          "verification_policy": "single-provider",
+          "verification_min_success": 1,
+          "provider_disagreement": false,
+          "verification_state": null,
+          "verified_action": null,
+          "anchor": {
+            "external_ref_hash": "a72631c8534f061b7bd91cf6a05fac6f6cc4facb3fff8a5889977b922632bbb2",
+            "object_hash": "05295d4da795593be348c96747dd4e2a7f393a51c65b203a74d8a5060eef7775"
+          },
+          "chain_state": {
+            "head_block_num": null,
+            "last_irreversible_block_num": null
+          }
+        },
+        {
+          "request_id": "c3b0e5bf2e2d74ac43488e0ec7e3c39bbb7ed66d73c155afc89f5212ceb8e4b2",
+          "trace_id": "c173f738-2dee-4b18-81b9-47fc3ac65ce6",
+          "mode": "single",
+          "submitter": "vadim1111111",
+          "contract": "verification",
+          "status": "failed",
+          "commitment_id": null,
+          "batch_id": null,
+          "external_ref_hash": "735f18b5548cefbd6f8291a6c55fe030708905cadb9c4eef6d95e159af0c6ffe",
+          "tx_id": null,
+          "block_num": null,
+          "registered_at": "2026-04-15T15:03:32Z",
+          "updated_at": "2026-04-15T15:03:32Z",
+          "finalized_at": null,
+          "failed_at": "2026-04-15T15:03:32Z",
+          "failure_reason": "tx_dropped",
+          "failure_details": {
+            "note": "manual live test failure path"
+          },
+          "trust_state": "failed",
+          "receipt_available": false,
+          "inclusion_verified": false,
+          "inclusion_verified_at": null,
+          "inclusion_verification_error": null,
+          "verification_policy": "single-provider",
+          "verification_min_success": 1,
+          "provider_disagreement": false,
+          "verification_state": null,
+          "verified_action": null,
+          "anchor": {
+            "external_ref_hash": "735f18b5548cefbd6f8291a6c55fe030708905cadb9c4eef6d95e159af0c6ffe",
+            "object_hash": "ccc787b99f5351b4b985072d38cfa9393b4c4aea9e49106478bbe626d6598746"
+          },
+          "chain_state": {
+            "head_block_num": null,
+            "last_irreversible_block_num": null
+          }
+        },
+        {
+          "request_id": "7ad8942338dbea9df015175a1b2372d0c4376f9d74369f5dba78a970df4e2bb8",
+          "trace_id": "62816710-fc8d-4ec3-92ab-fc24c7b2f7ca",
+          "mode": "single",
+          "submitter": "vadim1111111",
+          "contract": "verification",
+          "status": "failed",
+          "commitment_id": null,
+          "batch_id": null,
+          "external_ref_hash": "e0c1ccfe912ee1bca5ea92debdb9adfd0c70e8c0cd6a46cb975e4502bbd8a5e6",
+          "tx_id": null,
+          "block_num": null,
+          "registered_at": "2026-04-15T15:01:39Z",
+          "updated_at": "2026-04-15T15:01:39Z",
+          "finalized_at": null,
+          "failed_at": "2026-04-15T15:01:39Z",
+          "failure_reason": "tx_dropped",
+          "failure_details": {
+            "note": "manual live test failure path"
+          },
+          "trust_state": "failed",
+          "receipt_available": false,
+          "inclusion_verified": false,
+          "inclusion_verified_at": null,
+          "inclusion_verification_error": null,
+          "verification_policy": "single-provider",
+          "verification_min_success": 1,
+          "provider_disagreement": false,
+          "verification_state": null,
+          "verified_action": null,
+          "anchor": {
+            "external_ref_hash": "e0c1ccfe912ee1bca5ea92debdb9adfd0c70e8c0cd6a46cb975e4502bbd8a5e6",
+            "object_hash": "2d58e52cecf106079293adee06dee724f1bb415616224450ca352378ea53744f"
+          },
+          "chain_state": {
+            "head_block_num": null,
+            "last_irreversible_block_num": null
+          }
+        },
+        {
+          "request_id": "52167cb817bcc2cfebb046c1da6441f8e5754dc2f14cdee5ef6ad717b166de39",
+          "trace_id": "5e7161c5-887f-4ed8-871c-ce0e041648f1",
+          "mode": "single",
+          "submitter": "vadim1111111",
+          "contract": "verification",
+          "status": "failed",
+          "commitment_id": null,
+          "batch_id": null,
+          "external_ref_hash": "e0c9215e13f267c2a0e31dbde8e70b73fb3ced8119376b1ea34b860d86e7e083",
+          "tx_id": null,
+          "block_num": null,
+          "registered_at": "2026-04-15T15:00:12Z",
+          "updated_at": "2026-04-15T15:00:12Z",
+          "finalized_at": null,
+          "failed_at": "2026-04-15T15:00:12Z",
+          "failure_reason": "tx_dropped",
+          "failure_details": {
+            "note": "manual live test failure path"
+          },
+          "trust_state": "failed",
+          "receipt_available": false,
+          "inclusion_verified": false,
+          "inclusion_verified_at": null,
+          "inclusion_verification_error": null,
+          "verification_policy": "single-provider",
+          "verification_min_success": 1,
+          "provider_disagreement": false,
+          "verification_state": null,
+          "verified_action": null,
+          "anchor": {
+            "external_ref_hash": "e0c9215e13f267c2a0e31dbde8e70b73fb3ced8119376b1ea34b860d86e7e083",
+            "object_hash": "a09dd712d3a8cc91143873c630e39d4be1bdc7ead2919cab0d660e50bbdddac2"
+          },
+          "chain_state": {
+            "head_block_num": null,
+            "last_irreversible_block_num": null
+          }
+        }
+      ]
+    }
+  }
+}

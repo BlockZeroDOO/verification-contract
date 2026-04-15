@@ -1,0 +1,12 @@
+{
+  "sequence": 65,
+  "event": "compose_restart_audit_health",
+  "timestamp": "2026-04-15T15:11:20Z",
+  "payload": {
+    "response": {
+      "status": "ok",
+      "service": "audit-api",
+      "privacy_mode": "full"
+    }
+  }
+}

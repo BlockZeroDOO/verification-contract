@@ -1,0 +1,22 @@
+{
+  "sequence": 23,
+  "event": "receipt_failed_request",
+  "timestamp": "2026-04-15T15:10:34Z",
+  "payload": {
+    "request_id": "c5c6acd016ceca6a8e1e44cc82e85d0f440b80dfba4d3836b46315cb2bfdd93e",
+    "status_code": 409,
+    "response": {
+      "request_id": "c5c6acd016ceca6a8e1e44cc82e85d0f440b80dfba4d3836b46315cb2bfdd93e",
+      "status": "failed",
+      "trust_state": "failed",
+      "receipt_available": false,
+      "inclusion_verified": false,
+      "verification_policy": "single-provider",
+      "verification_min_success": 1,
+      "provider_disagreement": false,
+      "error": "receipt is not available for failed request",
+      "failed_at": "2026-04-15T15:10:34Z",
+      "failure_reason": "tx_dropped"
+    }
+  }
+}

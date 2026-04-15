@@ -1,0 +1,100 @@
+{
+  "sequence": 67,
+  "event": "batch_prepare",
+  "timestamp": "2026-04-15T15:11:20Z",
+  "payload": {
+    "request": {
+      "submitter": "vadim1111111",
+      "external_ref": "svc-live-batch-1776265832",
+      "schema": {
+        "id": 1776269832,
+        "version": "1.0.0",
+        "active": true,
+        "canonicalization_profile": "json-sorted-v1"
+      },
+      "policy": {
+        "id": 1776270833,
+        "active": true,
+        "allow_single": false,
+        "allow_batch": true,
+        "require_kyc": false,
+        "min_kyc_level": 0
+      },
+      "kyc": {
+        "active": true,
+        "level": 2,
+        "expires_at": "2030-01-01T00:00:00"
+      },
+      "items": [
+        {
+          "external_leaf_ref": "svc-live-batch-1776265832-leaf-a",
+          "payload": {
+            "doc_id": "a",
+            "amount": 1
+          }
+        },
+        {
+          "external_leaf_ref": "svc-live-batch-1776265832-leaf-b",
+          "payload": {
+            "doc_id": "b",
+            "amount": 2
+          }
+        }
+      ],
+      "include_debug_material": true
+    },
+    "status_code": 200,
+    "response": {
+      "trace_id": "f6aeba94-ef9d-469a-9d53-57b94be3282c",
+      "request_id": "191ad010ba1e78634babc66a5dbfba5c6c97b33c134aaa5adc56b4ed0ff99196",
+      "received_at": "2026-04-15T15:11:20Z",
+      "mode": "batch",
+      "canonicalization_profile": "json-sorted-v1",
+      "leaf_count": 2,
+      "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+      "external_ref_hash": "562ed3e1ab10dd21de5459f28610c036b130d1534b067033f6125f2302b40ad6",
+      "manifest_hash": "93c879d71c098efa00ba5499d72ac5a2d2346d124e5530f834ba90be9c389c12",
+      "prepared_action": {
+        "contract": "verification",
+        "action": "submitroot",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": 1776269832,
+          "policy_id": 1776270833,
+          "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+          "leaf_count": 2,
+          "external_ref": "562ed3e1ab10dd21de5459f28610c036b130d1534b067033f6125f2302b40ad6"
+        }
+      },
+      "leaf_hashes": [
+        "837cb7d6841b6cda373b2d9e91f189f4bd800c03118583bcf0ad74efdf467446",
+        "0add712648932f475e75dcdf1b6324aa88658fcd0df507f9ddda927af764f043"
+      ],
+      "manifest": {
+        "manifest_version": "batch-manifest-v1",
+        "submitter": "vadim1111111",
+        "schema_id": 1776269832,
+        "schema_version": "1.0.0",
+        "policy_id": 1776270833,
+        "external_ref_hash": "562ed3e1ab10dd21de5459f28610c036b130d1534b067033f6125f2302b40ad6",
+        "leaf_count": 2,
+        "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+        "leafs": [
+          {
+            "index": 0,
+            "leaf_hash": "837cb7d6841b6cda373b2d9e91f189f4bd800c03118583bcf0ad74efdf467446",
+            "external_leaf_ref": "svc-live-batch-1776265832-leaf-a",
+            "canonical_form": "{\"amount\":1,\"doc_id\":\"a\"}"
+          },
+          {
+            "index": 1,
+            "leaf_hash": "0add712648932f475e75dcdf1b6324aa88658fcd0df507f9ddda927af764f043",
+            "external_leaf_ref": "svc-live-batch-1776265832-leaf-b",
+            "canonical_form": "{\"amount\":2,\"doc_id\":\"b\"}"
+          }
+        ]
+      },
+      "manifest_canonical_form": "{\"external_ref_hash\":\"562ed3e1ab10dd21de5459f28610c036b130d1534b067033f6125f2302b40ad6\",\"leaf_count\":2,\"leafs\":[{\"canonical_form\":\"{\\\"amount\\\":1,\\\"doc_id\\\":\\\"a\\\"}\",\"external_leaf_ref\":\"svc-live-batch-1776265832-leaf-a\",\"index\":0,\"leaf_hash\":\"837cb7d6841b6cda373b2d9e91f189f4bd800c03118583bcf0ad74efdf467446\"},{\"canonical_form\":\"{\\\"amount\\\":2,\\\"doc_id\\\":\\\"b\\\"}\",\"external_leaf_ref\":\"svc-live-batch-1776265832-leaf-b\",\"index\":1,\"leaf_hash\":\"0add712648932f475e75dcdf1b6324aa88658fcd0df507f9ddda927af764f043\"}],\"manifest_version\":\"batch-manifest-v1\",\"policy_id\":1776270833,\"root_hash\":\"cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa\",\"schema_id\":1776269832,\"schema_version\":\"1.0.0\",\"submitter\":\"vadim1111111\"}"
+    }
+  }
+}

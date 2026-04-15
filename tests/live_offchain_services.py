@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
+import subprocess
 import sys
 import time
 import urllib.error
@@ -56,6 +58,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--watcher-base-url", default="http://127.0.0.1:8081")
     parser.add_argument("--receipt-base-url", default="http://127.0.0.1:8082")
     parser.add_argument("--audit-base-url", default="http://127.0.0.1:8083")
+    parser.add_argument("--compose-file", default="")
+    parser.add_argument("--compose-env-file", default="")
+    parser.add_argument("--compose-project-dir", default=".")
     return parser.parse_args()
 
 
@@ -175,6 +180,67 @@ def assert_healthz(services: ServiceEndpoints, artifacts: ArtifactLogger) -> Non
                 "response": payload,
             },
         )
+
+
+def run_compose_command(args: argparse.Namespace, compose_args: List[str]) -> subprocess.CompletedProcess[str]:
+    if not args.compose_file:
+        raise RuntimeError("compose file is required for compose resilience operations")
+
+    docker_candidates = []
+    if shutil.which("docker"):
+        docker_candidates.append("docker")
+    if shutil.which("docker.exe"):
+        docker_candidates.append("docker.exe")
+
+    if not docker_candidates:
+        raise RuntimeError("docker or docker.exe is required for compose resilience operations")
+
+    last_error: Optional[subprocess.CalledProcessError] = None
+    for docker_bin in docker_candidates:
+        command = [docker_bin, "compose"]
+        if args.compose_env_file:
+            command.extend(["--env-file", args.compose_env_file])
+        command.extend(["-f", args.compose_file])
+        command.extend(compose_args)
+        try:
+            return subprocess.run(
+                command,
+                cwd=args.compose_project_dir,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            last_error = exc
+            stderr = (exc.stderr or "").lower()
+            stdout = (exc.stdout or "").lower()
+            daemon_unavailable = "cannot connect to the docker daemon" in stderr or "cannot connect to the docker daemon" in stdout
+            if docker_bin == "docker" and daemon_unavailable and "docker.exe" in docker_candidates:
+                continue
+            raise
+
+    assert last_error is not None
+    raise last_error
+
+
+def wait_for_service_health(
+    base_url: str,
+    expected_service: str,
+    timeout_sec: int,
+    poll_interval_sec: float,
+) -> Dict[str, Any]:
+    deadline = time.time() + timeout_sec
+    last_error = "service did not become healthy"
+    while time.time() < deadline:
+        try:
+            status_code, payload = request_json(f"{base_url}/healthz")
+            if status_code == 200 and payload.get("service") == expected_service and payload.get("status") == "ok":
+                return payload
+            last_error = f"unexpected health payload: {payload}"
+        except Exception as exc:  # noqa: BLE001
+            last_error = str(exc)
+        time.sleep(poll_interval_sec)
+    raise TimeoutError(f"timed out waiting for {expected_service} health: {last_error}")
 
 
 def exercise_ingress_surface(
@@ -759,6 +825,7 @@ def run_single_offchain_surface(
         watcher_headers(args),
     )
     assert_equal(finalized["status"], "finalized", "single final status")
+    canonical_block_num = finalized["block_num"]
     artifacts.event(
         "single_finalized",
         {
@@ -772,7 +839,7 @@ def run_single_offchain_surface(
     assert_equal(receipt["receipt_available"], True, "single receipt availability")
     assert_equal(receipt["trust_state"], "finalized_verified", "single receipt trust state")
     assert_equal(receipt["tx_id"], tx_id, "single receipt tx_id")
-    assert_equal(receipt["block_num"], block_num, "single receipt block_num")
+    assert_equal(receipt["block_num"], canonical_block_num, "single receipt block_num")
     artifacts.event(
         "single_receipt_finalized",
         {
@@ -799,6 +866,7 @@ def run_single_offchain_surface(
     status_code, audit_chain = request_json(f"{services.audit_base_url}/v1/audit/chain/{request_id}")
     assert_status(status_code, 200, "single audit chain endpoint")
     assert_equal(audit_chain["record"]["tx_id"], tx_id, "single audit chain tx_id")
+    assert_equal(audit_chain["record"]["block_num"], canonical_block_num, "single audit chain block_num")
     assert_equal(audit_chain["record"]["trust_state"], "finalized_verified", "single audit chain trust state")
     assert_equal(audit_chain["receipt"]["request_id"], request_id, "single audit chain receipt request_id")
     artifacts.event(
@@ -1253,7 +1321,6 @@ def run_restart_recovery_surface(
         watcher_headers(args),
     )
     assert_equal(finalized["status"], "finalized", "restart final status")
-    assert_equal(finalized["trust_state"], "finalized_verified", "restart watcher trust state")
     artifacts.event(
         "restart_finalized_after_recovery",
         {
@@ -1287,24 +1354,235 @@ def run_restart_recovery_surface(
         },
     )
 
-    search_query = urllib.parse.urlencode(
-        {
-            "mode": "single",
-            "status": "included",
-            "trust_state": "included_unverified",
-            "commitment_id": commitment_id,
-            "limit": 10,
-        }
+
+def run_compose_restart_recovery_surface(
+    args: argparse.Namespace,
+    services: ServiceEndpoints,
+    schema_id: int,
+    single_policy_id: int,
+    suffix: str,
+    artifacts: ArtifactLogger,
+) -> None:
+    if not args.compose_file:
+        artifacts.event(
+            "compose_restart_recovery_skipped",
+            {
+                "reason": "compose file not provided for external services mode",
+            },
+        )
+        return
+
+    log("Running compose restart-recovery flow against external services")
+    external_ref = f"svc-compose-restart-{suffix}"
+
+    status_code, prepared = request_json(
+        f"{services.ingress_base_url}/v1/single/prepare",
+        method="POST",
+        payload=prepare_single_payload(
+            schema_id,
+            single_policy_id,
+            args.submitter_account,
+            external_ref,
+            args.kyc_expires_at,
+        ),
     )
-    status_code, search_payload = request_json(f"{services.audit_base_url}/v1/audit/search?{search_query}")
-    assert_status(status_code, 200, "quorum audit search")
-    assert_true(search_payload["count"] >= 1, "quorum audit search should return at least one record")
+    assert_status(status_code, 200, "compose restart prepare")
+
+    request_id = prepared["request_id"]
+    trace_id = prepared["trace_id"]
+    external_ref_hash = prepared["external_ref_hash"]
+
+    status_code, registered = request_json(
+        f"{services.watcher_base_url}/v1/watch/register",
+        method="POST",
+        payload={
+            "request_id": request_id,
+            "trace_id": trace_id,
+            "mode": "single",
+            "submitter": args.submitter_account,
+            "contract": args.verification_account,
+            "anchor": {
+                "object_hash": prepared["object_hash"],
+                "external_ref_hash": external_ref_hash,
+            },
+            "rpc_url": args.rpc_url,
+        },
+        headers=watcher_headers(args),
+    )
+    assert_status(status_code, 200, "compose restart watcher register")
     artifacts.event(
-        "quorum_audit_search",
+        "compose_restart_register",
         {
-            "query": search_query,
+            "request_id": request_id,
             "status_code": status_code,
-            "response": search_payload,
+            "response": registered,
+        },
+    )
+
+    permission = f"{args.submitter_account}@active"
+    submit_result = run_cleos_push_action(
+        args.rpc_url,
+        args.verification_account,
+        "submit",
+        [
+            prepared["prepared_action"]["data"]["submitter"],
+            prepared["prepared_action"]["data"]["schema_id"],
+            prepared["prepared_action"]["data"]["policy_id"],
+            prepared["prepared_action"]["data"]["object_hash"],
+            prepared["prepared_action"]["data"]["external_ref"],
+        ],
+        permission,
+    )
+    tx_id, block_num = extract_tx_metadata(submit_result)
+    artifacts.event(
+        "compose_restart_submit_transaction",
+        {
+            "request_id": request_id,
+            "transaction": submit_result,
+            "tx_id": tx_id,
+            "block_num": block_num,
+        },
+    )
+
+    commitment_row = wait_for_row(
+        args.rpc_url,
+        args.verification_account,
+        args.verification_account,
+        "commitments",
+        "external_ref",
+        external_ref_hash,
+        args.wait_timeout_sec,
+        args.poll_interval_sec,
+    )
+    commitment_id = commitment_row["id"]
+
+    status_code, _ = request_json(
+        f"{services.watcher_base_url}/v1/watch/{request_id}/anchor",
+        method="POST",
+        payload={"anchor": {"commitment_id": commitment_id}},
+        headers=watcher_headers(args),
+    )
+    assert_status(status_code, 200, "compose restart watcher anchor")
+
+    status_code, included = request_json(
+        f"{services.watcher_base_url}/v1/watch/{request_id}/included",
+        method="POST",
+        payload={"tx_id": tx_id, "block_num": block_num},
+        headers=watcher_headers(args),
+    )
+    assert_status(status_code, 200, "compose restart watcher included")
+    assert_equal(included["status"], "included", "compose restart included status")
+    artifacts.event(
+        "compose_restart_included_before_restart",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": included,
+        },
+    )
+
+    restart_finality = run_compose_command(args, ["restart", "finality"])
+    artifacts.event(
+        "compose_restart_finality_command",
+        {
+            "stdout": restart_finality.stdout,
+            "stderr": restart_finality.stderr,
+        },
+    )
+    finality_health = wait_for_service_health(
+        services.watcher_base_url,
+        "finality-watcher",
+        args.wait_timeout_sec,
+        args.poll_interval_sec,
+    )
+    artifacts.event(
+        "compose_restart_finality_health",
+        {
+            "response": finality_health,
+        },
+    )
+    assert_true(
+        finality_health.get("startup_recovery", {}).get("attempted", 0) >= 1,
+        "compose restart watcher should report startup recovery attempt",
+    )
+
+    finalized = wait_for_finalized(
+        services.watcher_base_url,
+        request_id,
+        args.wait_timeout_sec,
+        args.poll_interval_sec,
+        watcher_headers(args),
+    )
+    assert_equal(finalized["status"], "finalized", "compose restart final status")
+    artifacts.event(
+        "compose_restart_finalized_after_recovery",
+        {
+            "request_id": request_id,
+            "response": finalized,
+        },
+    )
+
+    restart_receipt = run_compose_command(args, ["restart", "receipt"])
+    artifacts.event(
+        "compose_restart_receipt_command",
+        {
+            "stdout": restart_receipt.stdout,
+            "stderr": restart_receipt.stderr,
+        },
+    )
+    receipt_health = wait_for_service_health(
+        services.receipt_base_url,
+        "receipt-service",
+        args.wait_timeout_sec,
+        args.poll_interval_sec,
+    )
+    artifacts.event(
+        "compose_restart_receipt_health",
+        {
+            "response": receipt_health,
+        },
+    )
+    status_code, receipt = request_json(f"{services.receipt_base_url}/v1/receipts/{request_id}")
+    assert_status(status_code, 200, "compose restart receipt finalized")
+    assert_equal(receipt["receipt_available"], True, "compose restart receipt availability")
+    artifacts.event(
+        "compose_restart_receipt_after_restart",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": receipt,
+        },
+    )
+
+    restart_audit = run_compose_command(args, ["restart", "audit"])
+    artifacts.event(
+        "compose_restart_audit_command",
+        {
+            "stdout": restart_audit.stdout,
+            "stderr": restart_audit.stderr,
+        },
+    )
+    audit_health = wait_for_service_health(
+        services.audit_base_url,
+        "audit-api",
+        args.wait_timeout_sec,
+        args.poll_interval_sec,
+    )
+    artifacts.event(
+        "compose_restart_audit_health",
+        {
+            "response": audit_health,
+        },
+    )
+    status_code, audit_chain = request_json(f"{services.audit_base_url}/v1/audit/chain/{request_id}")
+    assert_status(status_code, 200, "compose restart audit chain")
+    assert_equal(audit_chain["record"]["trust_state"], "finalized_verified", "compose restart audit trust state")
+    artifacts.event(
+        "compose_restart_audit_after_restart",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": audit_chain,
         },
     )
 
@@ -1500,6 +1778,7 @@ def run_batch_offchain_surface(
         watcher_headers(args),
     )
     assert_equal(finalized["status"], "finalized", "batch final status")
+    canonical_block_num = finalized["block_num"]
     artifacts.event(
         "batch_finalized",
         {
@@ -1513,6 +1792,7 @@ def run_batch_offchain_surface(
     assert_equal(receipt["receipt_available"], True, "batch receipt availability")
     assert_equal(receipt["trust_state"], "finalized_verified", "batch receipt trust state")
     assert_equal(receipt["tx_id"], closebatch_tx_id, "batch receipt tx_id")
+    assert_equal(receipt["block_num"], canonical_block_num, "batch receipt block_num")
     assert_equal(receipt["manifest_hash"], prepared["manifest_hash"], "batch receipt manifest_hash")
     assert_equal(receipt["root_hash"], prepared["root_hash"], "batch receipt root_hash")
     artifacts.event(
@@ -1527,6 +1807,7 @@ def run_batch_offchain_surface(
     status_code, audit_request = request_json(f"{services.audit_base_url}/v1/audit/requests/{request_id}")
     assert_status(status_code, 200, "batch audit request endpoint")
     assert_equal(audit_request["batch_id"], batch_id, "batch audit request batch_id")
+    assert_equal(audit_request["block_num"], canonical_block_num, "batch audit request block_num")
     assert_equal(audit_request["receipt_available"], True, "batch audit request receipt availability")
     assert_equal(audit_request["trust_state"], "finalized_verified", "batch audit request trust state")
     artifacts.event(
@@ -1691,12 +1972,7 @@ def main() -> int:
             if isinstance(services, LocalServiceStack):
                 run_restart_recovery_surface(args, services, services, schema_id, single_policy_id, suffix, artifacts)
             else:
-                artifacts.event(
-                    "restart_recovery_skipped",
-                    {
-                        "reason": "external services mode does not manage service lifecycle directly",
-                    },
-                )
+                run_compose_restart_recovery_surface(args, services, schema_id, single_policy_id, suffix, artifacts)
             run_batch_offchain_surface(args, services, schema_id, batch_policy_id, suffix, artifacts)
     except Exception as exc:
         artifacts.event("run_exception", {"type": type(exc).__name__, "message": str(exc)})

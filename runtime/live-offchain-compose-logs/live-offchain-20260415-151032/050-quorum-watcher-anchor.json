@@ -1,0 +1,48 @@
+{
+  "sequence": 50,
+  "event": "quorum_watcher_anchor",
+  "timestamp": "2026-04-15T15:10:52Z",
+  "payload": {
+    "request_id": "58e4159c3981c8ded098e62aefbf3255e9ef9f73f9c6d14afa68deac85199fcc",
+    "status_code": 200,
+    "response": {
+      "anchor": {
+        "external_ref_hash": "6486759fd2504e31b9deae4feee0e810dde2bfa55209e91c6a6277e0f8e46394",
+        "object_hash": "8d05da25754bd9ed884d53b72e8c8d3ca98ee033d946b50338b32594181e9e8a",
+        "commitment_id": 28
+      },
+      "block_num": null,
+      "chain_state": {
+        "head_block_num": null,
+        "last_irreversible_block_num": null
+      },
+      "contract": "verification",
+      "failed_at": null,
+      "failure_details": null,
+      "failure_reason": null,
+      "finalized_at": null,
+      "included_at": null,
+      "inclusion_verification_error": null,
+      "inclusion_verified": false,
+      "inclusion_verified_at": null,
+      "mode": "single",
+      "provider_disagreement": false,
+      "registered_at": "2026-04-15T15:10:47Z",
+      "request_id": "58e4159c3981c8ded098e62aefbf3255e9ef9f73f9c6d14afa68deac85199fcc",
+      "rpc_url": "http://127.0.0.1:1",
+      "rpc_urls": [
+        "http://127.0.0.1:1",
+        "https://jungle4.cryptolions.io"
+      ],
+      "status": "submitted",
+      "submitter": "vadim1111111",
+      "trace_id": "93a28f01-4aa5-48f8-9fca-25ff24f55849",
+      "tx_id": null,
+      "updated_at": "2026-04-15T15:10:52Z",
+      "verification_min_success": 2,
+      "verification_policy": "quorum",
+      "verification_state": null,
+      "verified_action": null
+    }
+  }
+}

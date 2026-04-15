@@ -1,0 +1,63 @@
+{
+  "sequence": 47,
+  "event": "quorum_watcher_register",
+  "timestamp": "2026-04-15T15:10:47Z",
+  "payload": {
+    "request": {
+      "request_id": "58e4159c3981c8ded098e62aefbf3255e9ef9f73f9c6d14afa68deac85199fcc",
+      "trace_id": "93a28f01-4aa5-48f8-9fca-25ff24f55849",
+      "mode": "single",
+      "submitter": "vadim1111111",
+      "contract": "verification",
+      "verification_policy": "quorum",
+      "verification_min_success": 2,
+      "anchor": {
+        "object_hash": "8d05da25754bd9ed884d53b72e8c8d3ca98ee033d946b50338b32594181e9e8a",
+        "external_ref_hash": "6486759fd2504e31b9deae4feee0e810dde2bfa55209e91c6a6277e0f8e46394"
+      },
+      "rpc_urls": [
+        "http://127.0.0.1:1",
+        "https://jungle4.cryptolions.io"
+      ]
+    },
+    "status_code": 200,
+    "response": {
+      "request_id": "58e4159c3981c8ded098e62aefbf3255e9ef9f73f9c6d14afa68deac85199fcc",
+      "trace_id": "93a28f01-4aa5-48f8-9fca-25ff24f55849",
+      "mode": "single",
+      "submitter": "vadim1111111",
+      "contract": "verification",
+      "rpc_url": "http://127.0.0.1:1",
+      "rpc_urls": [
+        "http://127.0.0.1:1",
+        "https://jungle4.cryptolions.io"
+      ],
+      "anchor": {
+        "object_hash": "8d05da25754bd9ed884d53b72e8c8d3ca98ee033d946b50338b32594181e9e8a",
+        "external_ref_hash": "6486759fd2504e31b9deae4feee0e810dde2bfa55209e91c6a6277e0f8e46394"
+      },
+      "tx_id": null,
+      "block_num": null,
+      "status": "submitted",
+      "registered_at": "2026-04-15T15:10:47Z",
+      "included_at": null,
+      "updated_at": "2026-04-15T15:10:47Z",
+      "finalized_at": null,
+      "failed_at": null,
+      "failure_reason": null,
+      "failure_details": null,
+      "inclusion_verified": false,
+      "inclusion_verified_at": null,
+      "inclusion_verification_error": null,
+      "verified_action": null,
+      "verification_policy": "quorum",
+      "verification_min_success": 2,
+      "verification_state": null,
+      "provider_disagreement": false,
+      "chain_state": {
+        "head_block_num": null,
+        "last_irreversible_block_num": null
+      }
+    }
+  }
+}

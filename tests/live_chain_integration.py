@@ -596,12 +596,13 @@ def run_single_flow(args: argparse.Namespace, services: LocalServiceStack, schem
         watcher_headers(args),
     )
     assert_equal(finalized["status"], "finalized", "single watcher final status")
+    canonical_block_num = finalized["block_num"]
 
     status_code, receipt = request_json(f"{services.receipt_base_url}/v1/receipts/{request_id}")
     assert_status(status_code, 200, "single receipt after finality")
     assert_equal(receipt["request_id"], request_id, "single receipt request_id")
     assert_equal(receipt["tx_id"], tx_id, "single receipt tx_id")
-    assert_equal(receipt["block_num"], block_num, "single receipt block_num")
+    assert_equal(receipt["block_num"], canonical_block_num, "single receipt block_num")
     assert_equal(receipt["finality_flag"], True, "single receipt finality flag")
     assert_equal(receipt["receipt_available"], True, "single receipt availability")
     assert_equal(receipt["inclusion_verified"], True, "single receipt inclusion verification")
@@ -611,6 +612,7 @@ def run_single_flow(args: argparse.Namespace, services: LocalServiceStack, schem
     assert_status(status_code, 200, "single audit lookup by commitment")
     assert_equal(audit_by_commitment["record"]["request_id"], request_id, "single audit request_id")
     assert_equal(audit_by_commitment["record"]["tx_id"], tx_id, "single audit tx_id")
+    assert_equal(audit_by_commitment["record"]["block_num"], canonical_block_num, "single audit block_num")
     assert_equal(audit_by_commitment["record"]["receipt_available"], True, "single audit receipt availability")
     assert_equal(audit_by_commitment["record"]["inclusion_verified"], True, "single audit inclusion verification")
     assert_equal(audit_by_commitment["record"]["trust_state"], "finalized_verified", "single audit trust state")
@@ -823,12 +825,13 @@ def run_batch_flow(args: argparse.Namespace, services: LocalServiceStack, schema
         watcher_headers(args),
     )
     assert_equal(finalized["status"], "finalized", "batch watcher final status")
+    canonical_block_num = finalized["block_num"]
 
     status_code, receipt = request_json(f"{services.receipt_base_url}/v1/receipts/{request_id}")
     assert_status(status_code, 200, "batch receipt after finality")
     assert_equal(receipt["request_id"], request_id, "batch receipt request_id")
     assert_equal(receipt["tx_id"], closebatch_tx_id, "batch receipt tx_id")
-    assert_equal(receipt["block_num"], closebatch_block_num, "batch receipt block_num")
+    assert_equal(receipt["block_num"], canonical_block_num, "batch receipt block_num")
     assert_equal(receipt["manifest_hash"], prepared["manifest_hash"], "batch receipt manifest_hash")
     assert_equal(receipt["root_hash"], prepared["root_hash"], "batch receipt root_hash")
     assert_equal(receipt["receipt_available"], True, "batch receipt availability")
@@ -839,6 +842,7 @@ def run_batch_flow(args: argparse.Namespace, services: LocalServiceStack, schema
     assert_status(status_code, 200, "batch audit lookup by batch")
     assert_equal(audit_by_batch["record"]["request_id"], request_id, "batch audit request_id")
     assert_equal(audit_by_batch["record"]["tx_id"], closebatch_tx_id, "batch audit tx_id")
+    assert_equal(audit_by_batch["record"]["block_num"], canonical_block_num, "batch audit block_num")
     assert_equal(audit_by_batch["record"]["receipt_available"], True, "batch audit receipt availability")
     assert_equal(audit_by_batch["record"]["inclusion_verified"], True, "batch audit inclusion verification")
     assert_equal(audit_by_batch["record"]["trust_state"], "finalized_verified", "batch audit trust state")

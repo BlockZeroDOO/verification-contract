@@ -1,0 +1,56 @@
+{
+  "sequence": 9,
+  "event": "ingress_single_prepare_default",
+  "timestamp": "2026-04-15T15:10:34Z",
+  "payload": {
+    "request": {
+      "submitter": "vadim1111111",
+      "external_ref": "svc-single-1776265832",
+      "schema": {
+        "id": 1776269832,
+        "version": "1.0.0",
+        "active": true,
+        "canonicalization_profile": "json-sorted-v1"
+      },
+      "policy": {
+        "id": 1776270832,
+        "active": true,
+        "allow_single": true,
+        "allow_batch": false,
+        "require_kyc": false,
+        "min_kyc_level": 0
+      },
+      "kyc": {
+        "active": true,
+        "level": 2,
+        "expires_at": "2030-01-01T00:00:00"
+      },
+      "payload": {
+        "doc_id": "svc-single-1776265832",
+        "kind": "invoice",
+        "amount": 42
+      }
+    },
+    "status_code": 200,
+    "response": {
+      "trace_id": "ba8f73bc-59b4-450c-9049-b332cf905010",
+      "request_id": "a2931c1b7b5833fe67638db0a0bdf6a3c101900394ffde9f9f96eebecb8c26da",
+      "received_at": "2026-04-15T15:10:34Z",
+      "mode": "single",
+      "canonicalization_profile": "json-sorted-v1",
+      "object_hash": "af25b9a69713cc880a94e28444a79318420eec80195ecc642c892297fa056b3c",
+      "external_ref_hash": "1f217e392f0d63858a8ffea4f124d05bf3c619779650d63262438d8c1849573c",
+      "prepared_action": {
+        "contract": "verification",
+        "action": "submit",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": 1776269832,
+          "policy_id": 1776270832,
+          "object_hash": "af25b9a69713cc880a94e28444a79318420eec80195ecc642c892297fa056b3c",
+          "external_ref": "1f217e392f0d63858a8ffea4f124d05bf3c619779650d63262438d8c1849573c"
+        }
+      }
+    }
+  }
+}

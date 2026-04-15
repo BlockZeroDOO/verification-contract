@@ -118,9 +118,9 @@ Remediation:
 
 These are not treated as open vulnerabilities, but they remain explicit operational assumptions:
 
-- `Finality Watcher`, `Receipt Service`, and `Audit API` still rely on an off-chain file-based state model
-- chain-history correctness depends on the configured RPC/history backend
-- `Audit API` and `Receipt Service` intentionally expose request/transaction correlation metadata
+- `Finality Watcher`, `Receipt Service`, and `Audit API` still rely on an off-chain state layer, with `SQLite` as the recommended runtime backend
+- chain-history correctness still depends on the configured RPC/history backend set
+- `Audit API` and `Receipt Service` intentionally expose request/transaction correlation metadata in `full` privacy mode
 - `dfs::settle(...)` still relies on the configured settlement authority role
 
 ## Operational Recommendations
@@ -128,22 +128,26 @@ These are not treated as open vulnerabilities, but they remain explicit operatio
 - keep `Finality Watcher` private
 - bind off-chain services to `127.0.0.1` unless there is a clear reason not to
 - place public services behind a reverse proxy with rate limiting and logging
+- use at least two independent history/RPC backends in production where possible
+- use `RECEIPT_PRIVACY_MODE=public` and `AUDIT_PRIVACY_MODE=public` for internet-facing deployments
 - rotate `WATCHER_AUTH_TOKEN` if it is shared across environments
 - keep separate tokens for local, testnet, and production deployments
-- retain and back up `finality-state.json` if receipts and audit traces are operationally important
+- retain and back up `FINALITY_STATE_DB` if receipts and audit traces are operationally important
 
 ## Validation Completed
 
 - Python service integration tests
 - shell smoke script syntax checks
 - clean contract builds for `verification` and `dfs`
+- local live off-chain restart/recovery validation over `SQLite`
 - Jungle4 validation for:
   - `verification` deployment and smoke
   - live-chain single and batch flows
   - `dfs` quote-based storage payment smoke
+  - compose-backed live off-chain flow validation
 
 ## Suggested Next Follow-Up
 
-- move from file-based watcher state to a more durable indexed backend
-- add explicit rate limiting and proxy templates for public receipt/audit deployments
-- expand live-chain security regression coverage across more failure scenarios
+- roll out multi-provider verification in real deployment environments
+- apply reverse proxy templates and privacy modes in public environments
+- expand live-chain and compose failure-injection coverage across more degraded scenarios

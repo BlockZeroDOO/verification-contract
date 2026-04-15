@@ -1,0 +1,43 @@
+{
+  "sequence": 3,
+  "event": "healthz_finality",
+  "timestamp": "2026-04-15T15:10:32Z",
+  "payload": {
+    "url": "http://127.0.0.1:8081/healthz",
+    "status_code": 200,
+    "response": {
+      "status": "ok",
+      "service": "finality-watcher",
+      "auth_required": true,
+      "insecure_dev_mode": false,
+      "verification_policy": "single-provider",
+      "verification_min_success": 1,
+      "store": {
+        "backend": "sqlite",
+        "path": "/data/finality-state.sqlite3",
+        "exists": true,
+        "schema_version": "1"
+      },
+      "startup_checks": {
+        "checked_at": "2026-04-15T15:09:29Z",
+        "request_count": 31,
+        "recoverable_request_count": 15,
+        "status_counts": {
+          "submitted": 9,
+          "finalized": 9,
+          "failed": 7,
+          "included": 6
+        }
+      },
+      "startup_recovery": {
+        "started_at": "2026-04-15T15:09:29Z",
+        "attempted": 15,
+        "updated": 0,
+        "finalized": 1,
+        "failed": 0,
+        "errors": [],
+        "completed_at": "2026-04-15T15:09:37Z"
+      }
+    }
+  }
+}

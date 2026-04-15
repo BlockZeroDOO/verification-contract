@@ -258,6 +258,7 @@ void verification::submit(
 ) {
     require_auth(submitter);
     check(is_account(submitter), "submitter account does not exist");
+    validate_nonzero_checksum(object_hash, "object_hash");
     validate_nonzero_checksum(external_ref, "external_ref");
 
     const auto schema = require_schema(schema_id);
@@ -448,59 +449,26 @@ void verification::record(
     const string& canonicalization_profile,
     const string& client_reference
 ) {
-    require_auth(get_self());
-    check(is_account(submitter), "submitter account does not exist");
-    validate_printable_ascii_text(canonicalization_profile, 32, "canonicalization_profile", false);
-    validate_client_reference(client_reference);
-    validate_new_request(submitter, client_reference);
-
-    store_proof(submitter, object_hash, canonicalization_profile, client_reference);
+    (void)submitter;
+    (void)object_hash;
+    (void)canonicalization_profile;
+    (void)client_reference;
+    check(false, "legacy proof flow is disabled");
 }
 
 void verification::setpaytoken(
     const name& token_contract,
     const asset& price
 ) {
-    require_auth(get_self());
-    check(is_account(token_contract), "token_contract does not exist");
-    validate_payment_price(price, "price");
-    validate_token_contract_stat(token_contract, price.symbol);
-
-    payment_token_table payment_tokens(get_self(), get_self().value);
-    auto by_token = payment_tokens.get_index<"bytokensym"_n>();
-    const auto key = make_payment_key(token_contract, price.symbol.code());
-    auto existing = by_token.find(key);
-
-    if (existing == by_token.end()) {
-        payment_tokens.emplace(get_self(), [&](auto& row) {
-            row.config_id = payment_tokens.available_primary_key();
-            if (row.config_id == 0) {
-                row.config_id = 1;
-            }
-            row.token_contract = token_contract;
-            row.price = price;
-            row.updated_at = time_point_sec(current_time_point());
-        });
-        return;
-    }
-
-    by_token.modify(existing, get_self(), [&](auto& row) {
-        row.price = price;
-        row.updated_at = time_point_sec(current_time_point());
-    });
+    (void)token_contract;
+    (void)price;
+    check(false, "legacy proof payment configuration is disabled");
 }
 
 void verification::rmpaytoken(const name& token_contract, const symbol& token_symbol) {
-    require_auth(get_self());
-    check(token_symbol.is_valid(), "token_symbol is invalid");
-
-    payment_token_table payment_tokens(get_self(), get_self().value);
-    auto by_token = payment_tokens.get_index<"bytokensym"_n>();
-    const auto key = make_payment_key(token_contract, token_symbol.code());
-    auto existing = by_token.find(key);
-    check(existing != by_token.end(), "payment token config does not exist");
-
-    by_token.erase(existing);
+    (void)token_contract;
+    (void)token_symbol;
+    check(false, "legacy proof payment configuration is disabled");
 }
 
 void verification::withdraw(
@@ -528,23 +496,9 @@ void verification::ontransfer(const name& from, const name& to, const asset& qua
     if (to != get_self() || from == get_self()) {
         return;
     }
-
-    check(quantity.amount > 0, "payment must be positive");
-
-    auto [object_hash, hash_algorithm, canonicalization_profile, client_reference] = parse_payment_memo(memo);
-    const auto parsed_hash = parse_hash(object_hash);
-
-    validate_text(hash_algorithm, 16, "hash_algorithm", false);
-    validate_printable_ascii_text(canonicalization_profile, 32, "canonicalization_profile", false);
-    validate_client_reference(client_reference);
-    check(hash_algorithm == "SHA-256", "only SHA-256 is currently supported");
-    validate_new_request(from, client_reference);
-
-    const name payment_token_contract = get_first_receiver();
-    const auto expected_price = resolve_price(payment_token_contract, quantity.symbol);
-    check(quantity == expected_price, "incorrect payment amount");
-
-    store_proof(from, parsed_hash, canonicalization_profile, client_reference);
+    (void)quantity;
+    (void)memo;
+    check(false, "legacy proof payments are disabled");
 }
 
 uint128_t verification::make_payment_key(const name& token_contract, const symbol_code& token_symbol) const {

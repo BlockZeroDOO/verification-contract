@@ -206,7 +206,32 @@ cleos -u https://history.denotary.io push action dfs setprice '[
 
 ## Simulate a storage payment receipt
 
-The current scaffold records a storage payment receipt when the incoming transfer memo is:
+The current scaffold now requires a pre-created storage quote before the incoming transfer.
+
+### 1. Create a storage quote
+
+```powershell
+cleos -u https://history.denotary.io push action dfs mkstorquote '[
+  "quote-0001",
+  "retail.user",
+  "manifest-sha256-example",
+  "eosio.token",
+  "5.0000 EOS",
+  "2030-01-01T00:00:00"
+]' -p settleauth1@active
+```
+
+This should create an open `storquotes` row bound to:
+
+- `payment_reference = quote-0001`
+- `source_account = retail.user`
+- `manifest_hash = manifest-sha256-example`
+- `token_contract = eosio.token`
+- `quantity = 5.0000 EOS`
+
+### 2. Fund the quoted storage payment
+
+Once the quote exists, the payer transfer memo remains:
 
 ```text
 storage|<payment_reference>|<manifest_hash>
@@ -228,6 +253,8 @@ This should create a `receipts` row with:
 - `receipt_kind = storage`
 - `payment_reference = quote-0001`
 - `status = received`
+
+And it should update the matching `storquotes` row from `open` to `consumed`.
 
 ## Submit a settlement
 

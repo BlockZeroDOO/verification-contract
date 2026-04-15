@@ -68,6 +68,7 @@ Current baseline artifact:
 - accept valid single submit
 - persist `submitter`, `schema_id`, `policy_id`, `hash`, `created_at`
 - reject duplicate idempotency key
+- reject zero `object_hash`
 - reject submit with invalid hash shape
 - reject submit when KYC is required and absent
 - supersede active record
@@ -119,7 +120,8 @@ Current baseline artifact:
 - watcher rejects conflicting re-registration of the same `request_id`
 - watcher rejects rewriting `tx_id` or `block_num` after they are recorded
 - watcher rejects conflicting `commitment_id` or `batch_id` anchor rewrites
-- watcher can require shared-token auth on mutation endpoints
+- watcher requires shared-token auth on mutation endpoints by default
+- watcher rejects finalization when chain inclusion cannot be verified against the stored anchor
 
 ### Service integration baseline
 
@@ -135,6 +137,7 @@ Current baseline artifact:
 - `submit` can be broadcast on-chain and reconciled into watcher finality state
 - `submitroot`, `linkmanifest`, and `closebatch` can be broadcast on-chain and reconciled into watcher finality state
 - finalized receipt matches the real live-chain `tx_id` and `block_num`
+- finalized receipt is issued only after verified inclusion, not only after `LIB >= block_num`
 - audit API can resolve live requests by `tx_id`, `commitment_id`, `batch_id`, and `external_ref_hash`
 
 ### Receipt service
@@ -157,9 +160,19 @@ Current baseline artifact:
 - replay of same single request is rejected or handled idempotently
 - replay of same batch request is rejected or handled idempotently
 - unauthorized governance action is rejected
+- legacy `record` / proof-payment path remains disabled in production flow
 - generic status mutation path is not exposed
 - metadata fields do not leak raw source document
 - malformed manifest or inclusion proof is rejected by verification path
+
+### DFS storage payments
+
+- accept storage payment only when a matching open storage quote exists
+- reject storage payment if `source_account` does not match the quote
+- reject storage payment if `manifest_hash` does not match the quote
+- reject storage payment if `token_contract` or `quantity` do not match the quote
+- reject storage payment if the quote is expired
+- reject second transfer attempt for an already consumed `payment_reference`
 
 ## Read Model Assertions
 

@@ -80,10 +80,12 @@ These tests validate that metadata-side consumers can rely on the on-chain model
 ### Transfer classification
 
 - accept `stake|<node_id>` memo and record stake state
-- accept `storage|<payment_reference>|<manifest_hash>` memo and create storage receipt
+- accept `storage|<payment_reference>|<manifest_hash>` memo only when a matching open storage quote exists
 - reject unknown memo type
 - reject malformed storage memo
 - reject duplicate `payment_reference`
+- reject storage memo when no matching quote exists
+- reject storage memo when quote payer, manifest hash, token contract, quantity, or expiry do not match
 
 ### Receipts and custody
 
@@ -118,6 +120,7 @@ These tests validate that metadata-side consumers can rely on the on-chain model
 - reject `rmtoken` with live balances
 - reject `rmtoken` with live price offers
 - reject `rmtoken` with unsettled receipts
+- reject `rmtoken` with open storage quotes
 - allow `rmtoken` only after state is drained or disabled path is used first
 
 ## Read-model assertions for metadata integration

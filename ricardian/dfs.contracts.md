@@ -42,6 +42,14 @@ Creates or updates the DFS pricing and settlement policy.
 
 Withdraws available settled revenue for an owner account.
 
+<h1 class="contract">mkstorquote</h1>
+
+Creates a bounded storage payment quote that binds `payment_reference` to payer, manifest, token, amount, and expiry.
+
+<h1 class="contract">cancelquote</h1>
+
+Cancels an open storage payment quote before it is consumed by an incoming transfer.
+
 <h1 class="contract">settle</h1>
 
 Finalizes a storage payment receipt into distributable balances and protocol fee accounting.

@@ -96,6 +96,19 @@ public:
         const asset& quantity
     );
 
+    [[eosio::action]]
+    void mkstorquote(
+        const string& payment_reference,
+        const name& source_account,
+        const string& manifest_hash,
+        const name& token_contract,
+        const asset& quantity,
+        const time_point_sec& expires_at
+    );
+
+    [[eosio::action]]
+    void cancelquote(const string& payment_reference);
+
     struct payout_row {
         name owner_account;
         asset quantity;
@@ -239,6 +252,22 @@ private:
         checksum256 by_paytxid() const { return compute_text_key(payment_txid); }
     };
 
+    struct [[eosio::table("storquotes")]] storage_quote_row {
+        uint64_t row_id;
+        string payment_reference;
+        name source_account;
+        string manifest_hash;
+        name token_contract;
+        asset quantity;
+        name status;
+        time_point_sec expires_at;
+        time_point_sec created_at;
+        time_point_sec updated_at;
+
+        uint64_t primary_key() const { return row_id; }
+        checksum256 by_payref() const { return compute_text_key(payment_reference); }
+    };
+
     struct [[eosio::table("pricepolicy")]] pricing_policy {
         name stake_token_contract;
         asset stake_minimum;
@@ -291,6 +320,11 @@ private:
         indexed_by<"bysettleid"_n, const_mem_fun<settlement_row, checksum256, &settlement_row::by_settleid>>,
         indexed_by<"bypaytxid"_n, const_mem_fun<settlement_row, checksum256, &settlement_row::by_paytxid>>
     >;
+    using storage_quote_table = multi_index<
+        "storquotes"_n,
+        storage_quote_row,
+        indexed_by<"bypayref"_n, const_mem_fun<storage_quote_row, checksum256, &storage_quote_row::by_payref>>
+    >;
     using pricing_policy_singleton = singleton<"pricepolicy"_n, pricing_policy>;
 
     static constexpr name role_metadata = "metadata"_n;
@@ -306,6 +340,9 @@ private:
     static constexpr name receipt_storage = "storage"_n;
     static constexpr name receipt_received = "received"_n;
     static constexpr name receipt_settled = "settled"_n;
+    static constexpr name quote_open = "open"_n;
+    static constexpr name quote_consumed = "consumed"_n;
+    static constexpr name quote_cancelled = "cancelled"_n;
 
     static checksum256 compute_text_key(const string& value);
     static checksum256 compute_balance_key(
@@ -318,6 +355,7 @@ private:
     accepted_token_row require_enabled_token(const name& token_contract, const symbol& token_symbol) const;
     balance_table::const_iterator find_balance(balance_table& balances, const name& owner_account, const name& token_contract, const symbol_code& symbol_code);
     receipt_table::const_iterator find_receipt(receipt_table& receipts, const string& payment_reference);
+    storage_quote_table::const_iterator find_storage_quote(storage_quote_table& quotes, const string& payment_reference);
     tuple<bool, string> parse_stake_memo(const string& memo) const;
     tuple<bool, string, string> parse_storage_memo(const string& memo) const;
     void validate_role(const name& role) const;
@@ -332,6 +370,7 @@ private:
         bool allow_empty
     ) const;
     void validate_nonnegative_asset(const asset& quantity, const char* field_name) const;
+    void validate_future_time(const time_point_sec& value, const char* field_name) const;
     void upsert_stake_after_deposit(
         const string& node_id,
         const name& owner_account,

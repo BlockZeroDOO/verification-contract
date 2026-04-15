@@ -17,6 +17,11 @@ Current active next epic:
 
 - Epic 8: security hardening
 
+Recently completed hardening items:
+
+- Phase 1: watcher auth by default, canonical `request_id` validation, inclusion verification gating
+- Phase 2: zero-hash rejection, legacy proof-path disablement, DFS quote-gated storage payments
+
 Deferred:
 
 - Epic 10: optional proof layer and ZKP

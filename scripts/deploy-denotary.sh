@@ -128,8 +128,8 @@ dfs account: ${DFS_ACCOUNT}
 dfs deployed: ${DEPLOY_DFS}
 
 Next steps:
-  - Configure verification payment tokens with setpaytoken.
-  - Optionally bootstrap dfs policy and accepted tokens.
+  - Configure verification KYC, schemas, and policies for your target flows.
+  - Optionally bootstrap dfs policy, accepted tokens, and storage quotes.
   - Verify tables with cleos get table commands from README.md
 
 EOF

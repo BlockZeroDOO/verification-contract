@@ -207,8 +207,13 @@ Current baseline already added:
 - safer default ingress responses without raw canonical material
 - watcher-side conflict protection for request re-registration and anchor mutation
 - strict request and transaction identifier validation
-- optional auth token for watcher mutation endpoints
+- watcher auth required by default, with explicit insecure dev mode only for local development
+- canonical `request_id` validation against anchor data
+- inclusion verification before finality-based receipts are issued
 - explicit failed-request handling for dropped or rejected transactions
+- zero-hash rejection for `verification.submit(...)`
+- legacy `verification` proof-payment path disabled
+- DFS storage payments gated by explicit quotes
 
 ### Stage 10. Optional proof layer and ZKP
 

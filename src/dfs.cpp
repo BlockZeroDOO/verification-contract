@@ -345,6 +345,17 @@ void dfs::rmtoken(
         }
     }
 
+    storage_quote_table quotes(get_self(), get_self().value);
+    for (auto itr = quotes.begin(); itr != quotes.end(); ++itr) {
+        if (
+            itr->token_contract == token_contract &&
+            itr->quantity.symbol == token_symbol &&
+            itr->status == quote_open
+        ) {
+            check(false, "cannot remove token with open storage quotes");
+        }
+    }
+
     by_token.erase(token_itr);
 }
 
@@ -443,6 +454,67 @@ void dfs::claimrevenue(
         "transfer"_n,
         std::make_tuple(get_self(), owner_account, quantity, string("dfs revenue claim"))
     ).send();
+}
+
+void dfs::mkstorquote(
+    const string& payment_reference,
+    const name& source_account,
+    const string& manifest_hash,
+    const name& token_contract,
+    const asset& quantity,
+    const time_point_sec& expires_at
+) {
+    const pricing_policy policy = get_policy();
+    require_auth(policy.settlement_authority);
+    check(is_account(source_account), "source_account does not exist");
+    check(is_account(token_contract), "token_contract does not exist");
+    validate_printable_ascii_text(payment_reference, 128, "payment_reference", false);
+    validate_printable_ascii_text(manifest_hash, 128, "manifest_hash", false);
+    validate_nonnegative_asset(quantity, "quantity");
+    check(quantity.amount > 0, "quantity must be positive");
+    validate_future_time(expires_at, "expires_at");
+    require_enabled_token(token_contract, quantity.symbol);
+
+    storage_quote_table quotes(get_self(), get_self().value);
+    auto by_payref = quotes.get_index<"bypayref"_n>();
+    check(by_payref.find(compute_text_key(payment_reference)) == by_payref.end(), "payment_reference quote already exists");
+
+    receipt_table receipts(get_self(), get_self().value);
+    check(find_receipt(receipts, payment_reference) == receipts.end(), "payment_reference already has receipt");
+
+    const time_point_sec now = time_point_sec(current_time_point());
+    quotes.emplace(get_self(), [&](auto& row) {
+        row.row_id = quotes.available_primary_key();
+        if (row.row_id == 0) {
+            row.row_id = 1;
+        }
+        row.payment_reference = payment_reference;
+        row.source_account = source_account;
+        row.manifest_hash = manifest_hash;
+        row.token_contract = token_contract;
+        row.quantity = quantity;
+        row.status = quote_open;
+        row.expires_at = expires_at;
+        row.created_at = now;
+        row.updated_at = now;
+    });
+}
+
+void dfs::cancelquote(const string& payment_reference) {
+    const pricing_policy policy = get_policy();
+    require_auth(policy.settlement_authority);
+    validate_printable_ascii_text(payment_reference, 128, "payment_reference", false);
+
+    storage_quote_table quotes(get_self(), get_self().value);
+    auto by_payref = quotes.get_index<"bypayref"_n>();
+    auto quote_itr = by_payref.find(compute_text_key(payment_reference));
+    check(quote_itr != by_payref.end(), "storage quote does not exist");
+    check(quote_itr->status == quote_open, "storage quote is not open");
+
+    by_payref.modify(quote_itr, get_self(), [&](auto& row) {
+        row.status = quote_cancelled;
+        row.updated_at = time_point_sec(current_time_point());
+    });
 }
 
 void dfs::settle(
@@ -595,6 +667,17 @@ void dfs::ontransfer(
     check(is_storage_payment, "unknown transfer memo type");
     require_enabled_token(get_first_receiver(), quantity.symbol);
 
+    storage_quote_table quotes(get_self(), get_self().value);
+    auto by_quote_payref = quotes.get_index<"bypayref"_n>();
+    auto quote_itr = by_quote_payref.find(compute_text_key(payment_reference));
+    check(quote_itr != by_quote_payref.end(), "storage payment quote does not exist");
+    check(quote_itr->status == quote_open, "storage payment quote is not open");
+    check(quote_itr->source_account == from, "storage payment source_account does not match quote");
+    check(quote_itr->manifest_hash == manifest_hash, "manifest_hash does not match storage payment quote");
+    check(quote_itr->token_contract == get_first_receiver(), "token_contract does not match storage payment quote");
+    check(quote_itr->quantity == quantity, "quantity does not match storage payment quote");
+    check(quote_itr->expires_at > time_point_sec(current_time_point()), "storage payment quote is expired");
+
     receipt_table receipts(get_self(), get_self().value);
     auto existing_receipt = find_receipt(receipts, payment_reference);
     check(existing_receipt == receipts.end(), "payment_reference already exists");
@@ -615,6 +698,11 @@ void dfs::ontransfer(
         row.distributed_quantity = asset(0, quantity.symbol);
         row.status = receipt_received;
         row.created_at = now;
+        row.updated_at = now;
+    });
+
+    by_quote_payref.modify(quote_itr, get_self(), [&](auto& row) {
+        row.status = quote_consumed;
         row.updated_at = now;
     });
 }
@@ -657,6 +745,18 @@ dfs::receipt_table::const_iterator dfs::find_receipt(receipt_table& receipts, co
         return receipts.end();
     }
     return receipts.iterator_to(*receipt_itr);
+}
+
+dfs::storage_quote_table::const_iterator dfs::find_storage_quote(
+    storage_quote_table& quotes,
+    const string& payment_reference
+) {
+    auto by_payref = quotes.get_index<"bypayref"_n>();
+    auto quote_itr = by_payref.find(compute_text_key(payment_reference));
+    if (quote_itr == by_payref.end()) {
+        return quotes.end();
+    }
+    return quotes.iterator_to(*quote_itr);
 }
 
 tuple<bool, string> dfs::parse_stake_memo(const string& memo) const {
@@ -779,6 +879,10 @@ void dfs::validate_nonnegative_asset(const asset& quantity, const char* field_na
     check(quantity.amount >= 0, string(field_name) + " cannot be negative");
 }
 
+void dfs::validate_future_time(const time_point_sec& value, const char* field_name) const {
+    check(value > time_point_sec(current_time_point()), string(field_name) + " must be in the future");
+}
+
 void dfs::upsert_stake_after_deposit(
     const string& node_id,
     const name& owner_account,
@@ -838,6 +942,8 @@ extern "C" {
                     (rmtoken)
                     (setpolicy)
                     (claimrevenue)
+                    (mkstorquote)
+                    (cancelquote)
                     (settle)
                 )
             }

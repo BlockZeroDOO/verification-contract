@@ -35,7 +35,7 @@ The `verification` contract currently covers:
 - single-record anchoring
 - batch anchoring
 - business lifecycle tracking for commitments and batches
-- legacy paid proof ingestion and treasury handling
+- explicit disablement of the legacy paid proof path
 
 ## On-chain tables
 
@@ -78,13 +78,15 @@ Anchoring core:
 - `linkmanifest(uint64_t id, checksum256 manifest_hash)`
 - `closebatch(uint64_t id)`
 
-Legacy/payment layer:
+Legacy compatibility actions retained only as disabled stubs:
 
 - `record(name submitter, checksum256 object_hash, string canonicalization_profile, string client_reference)`
 - `setpaytoken(name token_contract, asset price)`
 - `rmpaytoken(name token_contract, symbol token_symbol)`
+
+Operational action:
+
 - `withdraw(name token_contract, name to, asset quantity, string memo)`
-- `*::transfer` notify handler for the legacy paid flow
 
 ## Model notes
 
@@ -93,6 +95,32 @@ Legacy/payment layer:
 - `supersede(...)` links the original commitment to a successor through `superseded_by`
 - batch closure requires a linked `manifest_hash`
 - batch proof material remains off-chain; on-chain stores `root_hash`, `manifest_hash`, and batch metadata
+- the legacy `proofs` and proof-payment path are disabled for production use
+
+## `dfs` scope
+
+The `dfs` contract currently covers:
+
+- node registry
+- stake lifecycle
+- accepted token configuration
+- price offers
+- quote-based storage payment intake
+- settlement and claimable balances
+
+Key DFS actions:
+
+- `regnode(...)`
+- `updatenode(...)`
+- `requestunstk(...)`
+- `withdrawstk(...)`
+- `setprice(...)`
+- `settoken(...)`
+- `setpolicy(...)`
+- `mkstorquote(string payment_reference, name source_account, string manifest_hash, name token_contract, asset quantity, time_point_sec expires_at)`
+- `cancelquote(string payment_reference)`
+- `settle(...)`
+- `claimrevenue(...)`
 
 ## Off-chain services
 
@@ -118,8 +146,9 @@ Capabilities:
 - register a request for watching
 - attach `tx_id` and `block_num` after inclusion
 - attach `commitment_id` or `batch_id` into anchor metadata
-- optionally require a shared auth token on mutation endpoints
+- require a shared auth token on mutation endpoints by default
 - explicitly mark requests as failed when broadcasting or reconciliation fails
+- verify inclusion against chain history before finalized trust is granted
 - poll chain finality until irreversible
 
 ### Receipt Service
@@ -177,6 +206,7 @@ Expected artifacts:
 On-chain smoke coverage:
 
 - [scripts/smoke-test-onchain.sh](/c:/projects/verification-contract/scripts/smoke-test-onchain.sh:1)
+- [scripts/smoke-test-dfs.sh](/c:/projects/verification-contract/scripts/smoke-test-dfs.sh:1)
 - [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1)
 
 Typical run:
@@ -199,6 +229,14 @@ The smoke test covers:
 - batch submit
 - duplicate batch rejection
 - manifest linking and close guards
+
+DFS quote smoke coverage:
+
+```bash
+export DFS_SETTLEMENT_ACCOUNT=settleauth1
+export DFS_PAYER_ACCOUNT=someuser
+./scripts/smoke-test-dfs.sh
+```
 
 ## Integration tests
 

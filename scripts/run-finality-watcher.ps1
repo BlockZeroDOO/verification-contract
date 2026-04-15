@@ -2,7 +2,9 @@ param(
     [string]$ListenHost = "127.0.0.1",
     [int]$Port = 8081,
     [string]$RpcUrl = "https://history.denotary.io",
+    [string]$StateBackend = "file",
     [string]$StateFile = "runtime/finality-state.json",
+    [string]$StateDb = "runtime/finality-state.sqlite3",
     [int]$PollIntervalSec = 10,
     [string]$AuthToken = ""
 )
@@ -34,7 +36,9 @@ $arguments = @(
     "--host", $ListenHost,
     "--port", $Port,
     "--rpc-url", $RpcUrl,
+    "--state-backend", $StateBackend,
     "--state-file", $StateFile,
+    "--state-db", $StateDb,
     "--poll-interval-sec", $PollIntervalSec
 )
 

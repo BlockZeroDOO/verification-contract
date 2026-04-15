@@ -7,7 +7,8 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict
 
-from finality_store import FinalityStore
+from finality_store import build_finality_store
+from finality_store_base import FinalityStoreBase
 from openapi_docs import swagger_ui_html
 
 
@@ -347,7 +348,7 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
 
 
 class ReceiptServiceServer(ThreadingHTTPServer):
-    def __init__(self, server_address: tuple[str, int], handler: type[BaseHTTPRequestHandler], store: FinalityStore):
+    def __init__(self, server_address: tuple[str, int], handler: type[BaseHTTPRequestHandler], store: FinalityStoreBase):
         super().__init__(server_address, handler)
         self.store = store
 
@@ -356,13 +357,19 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the DeNotary receipt service.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8082)
+    parser.add_argument("--state-backend", default="file")
     parser.add_argument("--state-file", default="runtime/finality-state.json")
+    parser.add_argument("--state-db", default="runtime/finality-state.sqlite3")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    store = FinalityStore(args.state_file)
+    store = build_finality_store(
+        state_backend=args.state_backend,
+        state_file=args.state_file,
+        state_db=args.state_db,
+    )
     server = ReceiptServiceServer((args.host, args.port), ReceiptServiceHandler, store)
     print(f"Receipt service listening on http://{args.host}:{args.port}")
     server.serve_forever()

@@ -45,7 +45,9 @@ receipt_port="${RECEIPT_PORT:-8082}"
 audit_port="${AUDIT_PORT:-8083}"
 contract_account="${CONTRACT_ACCOUNT:-verification}"
 rpc_url="${RPC_URL:-https://history.denotary.io}"
+state_backend="${FINALITY_STATE_BACKEND:-file}"
 state_file="${STATE_FILE:-${project_root}/runtime/finality-state.json}"
+state_db="${FINALITY_STATE_DB:-${project_root}/runtime/finality-state.sqlite3}"
 poll_interval_sec="${POLL_INTERVAL_SEC:-10}"
 auth_token="${WATCHER_AUTH_TOKEN:-}"
 ingress_watcher_url="${INGRESS_WATCHER_URL:-}"
@@ -53,6 +55,7 @@ ingress_watcher_auth_token="${INGRESS_WATCHER_AUTH_TOKEN:-${WATCHER_AUTH_TOKEN:-
 ingress_watcher_rpc_url="${INGRESS_WATCHER_RPC_URL:-${RPC_URL:-https://history.denotary.io}}"
 
 mkdir -p "$(dirname "${state_file}")"
+mkdir -p "$(dirname "${state_db}")"
 
 case "${service_name}" in
     ingress)
@@ -83,7 +86,9 @@ case "${service_name}" in
             --host "${host}"
             --port "${finality_port}"
             --rpc-url "${rpc_url}"
+            --state-backend "${state_backend}"
             --state-file "${state_file}"
+            --state-db "${state_db}"
             --poll-interval-sec "${poll_interval_sec}"
             --auth-token "${auth_token}"
         )
@@ -93,14 +98,18 @@ case "${service_name}" in
         exec "${python_cmd}" "${project_root}/services/receipt_service.py" \
             --host "${host}" \
             --port "${receipt_port}" \
+            --state-backend "${state_backend}" \
             --state-file "${state_file}" \
+            --state-db "${state_db}" \
             "$@"
         ;;
     audit)
         exec "${python_cmd}" "${project_root}/services/audit_api.py" \
             --host "${host}" \
             --port "${audit_port}" \
+            --state-backend "${state_backend}" \
             --state-file "${state_file}" \
+            --state-db "${state_db}" \
             "$@"
         ;;
     *)

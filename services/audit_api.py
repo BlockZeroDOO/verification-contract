@@ -7,12 +7,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
-from finality_store import FinalityStore
+from finality_store import build_finality_store
+from finality_store_base import FinalityStoreBase
 from openapi_docs import swagger_ui_html
 from receipt_service import build_batch_receipt, build_single_receipt, derive_trust_state, receipt_available
 
 
-def select_requests(store: FinalityStore, predicate) -> List[Dict[str, Any]]:
+def select_requests(store: FinalityStoreBase, predicate) -> List[Dict[str, Any]]:
     matches: List[Dict[str, Any]] = []
     for payload in store.list_requests().values():
         if predicate(payload):
@@ -687,7 +688,7 @@ class AuditApiHandler(BaseHTTPRequestHandler):
 
 
 class AuditApiServer(ThreadingHTTPServer):
-    def __init__(self, server_address: Tuple[str, int], handler: type[BaseHTTPRequestHandler], store: FinalityStore):
+    def __init__(self, server_address: Tuple[str, int], handler: type[BaseHTTPRequestHandler], store: FinalityStoreBase):
         super().__init__(server_address, handler)
         self.store = store
 
@@ -696,13 +697,19 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the DeNotary audit API.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8083)
+    parser.add_argument("--state-backend", default="file")
     parser.add_argument("--state-file", default="runtime/finality-state.json")
+    parser.add_argument("--state-db", default="runtime/finality-state.sqlite3")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    store = FinalityStore(args.state_file)
+    store = build_finality_store(
+        state_backend=args.state_backend,
+        state_file=args.state_file,
+        state_db=args.state_db,
+    )
     server = AuditApiServer((args.host, args.port), AuditApiHandler, store)
     print(f"Audit API listening on http://{args.host}:{args.port}")
     server.serve_forever()

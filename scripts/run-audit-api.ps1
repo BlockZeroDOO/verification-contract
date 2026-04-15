@@ -1,7 +1,9 @@
 param(
     [string]$ListenHost = "127.0.0.1",
     [int]$Port = 8083,
-    [string]$StateFile = "runtime/finality-state.json"
+    [string]$StateBackend = "file",
+    [string]$StateFile = "runtime/finality-state.json",
+    [string]$StateDb = "runtime/finality-state.sqlite3"
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,4 +31,6 @@ if (-not $python) {
 & $python (Join-Path $projectRoot "services\\audit_api.py") `
     --host $ListenHost `
     --port $Port `
-    --state-file $StateFile
+    --state-backend $StateBackend `
+    --state-file $StateFile `
+    --state-db $StateDb

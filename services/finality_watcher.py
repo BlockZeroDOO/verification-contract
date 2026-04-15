@@ -14,7 +14,8 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, Iterable, Optional
 
-from finality_store import FinalityStore
+from finality_store import FinalityStore, build_finality_store
+from finality_store_base import FinalityStoreBase
 
 MAX_REQUEST_BODY_BYTES = 256 * 1024
 HEX_64_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -758,7 +759,7 @@ class FinalityWatcherServer(ThreadingHTTPServer):
         self,
         server_address: tuple[str, int],
         handler: type[BaseHTTPRequestHandler],
-        store: FinalityStore,
+        store: FinalityStoreBase,
         default_rpc_url: str,
         poll_interval_sec: int,
         auth_token: str = "",
@@ -802,7 +803,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8081)
     parser.add_argument("--rpc-url", default="https://history.denotary.io")
+    parser.add_argument("--state-backend", default="file")
     parser.add_argument("--state-file", default="runtime/finality-state.json")
+    parser.add_argument("--state-db", default="runtime/finality-state.sqlite3")
     parser.add_argument("--poll-interval-sec", type=int, default=10)
     parser.add_argument("--auth-token", default="")
     parser.add_argument("--insecure-dev-mode", action="store_true")
@@ -811,7 +814,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    store = FinalityStore(args.state_file)
+    store = build_finality_store(
+        state_backend=args.state_backend,
+        state_file=args.state_file,
+        state_db=args.state_db,
+    )
     server = FinalityWatcherServer(
         (args.host, args.port),
         FinalityWatcherHandler,

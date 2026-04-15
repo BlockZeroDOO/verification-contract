@@ -54,14 +54,20 @@ services:
       - "8081"
       - --rpc-url
       - ${RPC_URL:-https://history.denotary.io}
+      - --state-backend
+      - ${FINALITY_STATE_BACKEND:-file}
       - --state-file
       - /data/finality-state.json
+      - --state-db
+      - ${FINALITY_STATE_DB:-/data/finality-state.sqlite3}
       - --poll-interval-sec
       - ${POLL_INTERVAL_SEC:-10}
       - --auth-token
       - ${WATCHER_AUTH_TOKEN:?WATCHER_AUTH_TOKEN is required for the finality watcher}
     environment:
       RPC_URL: ${RPC_URL:-https://history.denotary.io}
+      FINALITY_STATE_BACKEND: ${FINALITY_STATE_BACKEND:-file}
+      FINALITY_STATE_DB: ${FINALITY_STATE_DB:-/data/finality-state.sqlite3}
       POLL_INTERVAL_SEC: ${POLL_INTERVAL_SEC:-10}
       WATCHER_AUTH_TOKEN: ${WATCHER_AUTH_TOKEN:?WATCHER_AUTH_TOKEN is required for the finality watcher}
     volumes:
@@ -93,8 +99,12 @@ services:
       - 0.0.0.0
       - --port
       - "8082"
+      - --state-backend
+      - ${FINALITY_STATE_BACKEND:-file}
       - --state-file
       - /data/finality-state.json
+      - --state-db
+      - ${FINALITY_STATE_DB:-/data/finality-state.sqlite3}
     volumes:
       - denotary-offchain-state:/data
     depends_on:
@@ -127,8 +137,12 @@ services:
       - 0.0.0.0
       - --port
       - "8083"
+      - --state-backend
+      - ${FINALITY_STATE_BACKEND:-file}
       - --state-file
       - /data/finality-state.json
+      - --state-db
+      - ${FINALITY_STATE_DB:-/data/finality-state.sqlite3}
     volumes:
       - denotary-offchain-state:/data
     depends_on:

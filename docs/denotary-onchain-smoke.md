@@ -92,6 +92,8 @@ It now delegates to `smoke-test-onchain.sh`, because the legacy proof-payment pa
 - `setpolicy` for single and batch flows
 - `submit`
 - duplicate single request rejection
+- zero `object_hash` rejection
+- disabled legacy `record` and `setpaytoken` actions
 - `supersede` with explicit `successor_id`
 - `revokecmmt`
 - `expirecmmt`
@@ -104,6 +106,8 @@ It now delegates to `smoke-test-onchain.sh`, because the legacy proof-payment pa
 ## What the DFS smoke validates
 
 - `mkstorquote`
+- storage payment without a matching quote is rejected
+- storage payment with mismatched `manifest_hash` is rejected
 - matching `storage|<payment_reference>|<manifest_hash>` transfer acceptance
 - receipt creation in `received` status
 - quote transition from `open` to `consumed`

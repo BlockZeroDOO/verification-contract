@@ -210,6 +210,7 @@ OBJECT_HASH_1="$(hash_text "object-1-${TIMESTAMP}")"
 OBJECT_HASH_2="$(hash_text "object-2-${TIMESTAMP}")"
 OBJECT_HASH_3="$(hash_text "object-3-${TIMESTAMP}")"
 OBJECT_HASH_4="$(hash_text "object-4-${TIMESTAMP}")"
+ZERO_HASH="$(printf '0%.0s' {1..64})"
 
 BATCH_EXTREF="$(hash_text "batch-${TIMESTAMP}")"
 ROOT_HASH="$(hash_text "root-${TIMESTAMP}")"
@@ -281,6 +282,29 @@ if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
     "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_1}\",\"${COMMIT_EXTREF_1}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: duplicate commitment request was accepted." >&2
+    exit 1
+fi
+
+log "Rejecting zero object_hash commitment"
+if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${ZERO_HASH}\",\"$(hash_text "zero-hash-${TIMESTAMP}")\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: zero object_hash commitment was accepted." >&2
+    exit 1
+fi
+
+log "Rejecting disabled legacy proof actions"
+if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" record \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${OBJECT_HASH_1}\",\"json-sorted-v1\",\"legacy-${TIMESTAMP}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: legacy record action was accepted." >&2
+    exit 1
+fi
+
+if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpaytoken \
+    "[\"eosio.token\",\"1.0000 EOS\"]" \
+    -p "${OWNER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: legacy setpaytoken action was accepted." >&2
     exit 1
 fi
 

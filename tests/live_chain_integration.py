@@ -130,6 +130,38 @@ def run_cleos_push_action(
         ) from exc
 
 
+def assert_cleos_push_action_fails(
+    rpc_url: str,
+    contract: str,
+    action: str,
+    data: List[Any],
+    permission: str,
+    expected_substring: str,
+) -> None:
+    command = [
+        "cleos",
+        "-u",
+        rpc_url,
+        "push",
+        "action",
+        contract,
+        action,
+        json.dumps(data, separators=(",", ":"), ensure_ascii=False),
+        "-p",
+        permission,
+    ]
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    if completed.returncode == 0:
+        raise AssertionError(f"expected cleos push action {contract} {action} to fail")
+
+    combined_output = f"{completed.stdout}\n{completed.stderr}"
+    if expected_substring not in combined_output:
+        raise AssertionError(
+            f"expected cleos failure output for {contract} {action} to contain {expected_substring!r}, got:\n"
+            f"{combined_output}"
+        )
+
+
 def extract_tx_metadata(result: Dict[str, Any]) -> Tuple[str, int]:
     tx_id = result.get("transaction_id")
     processed = result.get("processed", {})
@@ -549,6 +581,59 @@ def run_single_flow(args: argparse.Namespace, services: LocalServiceStack, schem
     log(f"Single live-chain flow passed; commitment_id={commitment_id}, tx_id={tx_id}")
 
 
+def run_negative_security_checks(
+    args: argparse.Namespace,
+    schema_id: int,
+    policy_id: int,
+    suffix: str,
+) -> None:
+    permission = f"{args.submitter_account}@active"
+    owner_permission = f"{args.owner_account}@active"
+    zero_external_ref = f"{suffix:0>64}"[-64:]
+
+    log("Running negative on-chain security checks")
+    assert_cleos_push_action_fails(
+        args.rpc_url,
+        args.verification_account,
+        "submit",
+        [
+            args.submitter_account,
+            schema_id,
+            policy_id,
+            "0" * 64,
+            zero_external_ref,
+        ],
+        permission,
+        "object_hash must be non-zero",
+    )
+
+    assert_cleos_push_action_fails(
+        args.rpc_url,
+        args.verification_account,
+        "record",
+        [
+            args.submitter_account,
+            "1" * 64,
+            "json-sorted-v1",
+            f"legacy-record-{suffix}",
+        ],
+        permission,
+        "legacy proof flow is disabled",
+    )
+
+    assert_cleos_push_action_fails(
+        args.rpc_url,
+        args.verification_account,
+        "setpaytoken",
+        [
+            "eosio.token",
+            "1.0000 EOS",
+        ],
+        owner_permission,
+        "legacy proof payment configuration is disabled",
+    )
+
+
 def run_batch_flow(args: argparse.Namespace, services: LocalServiceStack, schema_id: int, policy_id: int, suffix: str) -> None:
     external_ref = f"live-batch-{suffix}"
     permission = f"{args.submitter_account}@active"
@@ -771,6 +856,7 @@ def main() -> int:
             owner_permission,
         )
 
+        run_negative_security_checks(args, schema_id, policy_single_id, suffix)
         run_single_flow(args, services, schema_id, policy_single_id, suffix)
         run_batch_flow(args, services, schema_id, policy_batch_id, suffix)
 

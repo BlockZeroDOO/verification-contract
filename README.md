@@ -196,6 +196,12 @@ PowerShell:
 ./scripts/build-release.ps1
 ```
 
+Off-chain deployment defaults now assume:
+
+- `WATCHER_AUTH_TOKEN` is mandatory
+- `Finality Watcher` stays private behind localhost or a trusted internal network
+- public exposure of `Receipt Service` and `Audit API` should be a deliberate choice
+
 Expected artifacts:
 
 - `dist/verification/verification.wasm`

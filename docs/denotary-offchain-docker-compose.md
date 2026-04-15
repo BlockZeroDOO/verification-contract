@@ -26,7 +26,7 @@ CONTRACT_ACCOUNT=verification
 RPC_URL=https://history.denotary.io
 CHAIN_ID=9714ab662f0899c3ac4c5a02220f3d7ab61aacae311974239cc75f22c999cc48
 POLL_INTERVAL_SEC=10
-WATCHER_AUTH_TOKEN=
+WATCHER_AUTH_TOKEN=replace-with-shared-secret
 ```
 
 For Jungle4 instead:
@@ -41,6 +41,8 @@ CHAIN_ID=73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d
 ```bash
 docker compose --env-file .env.offchain -f docker-compose.offchain.yml up -d --build
 ```
+
+`WATCHER_AUTH_TOKEN` is required. The compose stack will fail fast if it is missing.
 
 ## 3. Check status
 
@@ -91,4 +93,8 @@ Use the services:
 - `Receipt Service`: `http://127.0.0.1:8082`
 - `Audit API`: `http://127.0.0.1:8083`
 
-If you want mutation auth on `Finality Watcher`, set `WATCHER_AUTH_TOKEN` in `.env.offchain` before starting the stack.
+Security notes:
+
+- keep `Finality Watcher` private; it is not intended for direct public exposure
+- prefer keeping all binds on `127.0.0.1` and publishing only through a reverse proxy
+- expose `Receipt Service` and `Audit API` publicly only if you explicitly accept their metadata surface

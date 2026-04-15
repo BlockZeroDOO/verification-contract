@@ -90,6 +90,22 @@ wait_for_table_match \
     ".rows[] | select(.payment_reference == \"${PAYMENT_REFERENCE}\") | select(.status == \"open\")" \
     "storage quote ${PAYMENT_REFERENCE}"
 
+log "Rejecting storage payment with mismatched manifest_hash"
+if cleos -u "${RPC_URL}" push action "${PAYMENT_TOKEN_CONTRACT}" transfer \
+    "[\"${DFS_PAYER_ACCOUNT}\",\"${DFS_ACCOUNT}\",\"${PAYMENT_AMOUNT}\",\"storage|${PAYMENT_REFERENCE}|$(hash_text "wrong-manifest-${TIMESTAMP}")\"]" \
+    -p "${DFS_PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: storage payment with mismatched manifest_hash was accepted." >&2
+    exit 1
+fi
+
+log "Rejecting storage payment without matching quote"
+if cleos -u "${RPC_URL}" push action "${PAYMENT_TOKEN_CONTRACT}" transfer \
+    "[\"${DFS_PAYER_ACCOUNT}\",\"${DFS_ACCOUNT}\",\"${PAYMENT_AMOUNT}\",\"storage|dfs-unquoted-${TIMESTAMP}|${MANIFEST_HASH}\"]" \
+    -p "${DFS_PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: storage payment without matching quote was accepted." >&2
+    exit 1
+fi
+
 log "Funding DFS with quoted storage payment"
 cleos -u "${RPC_URL}" push action "${PAYMENT_TOKEN_CONTRACT}" transfer \
     "[\"${DFS_PAYER_ACCOUNT}\",\"${DFS_ACCOUNT}\",\"${PAYMENT_AMOUNT}\",\"storage|${PAYMENT_REFERENCE}|${MANIFEST_HASH}\"]" \

@@ -60,6 +60,10 @@ case "${service_name}" in
             "$@"
         ;;
     finality)
+        if [[ -z "${auth_token}" ]]; then
+            echo "WATCHER_AUTH_TOKEN is required to start the finality watcher." >&2
+            exit 1
+        fi
         args=(
             "${project_root}/services/finality_watcher.py"
             --host "${host}"
@@ -67,10 +71,8 @@ case "${service_name}" in
             --rpc-url "${rpc_url}"
             --state-file "${state_file}"
             --poll-interval-sec "${poll_interval_sec}"
+            --auth-token "${auth_token}"
         )
-        if [[ -n "${auth_token}" ]]; then
-            args+=(--auth-token "${auth_token}")
-        fi
         exec "${python_cmd}" "${args[@]}" "$@"
         ;;
     receipt)

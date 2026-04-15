@@ -139,6 +139,8 @@ Current baseline artifact:
 - finalized receipt matches the real live-chain `tx_id` and `block_num`
 - finalized receipt is issued only after verified inclusion, not only after `LIB >= block_num`
 - audit API can resolve live requests by `tx_id`, `commitment_id`, `batch_id`, and `external_ref_hash`
+- live chain rejects zero `object_hash` submits
+- live chain rejects disabled legacy `record` and `setpaytoken` paths
 
 ### Receipt service
 
@@ -171,6 +173,7 @@ Current baseline artifact:
 ### DFS storage payments
 
 - accept storage payment only when a matching open storage quote exists
+- reject storage payment when no matching quote exists
 - reject storage payment if `source_account` does not match the quote
 - reject storage payment if `manifest_hash` does not match the quote
 - reject storage payment if `token_contract` or `quantity` do not match the quote

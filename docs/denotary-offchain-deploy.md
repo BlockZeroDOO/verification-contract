@@ -157,7 +157,12 @@ Recommended publication model:
 - public-facing reverse proxy in front of `Audit API`
 - keep `Finality Watcher` private
 
-If you expose `Finality Watcher` mutation endpoints beyond localhost, set `WATCHER_AUTH_TOKEN`.
+Operational policy:
+
+- `WATCHER_AUTH_TOKEN` is mandatory for `Finality Watcher`
+- do not publish `Finality Watcher` directly to the internet
+- prefer binding all services to `127.0.0.1` and exposing only proxied endpoints
+- review whether `Receipt Service` and `Audit API` should be public in your deployment, because they intentionally expose trace and correlation metadata
 
 ## 6. Health checks
 

@@ -215,6 +215,8 @@ Current baseline already added:
 - legacy `verification` proof-payment path disabled
 - DFS storage payments gated by explicit quotes
 - explicit `trust_state` / `receipt_available` signaling in receipt and audit responses
+- negative security regression checks in smoke and live-chain validation
+- off-chain deploy defaults now require `WATCHER_AUTH_TOKEN` and private watcher exposure
 
 ### Stage 10. Optional proof layer and ZKP
 

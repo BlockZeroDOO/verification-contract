@@ -2,7 +2,7 @@
 
 ## Purpose
 
-These smoke tests validate the retail `atomic pay + submit` path for `verification_retail`.
+These smoke tests validate the retail `atomic pay + submit` path for `verifretail`.
 
 Scripts:
 
@@ -12,7 +12,7 @@ Scripts:
 
 ## Prerequisites
 
-- deployed `verification_retail` contract
+- deployed `verifretail` contract
 - `cleos`
 - `jq`
 - imported keys for:

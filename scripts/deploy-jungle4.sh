@@ -7,7 +7,7 @@ project_root="$(cd "${script_dir}/.." && pwd)"
 
 RPC_URL="${RPC_URL:-https://jungle4.api.eosnation.io}"
 JUNGLE4_CHAIN_ID="${JUNGLE4_CHAIN_ID:-73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d}"
-VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
+VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verifent}"
 BUILD_BEFORE_DEPLOY="${BUILD_BEFORE_DEPLOY:-true}"
 
 require_command() {
@@ -79,15 +79,15 @@ check_chain
 
 if [[ "${BUILD_BEFORE_DEPLOY}" == "true" ]]; then
     echo "[deploy-jungle4] Building contract artifacts"
-    bash "${project_root}/scripts/build-testnet.sh" verification
+    bash "${project_root}/scripts/build-testnet.sh" verifent
 fi
 
-require_artifact verification
+require_artifact verifent
 
 echo "[deploy-jungle4] Verifying chain accounts"
 require_chain_account "${VERIFICATION_ACCOUNT}"
 
-deploy_contract "${VERIFICATION_ACCOUNT}" verification
+deploy_contract "${VERIFICATION_ACCOUNT}" verifent
 
 cat <<EOF
 
@@ -95,7 +95,7 @@ Jungle4 deploy completed.
 
 RPC URL: ${RPC_URL}
 chain id: ${JUNGLE4_CHAIN_ID}
-verification account: ${VERIFICATION_ACCOUNT}
+enterprise account: ${VERIFICATION_ACCOUNT}
 
 Next steps:
   - Run the on-chain smoke test against Jungle4.

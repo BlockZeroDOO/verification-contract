@@ -4,7 +4,7 @@ set -euo pipefail
 
 RPC_URL="${RPC_URL:-https://history.denotary.io}"
 READ_RPC_URL="${READ_RPC_URL:-${RPC_URL}}"
-VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
+VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verifent}"
 SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
 KYC_PROVIDER="${KYC_PROVIDER:-denotary-kyc}"
@@ -14,7 +14,7 @@ KYC_EXPIRES_AT="${KYC_EXPIRES_AT:-2030-01-01T00:00:00}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 
-: "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the verification contract authority account.}"
+: "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the enterprise contract authority account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded test account that can sign submits.}"
 
 if ! command -v cleos >/dev/null 2>&1; then
@@ -291,21 +291,6 @@ if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
     "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${ZERO_HASH}\",\"$(hash_text "zero-hash-${TIMESTAMP}")\"]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: zero object_hash commitment was accepted." >&2
-    exit 1
-fi
-
-log "Rejecting disabled legacy proof actions"
-if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" record \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${OBJECT_HASH_1}\",\"json-sorted-v1\",\"legacy-${TIMESTAMP}\"]" \
-    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
-    echo "Assertion failed: legacy record action was accepted." >&2
-    exit 1
-fi
-
-if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpaytoken \
-    "[\"eosio.token\",\"1.0000 EOS\"]" \
-    -p "${OWNER_ACCOUNT}@active" >/dev/null 2>&1; then
-    echo "Assertion failed: legacy setpaytoken action was accepted." >&2
     exit 1
 fi
 

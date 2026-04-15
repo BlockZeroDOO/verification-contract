@@ -4,13 +4,13 @@ This runbook covers deployment of the enterprise verification contract surface.
 
 Current contract mapping:
 
-- enterprise contract account: `verification`
-- enterprise WASM target: `verification`
+- enterprise contract account: `verifent`
+- enterprise WASM target: `verifent`
 - implementation wrapper: `verification_enterprise`
 
 Repository boundary:
 
-- `C:\projects\verification-contract` owns `verification` and `verification_retail`
+- `C:\projects\verification-contract` owns `verifent` and `verifretail`
 - `C:\projects\deNotary` owns the off-chain backend
 - `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
@@ -34,8 +34,8 @@ It does not support retail token payment flow.
 
 Expected artifacts:
 
-- `dist/verification/verification.wasm`
-- `dist/verification/verification.abi`
+- `dist/verifent/verifent.wasm`
+- `dist/verifent/verifent.abi`
 
 ## deNotary Deploy
 
@@ -46,7 +46,7 @@ Expected artifacts:
 Defaults:
 
 - `RPC_URL=https://history.denotary.io`
-- `VERIFICATION_ACCOUNT=verification`
+- `VERIFICATION_ACCOUNT=verifent`
 - `BUILD_BEFORE_DEPLOY=true`
 
 ## Jungle4 Deploy
@@ -58,17 +58,17 @@ Defaults:
 Defaults:
 
 - `RPC_URL=https://jungle4.api.eosnation.io`
-- `VERIFICATION_ACCOUNT=verification`
+- `VERIFICATION_ACCOUNT=verifent`
 - `BUILD_BEFORE_DEPLOY=true`
 
 ## Verify
 
 ```bash
-cleos -u <rpc> get table verification verification kyc
-cleos -u <rpc> get table verification verification schemas
-cleos -u <rpc> get table verification verification policies
-cleos -u <rpc> get table verification verification commitments
-cleos -u <rpc> get table verification verification batches
+cleos -u <rpc> get table verifent verifent kyc
+cleos -u <rpc> get table verifent verifent schemas
+cleos -u <rpc> get table verifent verifent policies
+cleos -u <rpc> get table verifent verifent commitments
+cleos -u <rpc> get table verifent verifent batches
 ```
 
 ## Smoke
@@ -76,8 +76,8 @@ cleos -u <rpc> get table verification verification batches
 deNotary:
 
 ```bash
-export OWNER_ACCOUNT=verification
-export VERIFICATION_ACCOUNT=verification
+export OWNER_ACCOUNT=verifent
+export VERIFICATION_ACCOUNT=verifent
 export SUBMITTER_ACCOUNT=youruser
 ./scripts/smoke-test-enterprise-denotary.sh
 ```
@@ -85,8 +85,8 @@ export SUBMITTER_ACCOUNT=youruser
 Jungle4:
 
 ```bash
-export OWNER_ACCOUNT=verification
-export VERIFICATION_ACCOUNT=verification
+export OWNER_ACCOUNT=verifent
+export VERIFICATION_ACCOUNT=verifent
 export SUBMITTER_ACCOUNT=youruser
 ./scripts/smoke-test-enterprise-jungle4.sh
 ```

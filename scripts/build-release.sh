@@ -19,7 +19,7 @@ fi
 if [[ $# -gt 0 ]]; then
     contracts=("$@")
 else
-    contracts=("verification")
+    contracts=("verifent")
 fi
 
 echo "Using compiler: ${compiler}"
@@ -35,18 +35,21 @@ build_contract() {
     local abi_file="${dist_dir}/${contract_name}.abi"
     local checksums_created="no"
 
-    if [[ ! -f "${project_root}/${source_file}" ]]; then
-        echo "Source file not found for contract '${contract_name}': ${source_file}" >&2
-        exit 1
-    fi
-
-    if [[ "${contract_name}" == "verification" ]]; then
+    if [[ "${contract_name}" == "verifent" ]]; then
+        source_file="src/verification.cpp"
+        source_args=("src/verification.cpp")
         compiler_args+=("-DVERIFICATION_ENTERPRISE_BUILD")
         source_args+=("src/verification_enterprise.cpp")
         source_args+=("src/verification_core.cpp")
-    elif [[ "${contract_name}" == "verification_retail" ]]; then
+    elif [[ "${contract_name}" == "verifretail" ]]; then
+        source_file="src/verification_retail_entry.cpp"
         compiler_args+=("-DVERIFICATION_RETAIL_BUILD")
         source_args=("src/verification_retail_entry.cpp" "src/verification_retail.cpp" "src/verification_core.cpp")
+    fi
+
+    if [[ ! -f "${project_root}/${source_file}" ]]; then
+        echo "Source file not found for contract '${contract_name}': ${source_file}" >&2
+        exit 1
     fi
 
     mkdir -p "${dist_dir}"

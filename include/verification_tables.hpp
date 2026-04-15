@@ -139,49 +139,8 @@ using batch_table = multi_index<
 struct [[eosio::table("counters")]] counter_state {
     uint64_t next_commitment_id = 1;
     uint64_t next_batch_id = 1;
-    uint64_t next_proof_id = 1;
 };
 
 using counter_singleton = singleton<"counters"_n, counter_state>;
-
-struct [[eosio::table("proofs")]] proof_row {
-    uint64_t proof_id;
-    name writer;
-    name submitter;
-    checksum256 object_hash;
-    string canonicalization_profile;
-    string client_reference;
-    time_point_sec submitted_at;
-
-    uint64_t primary_key() const { return proof_id; }
-    uint64_t by_submitter() const { return submitter.value; }
-    checksum256 by_request() const { return verification_common::compute_request_key(submitter, client_reference); }
-};
-
-using proof_table = multi_index<
-    "proofs"_n,
-    proof_row,
-    indexed_by<"bysubmitter"_n, const_mem_fun<proof_row, uint64_t, &proof_row::by_submitter>>,
-    indexed_by<"byrequest"_n, const_mem_fun<proof_row, checksum256, &proof_row::by_request>>
->;
-
-struct [[eosio::table("paytokens")]] payment_token {
-    uint64_t config_id;
-    name token_contract;
-    asset price;
-    time_point_sec updated_at;
-
-    uint64_t primary_key() const { return config_id; }
-    uint128_t bytokensym() const {
-        return (static_cast<uint128_t>(token_contract.value) << 64) |
-               price.symbol.code().raw();
-    }
-};
-
-using payment_token_table = multi_index<
-    "paytokens"_n,
-    payment_token,
-    indexed_by<"bytokensym"_n, const_mem_fun<payment_token, uint128_t, &payment_token::bytokensym>>
->;
 
 }  // namespace verification_tables

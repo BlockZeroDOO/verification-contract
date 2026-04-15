@@ -7,7 +7,7 @@ The active deployment target is now the `deNotary.io` chain:
 - history / RPC URL: `https://history.denotary.io`
 - chain id: `9714ab662f0899c3ac4c5a02220f3d7ab61aacae311974239cc75f22c999cc48`
 
-The current contract model no longer uses the former network setup or the legacy `managementel -> verification` deployment flow.
+The current contract model no longer uses the former network setup or the legacy `managementel -> verifent` deployment flow.
 
 Use these documents instead:
 

@@ -1,5 +1,5 @@
 param(
-    [string[]]$ContractName = @("verification")
+    [string[]]$ContractName = @("verifent")
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,20 +25,25 @@ catch {
 }
 
 foreach ($name in $ContractName) {
-    $sourceFile = Join-Path $projectRoot "src\$name.cpp"
-    if (-not (Test-Path $sourceFile)) {
-        throw "Source file not found for contract '$name': $sourceFile"
-    }
     $sourceArgs = @("src/$name.cpp")
     $compilerArgs = @()
-    if ($name -eq "verification") {
+    if ($name -eq "verifent") {
+        $sourceFile = Join-Path $projectRoot "src\verification.cpp"
+        $sourceArgs = @("src/verification.cpp")
         $compilerArgs += "-DVERIFICATION_ENTERPRISE_BUILD"
         $sourceArgs += "src/verification_enterprise.cpp"
         $sourceArgs += "src/verification_core.cpp"
     }
-    elseif ($name -eq "verification_retail") {
+    elseif ($name -eq "verifretail") {
+        $sourceFile = Join-Path $projectRoot "src\verification_retail_entry.cpp"
         $compilerArgs += "-DVERIFICATION_RETAIL_BUILD"
         $sourceArgs = @("src/verification_retail_entry.cpp", "src/verification_retail.cpp", "src/verification_core.cpp")
+    }
+    else {
+        $sourceFile = Join-Path $projectRoot "src\$name.cpp"
+    }
+    if (-not (Test-Path $sourceFile)) {
+        throw "Source file not found for contract '$name': $sourceFile"
     }
 
     $distDir = Join-Path $projectRoot "dist\$name"

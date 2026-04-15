@@ -1,21 +1,21 @@
 # deNotary Retail Verification Deploy
 
-This runbook covers deployment of the `verification_retail` contract only.
+This runbook covers deployment of the `verifretail` contract only.
 
 Repository boundary:
 
-- `C:\projects\verification-contract` owns `verification` and `verification_retail`
+- `C:\projects\verification-contract` owns `verifent` and `verifretail`
 - `C:\projects\deNotary` owns the off-chain backend
 - `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
 ## Purpose
 
-`verification_retail` is the wallet-first retail contract that supports atomic on-chain payment plus submit flow.
+`verifretail` is the wallet-first retail contract that supports atomic on-chain payment plus submit flow.
 
 Retail payment model:
 
-- `token::transfer -> verification_retail`
-- `verification_retail::submit` or `submitroot`
+- `token::transfer -> verifretail`
+- `verifretail::submit` or `submitroot`
 - exact payment only
 - no deposit model
 
@@ -27,8 +27,8 @@ Retail payment model:
 
 Expected artifacts:
 
-- `dist/verification_retail/verification_retail.wasm`
-- `dist/verification_retail/verification_retail.abi`
+- `dist/verifretail/verifretail.wasm`
+- `dist/verifretail/verifretail.abi`
 
 ## deNotary Deploy
 

@@ -7,6 +7,11 @@ Split the current verification product surface into two separate smart contracts
 - `verification_enterprise`
 - `verification_retail`
 
+Chosen final deployment names:
+
+- enterprise contract/account: `verifent`
+- retail contract/account: `verifretail`
+
 The objective is to support two different commercial and trust models without polluting one contract with the other model's requirements.
 
 ## Product Positioning

@@ -1,16 +1,16 @@
 # Verification Contract Core
 
-This document describes the canonical on-chain scope of the `verification` contract.
+This document describes the canonical on-chain scope of the `verifent` contract.
 
 ## Repository Boundary
 
-- `C:\projects\verification-contract` owns the `verification` smart contract
+- `C:\projects\verification-contract` owns the `verifent` and `verifretail` smart contracts
 - `C:\projects\deNotary` owns the off-chain backend
 - `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
 ## Purpose
 
-The `verification` contract anchors hashes and batch roots on-chain under explicit governance rules.
+The `verifent` contract anchors hashes and batch roots on-chain under explicit governance rules.
 
 It is responsible for:
 
@@ -123,7 +123,6 @@ Fields:
 
 - `next_commitment_id`
 - `next_batch_id`
-- `next_proof_id`
 
 ## Core Actions
 
@@ -153,14 +152,6 @@ Fields:
 ### Treasury
 
 - `withdraw`
-
-### Disabled Legacy Stubs
-
-The following actions remain only as disabled compatibility stubs and are not part of the active product model:
-
-- `record`
-- `setpaytoken`
-- `rmpaytoken`
 
 ## Business Status Model
 
@@ -222,10 +213,10 @@ Must satisfy:
 
 ## Deployment Assumption
 
-The contract is deployed to a clean account and does not perform in-place migration from the legacy proof-payment design.
+The contract is deployed to a clean account and does not perform in-place migration from the previous proof-payment design.
 
 That means:
 
 - the current on-chain model is `kyc + schemas + policies + commitments + batches`
-- legacy proof-payment writes are disabled
+- legacy proof-payment state and actions are removed
 - off-chain read services are external to this repository

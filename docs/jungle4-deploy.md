@@ -1,10 +1,10 @@
 # Jungle4 Verification Deploy
 
-This runbook covers deployment of the `verification` contract only on Jungle4.
+This runbook covers deployment of the `verifent` contract only on Jungle4.
 
 Repository boundary:
 
-- `C:\projects\verification-contract` owns `verification`
+- `C:\projects\verification-contract` owns `verifent`
 - `C:\projects\deNotary` owns the off-chain backend
 - `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
@@ -18,8 +18,8 @@ Repository boundary:
 - Linux / WSL host
 - `cleos`
 - `cdt-cpp`
-- imported keys for `verification`
-- deployed Jungle4 `verification` account with enough RAM/CPU/NET
+- imported keys for `verifent`
+- deployed Jungle4 `verifent` account with enough RAM/CPU/NET
 
 ## Build
 
@@ -29,8 +29,8 @@ Repository boundary:
 
 Expected artifacts:
 
-- `dist/verification/verification.wasm`
-- `dist/verification/verification.abi`
+- `dist/verifent/verifent.wasm`
+- `dist/verifent/verifent.abi`
 
 ## Deploy
 
@@ -41,30 +41,30 @@ Expected artifacts:
 Defaults:
 
 - `RPC_URL=https://jungle4.api.eosnation.io`
-- `VERIFICATION_ACCOUNT=verification`
+- `VERIFICATION_ACCOUNT=verifent`
 - `BUILD_BEFORE_DEPLOY=true`
 
 ## Manual deploy
 
 ```bash
-cleos -u https://jungle4.api.eosnation.io set contract verification ./dist/verification -p verification@active
+cleos -u https://jungle4.api.eosnation.io set contract verifent ./dist/verifent -p verifent@active
 ```
 
 ## Verify
 
 ```bash
-cleos -u https://jungle4.api.eosnation.io get table verification verification kyc
-cleos -u https://jungle4.api.eosnation.io get table verification verification schemas
-cleos -u https://jungle4.api.eosnation.io get table verification verification policies
-cleos -u https://jungle4.api.eosnation.io get table verification verification commitments
-cleos -u https://jungle4.api.eosnation.io get table verification verification batches
+cleos -u https://jungle4.api.eosnation.io get table verifent verifent kyc
+cleos -u https://jungle4.api.eosnation.io get table verifent verifent schemas
+cleos -u https://jungle4.api.eosnation.io get table verifent verifent policies
+cleos -u https://jungle4.api.eosnation.io get table verifent verifent commitments
+cleos -u https://jungle4.api.eosnation.io get table verifent verifent batches
 ```
 
 ## Smoke
 
 ```bash
-export OWNER_ACCOUNT=verification
-export VERIFICATION_ACCOUNT=verification
+export OWNER_ACCOUNT=verifent
+export VERIFICATION_ACCOUNT=verifent
 export SUBMITTER_ACCOUNT=youruser
 ./scripts/smoke-test-jungle4.sh
 ```

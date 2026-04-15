@@ -20,7 +20,7 @@
 using namespace eosio;
 using std::string;
 
-class [[eosio::contract("verification")]] verification_enterprise : public contract {
+class [[eosio::contract("verifent")]] verification_enterprise : public contract {
 public:
     using contract::contract;
 
@@ -112,32 +112,12 @@ public:
     void closebatch(uint64_t id);
 
     [[eosio::action]]
-    void record(
-        const name& submitter,
-        const checksum256& object_hash,
-        const string& canonicalization_profile,
-        const string& client_reference
-    );
-
-    [[eosio::action]]
-    void setpaytoken(
-        const name& token_contract,
-        const asset& price
-    );
-
-    [[eosio::action]]
-    void rmpaytoken(const name& token_contract, const symbol& token_symbol);
-
-    [[eosio::action]]
     void withdraw(
         const name& token_contract,
         const name& to,
         const asset& quantity,
         const string& memo
     );
-
-    [[eosio::on_notify("*::transfer")]]
-    void ontransfer(const name& from, const name& to, const asset& quantity, const string& memo);
 
 private:
     using kyc_row = verification_tables::kyc_row;
@@ -152,29 +132,14 @@ private:
     using batch_table = verification_tables::batch_table;
     using counter_state = verification_tables::counter_state;
     using counter_singleton = verification_tables::counter_singleton;
-    using proof_row = verification_tables::proof_row;
-    using proof_table = verification_tables::proof_table;
-    using payment_token = verification_tables::payment_token;
-    using payment_token_table = verification_tables::payment_token_table;
-
-    uint128_t make_payment_key(const name& token_contract, const symbol_code& token_symbol) const;
-    payment_token get_payment_token(const name& token_contract, const symbol_code& token_symbol) const;
     kyc_row require_kyc_record(const name& account) const;
     schema_row require_schema(uint64_t id) const;
     policy_row require_policy(uint64_t id) const;
     uint64_t next_batch_id();
     uint64_t next_commitment_id();
-    asset resolve_price(const name& token_contract, const symbol& token_symbol) const;
     void validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const;
     void validate_batch_is_open(const batch_row& batch) const;
     void validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const;
     void validate_commitment_can_be_successor(const commitment_row& current, const commitment_row& successor) const;
     void validate_commitment_is_active(const commitment_row& commitment) const;
-    void validate_new_request(const name& submitter, const string& client_reference) const;
-    void store_proof(
-        const name& submitter,
-        const checksum256& object_hash,
-        const string& canonicalization_profile,
-        const string& client_reference
-    );
 };

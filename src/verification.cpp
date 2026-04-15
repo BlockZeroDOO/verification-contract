@@ -14,14 +14,10 @@ extern "C" {
                     (setpolicy)(enablezk)(disablezk)
                     (submit)(supersede)(revokecmmt)(expirecmmt)
                     (submitroot)(linkmanifest)(closebatch)
-                    (record)(setpaytoken)(rmpaytoken)(withdraw)
+                    (withdraw)
                 )
             }
             return;
-        }
-
-        if (action == "transfer"_n.value) {
-            eosio::execute_action(name(receiver), name(code), &verification_enterprise::ontransfer);
         }
     }
 }

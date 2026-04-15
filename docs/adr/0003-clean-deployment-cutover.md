@@ -2,17 +2,17 @@
 
 ## Status
 
-Accepted for MVP planning.
+Accepted.
 
 ## Context
 
-В текущем репозитории уже существует контракт `verification` со старой моделью:
+The earlier contract lineage included a legacy proof-oriented payment model with:
 
-- таблица `proofs`
-- action `record(...)`
-- paid submit path через `ontransfer`
+- a `proofs` table
+- a `record(...)` action
+- a transfer-triggered paid submit path
 
-Однако целевая модель DeNotary L1 MVP существенно шире и требует новые реестры:
+The target DeNotary L1 model for the current contract family is different and is centered on:
 
 - `kyc`
 - `schemas`
@@ -20,47 +20,48 @@ Accepted for MVP planning.
 - `commitments`
 - `batches`
 
-Есть два варианта:
+At the time of the redesign there were two options:
 
-1. проектировать миграцию старых таблиц и compatibility layer
-2. деплоить целевой контракт на новые аккаунты как fresh deployment
+1. design a compatibility and migration layer from the old proof model
+2. deploy the new model to fresh contract accounts and avoid legacy migration entirely
 
-Пользовательский контекст для этого проекта позволяет второй вариант.
+The project context allowed the second option.
 
 ## Decision
 
-Для MVP принимается fresh deployment модель:
+For the current product line we use a fresh-deployment model:
 
-- контракт DeNotary L1 деплоится на чистый аккаунт
-- миграция `proofs` в `commitments` не проектируется
-- совместимость с legacy action `record(...)` не требуется
-- таблицы и actions называются по целевой модели, а не по legacy shape
+- new contract surfaces are deployed to clean accounts
+- no migration from `proofs` to `commitments` is designed
+- no compatibility path for the old proof-payment actions is required
+- the contract surface follows the target model directly instead of preserving legacy shapes
 
 ## Consequences
 
-Плюсы:
+Benefits:
 
-- можно проектировать чистую domain model без compatibility baggage
-- упрощается stage 1 и stage 2
-- снижается риск сохранить неудачные формы legacy API только ради совместимости
+- cleaner domain model
+- lower implementation risk
+- no compatibility baggage in the enterprise surface
+- easier split between enterprise and retail products
 
-Минусы:
+Costs:
 
-- старые deploy/runbook документы нужно пересмотреть под новую модель
-- legacy flows нельзя считать поддержанными автоматически
+- older deploy and runbook docs must be updated
+- previous proof-payment flows are not preserved
 
-## Rejected alternatives
+## Rejected Alternatives
 
-### Alternative 1. Миграция legacy proof rows
+### Alternative 1. Migrate legacy proof rows
 
-Отклонено, потому что:
+Rejected because:
 
-- не нужна при fresh deployment
-- создает лишнюю сложность до появления реального migration use case
+- there was no active migration need for the target rollout
+- it would add complexity before there was a real production use case
 
-### Alternative 2. Сохранять `record(...)` как compatibility action
+### Alternative 2. Keep `record(...)` as a compatibility action
 
-Отклонено, потому что:
+Rejected because:
 
-- legacy action не знает о `schema_id`, `policy_id`, KYC и batch model
-- compatibility path будет искажать целевой API контракта
+- it does not match the target schema/policy/KYC/batch model
+- it would distort the new contract API for the sake of backward compatibility

@@ -7,7 +7,7 @@ project_root="$(cd "${script_dir}/.." && pwd)"
 
 RPC_URL="${RPC_URL:-https://history.denotary.io}"
 DENOTARY_CHAIN_ID="${DENOTARY_CHAIN_ID:-9714ab662f0899c3ac4c5a02220f3d7ab61aacae311974239cc75f22c999cc48}"
-VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
+VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verifent}"
 BUILD_BEFORE_DEPLOY="${BUILD_BEFORE_DEPLOY:-true}"
 
 require_command() {
@@ -29,14 +29,6 @@ require_artifact() {
 
     if [[ ! -f "${dist_dir}/${contract_name}.abi" ]]; then
         echo "Missing artifact: ${dist_dir}/${contract_name}.abi" >&2
-        exit 1
-    fi
-}
-
-require_account_name_constraints() {
-    if [[ "${VERIFICATION_ACCOUNT}" != "verification" ]]; then
-        echo "This codebase expects the verification contract account to be exactly 'verification'." >&2
-        echo "Deploy to 'verification' or patch the hardcoded contract name first." >&2
         exit 1
     fi
 }
@@ -83,20 +75,19 @@ add_code_permission() {
 }
 
 require_command cleos
-require_account_name_constraints
 check_chain
 
 if [[ "${BUILD_BEFORE_DEPLOY}" == "true" ]]; then
     echo "[deploy-denotary] Building contract artifacts"
-    bash "${project_root}/scripts/build-testnet.sh" verification
+    bash "${project_root}/scripts/build-testnet.sh" verifent
 fi
 
-require_artifact verification
+require_artifact verifent
 
 echo "[deploy-denotary] Verifying chain accounts"
 require_chain_account "${VERIFICATION_ACCOUNT}"
 
-deploy_contract "${VERIFICATION_ACCOUNT}" verification
+deploy_contract "${VERIFICATION_ACCOUNT}" verifent
 add_code_permission "${VERIFICATION_ACCOUNT}"
 
 cat <<EOF
@@ -105,10 +96,10 @@ deNotary deploy completed.
 
 RPC URL: ${RPC_URL}
 chain id: ${DENOTARY_CHAIN_ID}
-verification account: ${VERIFICATION_ACCOUNT}
+enterprise account: ${VERIFICATION_ACCOUNT}
 
 Next steps:
-  - Configure verification KYC, schemas, and policies for your target flows.
+  - Configure enterprise KYC, schemas, and policies for your target flows.
   - If you need the DFS contract, deploy it from C:\projects\decentralized_storage\contracts\dfs
   - Verify tables with cleos get table commands from README.md
 

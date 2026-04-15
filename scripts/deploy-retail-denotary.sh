@@ -27,8 +27,8 @@ fi
 echo "[deploy-retail-denotary] Verifying retail chain account"
 cleos -u "${RPC_URL}" get account "${RETAIL_ACCOUNT}" >/dev/null
 
-echo "[deploy-retail-denotary] Deploying verification_retail to ${RETAIL_ACCOUNT}"
-cleos -u "${RPC_URL}" set contract "${RETAIL_ACCOUNT}" "${PROJECT_ROOT}/dist/verification_retail" -p "${RETAIL_ACCOUNT}@active"
+echo "[deploy-retail-denotary] Deploying verifretail to ${RETAIL_ACCOUNT}"
+cleos -u "${RPC_URL}" set contract "${RETAIL_ACCOUNT}" "${PROJECT_ROOT}/dist/verifretail" -p "${RETAIL_ACCOUNT}@active"
 
 echo
 echo "deNotary retail deploy completed."

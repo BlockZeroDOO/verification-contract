@@ -18,20 +18,20 @@ Scripts:
 
 ## Prerequisites
 
-- deployed `verification` contract
+- deployed `verifent` contract
 - `cleos`
 - `jq`
 - imported keys for:
   - contract owner account
   - submitter account
 
-## Required env vars for `verification`
+## Required env vars for `verifent`
 
 ```bash
 export RPC_URL=https://your-rpc
 export READ_RPC_URL=${RPC_URL}
-export VERIFICATION_ACCOUNT=verification
-export OWNER_ACCOUNT=verification
+export VERIFICATION_ACCOUNT=verifent
+export OWNER_ACCOUNT=verifent
 export SUBMITTER_ACCOUNT=someuser
 ```
 
@@ -73,8 +73,7 @@ Legacy compatibility wrapper:
 ./scripts/smoke-test.sh
 ```
 
-It now delegates to `smoke-test-onchain.sh`, because the legacy proof-payment path in
-`verification` is intentionally disabled.
+It now delegates directly to `smoke-test-onchain.sh`.
 
 Retail smoke:
 
@@ -82,7 +81,7 @@ Retail smoke:
 ./scripts/smoke-test-retail.sh
 ```
 
-## What the verification smoke validates
+## What the enterprise smoke validates
 
 - `issuekyc`
 - `renewkyc`
@@ -91,7 +90,6 @@ Retail smoke:
 - `submit`
 - duplicate single request rejection
 - zero `object_hash` rejection
-- disabled legacy `record` and `setpaytoken` actions
 - `supersede` with explicit `successor_id`
 - `revokecmmt`
 - `expirecmmt`

@@ -591,7 +591,7 @@ void verification_retail::ontransfer(const name& from, const name& to, const ass
 }
 
 uint128_t verification_retail::make_payment_key(const name& token_contract, const symbol_code& token_symbol) const {
-    return verification_core::make_payment_key(token_contract, token_symbol);
+    return (static_cast<uint128_t>(token_contract.value) << 64) | token_symbol.raw();
 }
 
 verification_retail::kyc_row verification_retail::require_kyc_record(const name& account) const {
@@ -635,25 +635,6 @@ void verification_retail::validate_commitment_can_be_successor(
 
 void verification_retail::validate_commitment_is_active(const commitment_row& commitment) const {
     verification_core::validate_commitment_is_active(commitment);
-}
-
-void verification_retail::validate_new_request(const name& submitter, const string& client_reference) const {
-    verification_core::validate_new_request(get_self(), submitter, client_reference);
-}
-
-void verification_retail::store_proof(
-    const name& submitter,
-    const checksum256& object_hash,
-    const string& canonicalization_profile,
-    const string& client_reference
-) {
-    verification_core::store_proof(
-        get_self(),
-        submitter,
-        object_hash,
-        canonicalization_profile,
-        client_reference
-    );
 }
 
 verification_retail::accepted_token_row verification_retail::require_accepted_token(
@@ -782,5 +763,3 @@ void verification_retail::consume_receipt(uint64_t receipt_id) {
         row.consumed_at = time_point_sec(current_time_point());
     });
 }
-
-

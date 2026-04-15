@@ -21,7 +21,7 @@
 using namespace eosio;
 using std::string;
 
-class [[eosio::contract("verification_retail")]] verification_retail : public contract {
+class [[eosio::contract("verifretail")]] verification_retail : public contract {
 public:
     using contract::contract;
 
@@ -145,8 +145,6 @@ private:
     using batch_table = verification_tables::batch_table;
     using counter_state = verification_tables::counter_state;
     using counter_singleton = verification_tables::counter_singleton;
-    using proof_row = verification_tables::proof_row;
-    using proof_table = verification_tables::proof_table;
     using accepted_token_row = verification_retail_tables::accepted_token_row;
     using accepted_token_table = verification_retail_tables::accepted_token_table;
     using tariff_row = verification_retail_tables::tariff_row;
@@ -170,13 +168,6 @@ private:
     void validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const;
     void validate_commitment_can_be_successor(const commitment_row& current, const commitment_row& successor) const;
     void validate_commitment_is_active(const commitment_row& commitment) const;
-    void validate_new_request(const name& submitter, const string& client_reference) const;
-    void store_proof(
-        const name& submitter,
-        const checksum256& object_hash,
-        const string& canonicalization_profile,
-        const string& client_reference
-    );
     accepted_token_row require_accepted_token(const name& token_contract, const symbol_code& token_symbol) const;
     tariff_row require_tariff(uint8_t mode, const name& token_contract, const symbol& token_symbol) const;
     payment_receipt_row require_pending_receipt(
@@ -190,4 +181,3 @@ private:
     std::tuple<uint8_t, name, checksum256> parse_payment_memo(const string& memo) const;
     void consume_receipt(uint64_t receipt_id);
 };
-

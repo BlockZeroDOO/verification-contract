@@ -4,6 +4,11 @@
 
 This document translates the enterprise/retail split plan into a concrete repository-level implementation roadmap.
 
+Final deployment targets:
+
+- enterprise contract/account: `verifent`
+- retail contract/account: `verifretail`
+
 It focuses on:
 
 - target file layout

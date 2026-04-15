@@ -27,8 +27,8 @@ fi
 echo "[deploy-retail-jungle4] Verifying retail chain account"
 cleos -u "${RPC_URL}" get account "${RETAIL_ACCOUNT}" >/dev/null
 
-echo "[deploy-retail-jungle4] Deploying verification_retail to ${RETAIL_ACCOUNT}"
-cleos -u "${RPC_URL}" set contract "${RETAIL_ACCOUNT}" "${PROJECT_ROOT}/dist/verification_retail" -p "${RETAIL_ACCOUNT}@active"
+echo "[deploy-retail-jungle4] Deploying verifretail to ${RETAIL_ACCOUNT}"
+cleos -u "${RPC_URL}" set contract "${RETAIL_ACCOUNT}" "${PROJECT_ROOT}/dist/verifretail" -p "${RETAIL_ACCOUNT}@active"
 
 echo
 echo "Jungle4 retail deploy completed."

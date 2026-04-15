@@ -1,26 +1,6 @@
 #include <verification_enterprise.hpp>
 
 namespace {
-struct token_stat_row {
-    asset supply;
-    asset max_supply;
-    name issuer;
-
-    uint64_t primary_key() const { return supply.symbol.code().raw(); }
-};
-
-using token_stat_table = eosio::multi_index<"stat"_n, token_stat_row>;
-
-void validate_token_contract_stat(const eosio::name& token_contract, const eosio::symbol& token_symbol) {
-    token_stat_table token_stats(token_contract, token_symbol.code().raw());
-    auto token_stat = token_stats.find(token_symbol.code().raw());
-    eosio::check(token_stat != token_stats.end(), "token symbol is not available in token contract stat table");
-    eosio::check(
-        token_stat->supply.symbol == token_symbol,
-        "token symbol precision does not match token contract stat"
-    );
-}
-
 bool is_zero_checksum(const eosio::checksum256& value) {
     return verification_validators::is_zero_checksum(value);
 }
@@ -435,34 +415,6 @@ void verification_enterprise::closebatch(uint64_t id) {
     });
 }
 
-void verification_enterprise::record(
-    const name& submitter,
-    const checksum256& object_hash,
-    const string& canonicalization_profile,
-    const string& client_reference
-) {
-    (void)submitter;
-    (void)object_hash;
-    (void)canonicalization_profile;
-    (void)client_reference;
-    check(false, "legacy proof flow is disabled");
-}
-
-void verification_enterprise::setpaytoken(
-    const name& token_contract,
-    const asset& price
-) {
-    (void)token_contract;
-    (void)price;
-    check(false, "legacy proof payment configuration is disabled");
-}
-
-void verification_enterprise::rmpaytoken(const name& token_contract, const symbol& token_symbol) {
-    (void)token_contract;
-    (void)token_symbol;
-    check(false, "legacy proof payment configuration is disabled");
-}
-
 void verification_enterprise::withdraw(
     const name& token_contract,
     const name& to,
@@ -484,26 +436,6 @@ void verification_enterprise::withdraw(
     ).send();
 }
 
-void verification_enterprise::ontransfer(const name& from, const name& to, const asset& quantity, const string& memo) {
-    if (to != get_self() || from == get_self()) {
-        return;
-    }
-    (void)quantity;
-    (void)memo;
-    check(false, "legacy proof payments are disabled");
-}
-
-uint128_t verification_enterprise::make_payment_key(const name& token_contract, const symbol_code& token_symbol) const {
-    return verification_core::make_payment_key(token_contract, token_symbol);
-}
-
-verification_enterprise::payment_token verification_enterprise::get_payment_token(
-    const name& token_contract,
-    const symbol_code& token_symbol
-) const {
-    return verification_core::get_payment_token(get_self(), token_contract, token_symbol);
-}
-
 verification_enterprise::kyc_row verification_enterprise::require_kyc_record(const name& account) const {
     return verification_core::require_kyc_record(get_self(), account);
 }
@@ -522,10 +454,6 @@ uint64_t verification_enterprise::next_batch_id() {
 
 uint64_t verification_enterprise::next_commitment_id() {
     return verification_core::next_commitment_id(get_self());
-}
-
-asset verification_enterprise::resolve_price(const name& token_contract, const symbol& token_symbol) const {
-    return verification_core::resolve_price(get_self(), token_contract, token_symbol);
 }
 
 void verification_enterprise::validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const {
@@ -550,23 +478,3 @@ void verification_enterprise::validate_commitment_can_be_successor(
 void verification_enterprise::validate_commitment_is_active(const commitment_row& commitment) const {
     verification_core::validate_commitment_is_active(commitment);
 }
-
-void verification_enterprise::validate_new_request(const name& submitter, const string& client_reference) const {
-    verification_core::validate_new_request(get_self(), submitter, client_reference);
-}
-
-void verification_enterprise::store_proof(
-    const name& submitter,
-    const checksum256& object_hash,
-    const string& canonicalization_profile,
-    const string& client_reference
-) {
-    verification_core::store_proof(
-        get_self(),
-        submitter,
-        object_hash,
-        canonicalization_profile,
-        client_reference
-    );
-}
-

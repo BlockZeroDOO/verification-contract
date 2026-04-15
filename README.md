@@ -2,18 +2,18 @@
 
 This repository is the canonical home of the on-chain verification contracts:
 
-- `verification`
-- `verification_retail`
+- `verifent`
+- `verifretail`
 
 Repository boundary:
 
-- this repository owns the `verification` contract, its Ricardian files, and contract-facing runbooks
+- this repository owns the `verifent` and `verifretail` contracts, their Ricardian files, and contract-facing runbooks
 - `deNotary` owns the off-chain backend and operational runtime around the contract
 - `decentralized_storage\contracts\dfs` owns the DFS contract
 
 ## Scope
 
-The enterprise `verification` contract covers:
+The enterprise `verifent` contract covers:
 
 - KYC access control
 - schema registry
@@ -21,9 +21,9 @@ The enterprise `verification` contract covers:
 - single-record anchoring
 - batch anchoring
 - commitment and batch lifecycle tracking
-- explicit disablement of the legacy paid proof path
+- clean enterprise-only anchoring surface with no legacy proof-payment path
 
-The retail `verification_retail` contract covers:
+The retail `verifretail` contract covers:
 
 - the same verification core model
 - wallet-first `atomic pay + submit`
@@ -38,7 +38,6 @@ The retail `verification_retail` contract covers:
 - `commitments`
 - `batches`
 - `counters`
-- legacy disabled tables `proofs` and `paytokens`
 
 ## Core actions
 
@@ -64,12 +63,6 @@ Anchoring core:
 - `submitroot(...)`
 - `linkmanifest(...)`
 - `closebatch(...)`
-
-Legacy compatibility actions retained only as disabled stubs:
-
-- `record(...)`
-- `setpaytoken(...)`
-- `rmpaytoken(...)`
 
 Operational action:
 
@@ -97,8 +90,10 @@ PowerShell:
 
 Expected artifacts:
 
-- `dist/verification/verification.wasm`
-- `dist/verification/verification.abi`
+- `dist/verifent/verifent.wasm`
+- `dist/verifent/verifent.abi`
+- `dist/verifretail/verifretail.wasm`
+- `dist/verifretail/verifretail.abi`
 
 ## Deploy
 
@@ -135,6 +130,7 @@ Jungle4:
 
 ## Contract docs
 
+- [docs/contract-reference.md](/c:/projects/verification-contract/docs/contract-reference.md:1)
 - [docs/denotary-l1-contract-core.md](/c:/projects/verification-contract/docs/denotary-l1-contract-core.md:1)
 - [docs/adr/0002-batch-proof-storage.md](/c:/projects/verification-contract/docs/adr/0002-batch-proof-storage.md:1)
 - [docs/adr/0003-clean-deployment-cutover.md](/c:/projects/verification-contract/docs/adr/0003-clean-deployment-cutover.md:1)

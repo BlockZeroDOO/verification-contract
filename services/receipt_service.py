@@ -29,6 +29,9 @@ def build_single_receipt(payload: Dict[str, Any]) -> Dict[str, Any]:
         "block_num": payload["block_num"],
         "finality_flag": True,
         "finalized_at": payload["finalized_at"],
+        "inclusion_verified": payload.get("inclusion_verified", False),
+        "inclusion_verified_at": payload.get("inclusion_verified_at"),
+        "verified_action": payload.get("verified_action"),
         "chain_state": payload.get("chain_state", {}),
     }
 
@@ -50,6 +53,9 @@ def build_batch_receipt(payload: Dict[str, Any]) -> Dict[str, Any]:
         "block_num": payload["block_num"],
         "finality_flag": True,
         "finalized_at": payload["finalized_at"],
+        "inclusion_verified": payload.get("inclusion_verified", False),
+        "inclusion_verified_at": payload.get("inclusion_verified_at"),
+        "verified_action": payload.get("verified_action"),
         "chain_state": payload.get("chain_state", {}),
     }
 
@@ -75,10 +81,11 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
                 self.send_error(HTTPStatus.NOT_FOUND, "Request not found")
                 return
 
-            if payload.get("status") != "finalized":
+            if payload.get("status") != "finalized" or not payload.get("inclusion_verified", False):
                 response = {
                     "request_id": request_id,
                     "status": payload.get("status"),
+                    "inclusion_verified": payload.get("inclusion_verified", False),
                 }
                 if payload.get("status") == "failed":
                     response.update(
@@ -88,8 +95,12 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
                             "failure_reason": payload.get("failure_reason"),
                         }
                     )
+                elif payload.get("status") == "finalized":
+                    response["error"] = "receipt is not available before inclusion verification"
+                    response["inclusion_verification_error"] = payload.get("inclusion_verification_error")
                 else:
                     response["error"] = "receipt is not available before finality"
+                    response["inclusion_verification_error"] = payload.get("inclusion_verification_error")
 
                 self.write_json(HTTPStatus.CONFLICT, response)
                 return

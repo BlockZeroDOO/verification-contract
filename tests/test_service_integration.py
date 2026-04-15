@@ -56,6 +56,31 @@ def request_json(
 class MockChainHandler(BaseHTTPRequestHandler):
     server_version = "MockChain/0.1"
 
+    def do_GET(self) -> None:
+        if not self.path.startswith("/v2/history/get_transaction"):
+            self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+            return
+
+        request_id = self.path.split("id=", 1)[1].split("&", 1)[0] if "id=" in self.path else ""
+        payload = self.server.transactions.get(request_id)
+        if payload is None:
+            body = json.dumps(
+                {
+                    "query_time_ms": 0.1,
+                    "executed": False,
+                    "trx_id": request_id,
+                    "lib": self.server.chain_state["last_irreversible_block_num"],
+                }
+            ).encode("utf-8")
+        else:
+            body = json.dumps(payload).encode("utf-8")
+
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_POST(self) -> None:
         if self.path != "/v1/chain/get_info":
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
@@ -79,6 +104,7 @@ class MockChainServer(ThreadingHTTPServer):
             "head_block_num": 100,
             "last_irreversible_block_num": 90,
         }
+        self.transactions: Dict[str, Dict[str, Any]] = {}
 
 
 class ServiceIntegrationTest(unittest.TestCase):
@@ -200,6 +226,14 @@ class ServiceIntegrationTest(unittest.TestCase):
     def _watcher_headers(self) -> Dict[str, str]:
         return {"X-DeNotary-Token": self.WATCHER_AUTH_TOKEN}
 
+    def _mock_transaction(self, tx_id: str, block_num: int, actions: list[Dict[str, Any]]) -> None:
+        self.mock_chain_server.transactions[tx_id] = {
+            "trx_id": tx_id,
+            "executed": True,
+            "block_num": block_num,
+            "actions": actions,
+        }
+
     def test_ingress_redacts_debug_material_by_default(self) -> None:
         status, response = request_json(
             f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
@@ -266,6 +300,25 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(anchored["anchor"]["commitment_id"], 42)
 
+        self._mock_transaction(
+            tx_id,
+            block_num,
+            [
+                {
+                    "block_num": block_num,
+                    "act": {
+                        "account": "verification",
+                        "name": "submit",
+                        "data": {
+                            "submitter": "alice",
+                            "object_hash": prepared["object_hash"],
+                            "external_ref": prepared["external_ref_hash"],
+                        },
+                    },
+                }
+            ],
+        )
+
         status, included = request_json(
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/included",
             method="POST",
@@ -274,6 +327,7 @@ class ServiceIntegrationTest(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertEqual(included["status"], "included")
+        self.assertTrue(included["inclusion_verified"])
 
         self.mock_chain_server.chain_state = {
             "head_block_num": 121,
@@ -307,6 +361,7 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(receipt["request_id"], request_id)
         self.assertTrue(receipt["finality_flag"])
+        self.assertTrue(receipt["inclusion_verified"])
 
         status, audit_chain = request_json(
             f"http://127.0.0.1:{self.audit_port}/v1/audit/by-commitment/42",
@@ -314,6 +369,7 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(audit_chain["record"]["request_id"], request_id)
         self.assertEqual(audit_chain["record"]["tx_id"], tx_id)
+        self.assertTrue(audit_chain["record"]["inclusion_verified"])
         self.assertEqual(audit_chain["receipt"]["request_id"], request_id)
         self.assertEqual(audit_chain["proof_chain"][-1]["stage"], "block_finalized")
 
@@ -361,6 +417,23 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(anchored["anchor"]["batch_id"], 7)
 
+        self._mock_transaction(
+            tx_id,
+            block_num,
+            [
+                {
+                    "block_num": block_num,
+                    "act": {
+                        "account": "verification",
+                        "name": "closebatch",
+                        "data": {
+                            "id": 7,
+                        },
+                    },
+                }
+            ],
+        )
+
         status, included = request_json(
             f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/included",
             method="POST",
@@ -369,6 +442,7 @@ class ServiceIntegrationTest(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertEqual(included["status"], "included")
+        self.assertTrue(included["inclusion_verified"])
 
         self.mock_chain_server.chain_state = {
             "head_block_num": 131,
@@ -389,6 +463,7 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(audit_chain["record"]["request_id"], request_id)
         self.assertEqual(audit_chain["record"]["batch_id"], 7)
+        self.assertTrue(audit_chain["record"]["inclusion_verified"])
         self.assertEqual(audit_chain["receipt"]["manifest_hash"], prepared["manifest_hash"])
 
     def test_watcher_rejects_conflicting_reregistration(self) -> None:
@@ -429,6 +504,34 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("trace_id", response["error"])
 
+    def test_watcher_rejects_request_id_mismatch(self) -> None:
+        status, prepared = request_json(
+            f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
+            method="POST",
+            payload=self._single_prepare_payload("single-request-id-mismatch"),
+        )
+        self.assertEqual(status, 200)
+
+        status, response = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/register",
+            method="POST",
+            payload={
+                "request_id": "f" * 64,
+                "trace_id": prepared["trace_id"],
+                "mode": "single",
+                "submitter": "alice",
+                "contract": "verification",
+                "anchor": {
+                    "object_hash": prepared["object_hash"],
+                    "external_ref_hash": prepared["external_ref_hash"],
+                },
+                "rpc_url": self.mock_chain_url,
+            },
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("request_id", response["error"])
+
     def test_watcher_rejects_unauthorized_mutation(self) -> None:
         status, prepared = request_json(
             f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
@@ -455,6 +558,64 @@ class ServiceIntegrationTest(unittest.TestCase):
         )
         self.assertEqual(status, 401)
         self.assertIn("auth token", response["error"])
+
+    def test_watcher_rejects_mismatched_indexed_transaction(self) -> None:
+        status, prepared = request_json(
+            f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
+            method="POST",
+            payload=self._single_prepare_payload("single-mismatch-tx"),
+        )
+        self.assertEqual(status, 200)
+
+        request_id = prepared["request_id"]
+        tx_id = "3" * 64
+        block_num = 140
+        self._mock_transaction(
+            tx_id,
+            block_num,
+            [
+                {
+                    "block_num": block_num,
+                    "act": {
+                        "account": "verification",
+                        "name": "submit",
+                        "data": {
+                            "submitter": "alice",
+                            "object_hash": "0" * 64,
+                            "external_ref": prepared["external_ref_hash"],
+                        },
+                    },
+                }
+            ],
+        )
+
+        status, _ = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/register",
+            method="POST",
+            payload={
+                "request_id": request_id,
+                "trace_id": prepared["trace_id"],
+                "mode": "single",
+                "submitter": "alice",
+                "contract": "verification",
+                "anchor": {
+                    "object_hash": prepared["object_hash"],
+                    "external_ref_hash": prepared["external_ref_hash"],
+                },
+                "rpc_url": self.mock_chain_url,
+            },
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+
+        status, response = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/included",
+            method="POST",
+            payload={"tx_id": tx_id, "block_num": block_num},
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("indexed transaction", response["error"])
 
     def test_failed_request_blocks_receipt_and_is_visible_in_audit(self) -> None:
         status, prepared = request_json(

@@ -21,7 +21,7 @@ def select_requests(store: FinalityStore, predicate) -> List[Dict[str, Any]]:
 
 
 def maybe_build_receipt(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    if payload.get("status") != "finalized":
+    if payload.get("status") != "finalized" or not payload.get("inclusion_verified", False):
         return None
 
     mode = payload.get("mode")
@@ -60,11 +60,24 @@ def build_proof_chain(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
             }
         )
 
+    if payload.get("tx_id"):
+        chain.append(
+            {
+                "stage": "transaction_verified",
+                "status": "completed" if payload.get("inclusion_verified") else "pending",
+                "timestamp": payload.get("inclusion_verified_at"),
+                "details": {
+                    "verified_action": payload.get("verified_action"),
+                    "verification_error": payload.get("inclusion_verification_error"),
+                },
+            }
+        )
+
     if payload.get("status") == "finalized":
         chain.append(
             {
                 "stage": "block_finalized",
-                "status": "completed",
+                "status": "completed" if payload.get("inclusion_verified") else "pending",
                 "timestamp": payload.get("finalized_at"),
                 "details": payload.get("chain_state", {}),
             }
@@ -102,6 +115,10 @@ def build_audit_record(payload: Dict[str, Any]) -> Dict[str, Any]:
         "failed_at": payload.get("failed_at"),
         "failure_reason": payload.get("failure_reason"),
         "failure_details": payload.get("failure_details"),
+        "inclusion_verified": payload.get("inclusion_verified", False),
+        "inclusion_verified_at": payload.get("inclusion_verified_at"),
+        "inclusion_verification_error": payload.get("inclusion_verification_error"),
+        "verified_action": payload.get("verified_action"),
         "anchor": anchor,
         "chain_state": payload.get("chain_state", {}),
     }

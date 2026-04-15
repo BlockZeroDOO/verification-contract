@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import hmac
 import json
 import re
 import threading
-import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, Optional
 
 from finality_store import FinalityStore
 
@@ -19,6 +20,10 @@ MAX_REQUEST_BODY_BYTES = 256 * 1024
 HEX_64_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 TRACE_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 ACCOUNT_NAME_RE = re.compile(r"^[a-z1-5.]{1,12}$")
+
+
+class TransactionLookupPending(Exception):
+    pass
 
 
 def iso_now() -> str:
@@ -64,53 +69,6 @@ def require_optional_reason(mapping: Dict[str, Any], field_name: str) -> Optiona
     if len(value) > 256:
         raise ValueError(f"{field_name} is too long")
     return value
-
-
-def validate_anchor_metadata(anchor: Dict[str, Any], mode: str) -> Dict[str, Any]:
-    external_ref_hash = anchor.get("external_ref_hash")
-    if external_ref_hash is not None:
-        anchor["external_ref_hash"] = require_hex_64(anchor, "external_ref_hash")
-
-    object_hash = anchor.get("object_hash")
-    if object_hash is not None:
-        if mode != "single":
-            raise ValueError("object_hash is only valid for single mode")
-        anchor["object_hash"] = require_hex_64(anchor, "object_hash")
-
-    root_hash = anchor.get("root_hash")
-    if root_hash is not None:
-        if mode != "batch":
-            raise ValueError("root_hash is only valid for batch mode")
-        anchor["root_hash"] = require_hex_64(anchor, "root_hash")
-
-    manifest_hash = anchor.get("manifest_hash")
-    if manifest_hash is not None:
-        if mode != "batch":
-            raise ValueError("manifest_hash is only valid for batch mode")
-        anchor["manifest_hash"] = require_hex_64(anchor, "manifest_hash")
-
-    leaf_count = anchor.get("leaf_count")
-    if leaf_count is not None:
-        if mode != "batch":
-            raise ValueError("leaf_count is only valid for batch mode")
-        if not isinstance(leaf_count, int) or leaf_count <= 0:
-            raise ValueError("leaf_count must be positive integer when provided")
-
-    if "commitment_id" in anchor:
-        commitment_id = require_optional_positive_int(anchor, "commitment_id")
-        if mode != "single":
-            raise ValueError("commitment_id is only valid for single mode")
-        if commitment_id is not None:
-            anchor["commitment_id"] = commitment_id
-
-    if "batch_id" in anchor:
-        batch_id = require_optional_positive_int(anchor, "batch_id")
-        if mode != "batch":
-            raise ValueError("batch_id is only valid for batch mode")
-        if batch_id is not None:
-            anchor["batch_id"] = batch_id
-
-    return anchor
 
 
 def require_hex_64(mapping: Dict[str, Any], field_name: str) -> str:
@@ -160,7 +118,7 @@ def get_request_auth_token(handler: BaseHTTPRequestHandler) -> str:
 def require_mutation_auth(handler: BaseHTTPRequestHandler) -> None:
     configured_token = getattr(handler.server, "auth_token", "") or ""
     if not configured_token:
-        return
+        raise PermissionError("watcher mutation endpoint requires valid auth token")
 
     presented_token = get_request_auth_token(handler)
     if not presented_token or not hmac.compare_digest(presented_token, configured_token):
@@ -178,8 +136,89 @@ def rpc_post_json(url: str, path: str, payload: Dict[str, Any]) -> Dict[str, Any
         return json.loads(response.read().decode("utf-8"))
 
 
+def rpc_get_json(url: str, path: str, query: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    query_string = ""
+    if query:
+        query_string = "?" + urllib.parse.urlencode(query)
+    request = urllib.request.Request(
+        f"{url.rstrip('/')}{path}{query_string}",
+        headers={"Accept": "application/json"},
+        method="GET",
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
 def fetch_chain_info(rpc_url: str) -> Dict[str, Any]:
     return rpc_post_json(rpc_url, "/v1/chain/get_info", {})
+
+
+def sha256_hex_text(payload: str) -> str:
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def derive_request_id(submitter: str, external_ref_hash: str, content_hash: str, mode: str) -> str:
+    return sha256_hex_text(f"{submitter}:{external_ref_hash}:{content_hash}:{mode}")
+
+
+def extract_request_content_hash(mode: str, anchor: Dict[str, Any]) -> str:
+    if mode == "single":
+        object_hash = anchor.get("object_hash")
+        if not isinstance(object_hash, str) or not HEX_64_RE.fullmatch(object_hash):
+            raise ValueError("single mode requires anchor.object_hash")
+        return object_hash.lower()
+
+    root_hash = anchor.get("root_hash")
+    if not isinstance(root_hash, str) or not HEX_64_RE.fullmatch(root_hash):
+        raise ValueError("batch mode requires anchor.root_hash")
+    return root_hash.lower()
+
+
+def validate_anchor_metadata(anchor: Dict[str, Any], mode: str) -> Dict[str, Any]:
+    external_ref_hash = anchor.get("external_ref_hash")
+    if external_ref_hash is not None:
+        anchor["external_ref_hash"] = require_hex_64(anchor, "external_ref_hash")
+
+    object_hash = anchor.get("object_hash")
+    if object_hash is not None:
+        if mode != "single":
+            raise ValueError("object_hash is only valid for single mode")
+        anchor["object_hash"] = require_hex_64(anchor, "object_hash")
+
+    root_hash = anchor.get("root_hash")
+    if root_hash is not None:
+        if mode != "batch":
+            raise ValueError("root_hash is only valid for batch mode")
+        anchor["root_hash"] = require_hex_64(anchor, "root_hash")
+
+    manifest_hash = anchor.get("manifest_hash")
+    if manifest_hash is not None:
+        if mode != "batch":
+            raise ValueError("manifest_hash is only valid for batch mode")
+        anchor["manifest_hash"] = require_hex_64(anchor, "manifest_hash")
+
+    leaf_count = anchor.get("leaf_count")
+    if leaf_count is not None:
+        if mode != "batch":
+            raise ValueError("leaf_count is only valid for batch mode")
+        if not isinstance(leaf_count, int) or leaf_count <= 0:
+            raise ValueError("leaf_count must be positive integer when provided")
+
+    if "commitment_id" in anchor:
+        commitment_id = require_optional_positive_int(anchor, "commitment_id")
+        if mode != "single":
+            raise ValueError("commitment_id is only valid for single mode")
+        if commitment_id is not None:
+            anchor["commitment_id"] = commitment_id
+
+    if "batch_id" in anchor:
+        batch_id = require_optional_positive_int(anchor, "batch_id")
+        if mode != "batch":
+            raise ValueError("batch_id is only valid for batch mode")
+        if batch_id is not None:
+            anchor["batch_id"] = batch_id
+
+    return anchor
 
 
 def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[str, Any]:
@@ -192,6 +231,11 @@ def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[
     submitter = require_account_name(body, "submitter")
     contract = require_account_name(body, "contract")
     anchor = validate_anchor_metadata(require_mapping(body, "anchor"), mode)
+    external_ref_hash = require_hex_64(anchor, "external_ref_hash")
+    content_hash = extract_request_content_hash(mode, anchor)
+    expected_request_id = derive_request_id(submitter, external_ref_hash, content_hash, mode)
+    if request_id != expected_request_id:
+        raise ValueError("request_id does not match derived canonical request id")
 
     tx_id = body.get("tx_id")
     if tx_id is not None:
@@ -230,11 +274,229 @@ def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[
         "failed_at": None,
         "failure_reason": None,
         "failure_details": None,
+        "inclusion_verified": False,
+        "inclusion_verified_at": None,
+        "inclusion_verification_error": None,
+        "verified_action": None,
         "chain_state": {
             "head_block_num": None,
             "last_irreversible_block_num": None,
         },
     }
+
+
+def extract_transaction_block_num(payload: Dict[str, Any]) -> Optional[int]:
+    candidate = payload.get("block_num")
+    if isinstance(candidate, int) and candidate > 0:
+        return candidate
+
+    traces = payload.get("actions")
+    if isinstance(traces, list):
+        for action in traces:
+            if isinstance(action, dict):
+                action_block_num = action.get("block_num")
+                if isinstance(action_block_num, int) and action_block_num > 0:
+                    return action_block_num
+    return None
+
+
+def extract_action_data(container: Dict[str, Any]) -> Dict[str, Any]:
+    data = container.get("data")
+    return data if isinstance(data, dict) else {}
+
+
+def iter_transaction_actions(payload: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+    traces = payload.get("actions")
+    if isinstance(traces, list):
+        for action in traces:
+            if not isinstance(action, dict):
+                continue
+            act = action.get("act")
+            if isinstance(act, dict):
+                yield {
+                    "account": act.get("account"),
+                    "name": act.get("name"),
+                    "data": extract_action_data(act),
+                    "block_num": action.get("block_num"),
+                }
+                continue
+
+            yield {
+                "account": action.get("account"),
+                "name": action.get("name"),
+                "data": extract_action_data(action),
+                "block_num": action.get("block_num"),
+            }
+        return
+
+    trx = payload.get("trx")
+    if not isinstance(trx, dict):
+        return
+    nested_trx = trx.get("trx")
+    if not isinstance(nested_trx, dict):
+        return
+    actions = nested_trx.get("actions")
+    if not isinstance(actions, list):
+        return
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        yield {
+            "account": action.get("account"),
+            "name": action.get("name"),
+            "data": extract_action_data(action),
+            "block_num": payload.get("block_num"),
+        }
+
+
+def fetch_transaction_details(rpc_url: str, tx_id: str, block_num: Optional[int]) -> Dict[str, Any]:
+    candidates = [
+        ("GET", "/v2/history/get_transaction", {"id": tx_id, "block_hint": block_num} if block_num else {"id": tx_id}),
+        ("POST", "/v1/history/get_transaction", {"id": tx_id, "block_num_hint": block_num} if block_num else {"id": tx_id}),
+    ]
+    pending_messages: list[str] = []
+
+    for method, path, payload in candidates:
+        try:
+            if method == "GET":
+                response = rpc_get_json(rpc_url, path, payload)
+            else:
+                response = rpc_post_json(rpc_url, path, payload)
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8")
+            if exc.code in {404, 410}:
+                pending_messages.append(body or f"{path} returned HTTP {exc.code}")
+                continue
+            raise
+
+        if isinstance(response, dict):
+            if response.get("executed") is False:
+                pending_messages.append("transaction is not yet indexed in history")
+                continue
+            if response.get("code") in {404, 410}:
+                pending_messages.append(str(response.get("message") or f"{path} returned {response['code']}"))
+                continue
+            if response.get("statusCode") in {404, 410}:
+                pending_messages.append(str(response.get("message") or f"{path} returned {response['statusCode']}"))
+                continue
+        return response
+
+    if pending_messages:
+        raise TransactionLookupPending(pending_messages[-1])
+    raise TransactionLookupPending("transaction is not yet verifiable")
+
+
+def coerce_positive_int(value: Any) -> Optional[int]:
+    if isinstance(value, int) and value > 0:
+        return value
+    if isinstance(value, str) and value.isdigit():
+        parsed = int(value)
+        if parsed > 0:
+            return parsed
+    return None
+
+
+def matches_single_action(request_payload: Dict[str, Any], action: Dict[str, Any]) -> bool:
+    if action.get("account") != request_payload.get("contract"):
+        return False
+    if action.get("name") != "submit":
+        return False
+
+    data = action.get("data", {})
+    anchor = request_payload.get("anchor", {})
+    return (
+        str(data.get("submitter")) == request_payload.get("submitter")
+        and str(data.get("object_hash", "")).lower() == anchor.get("object_hash")
+        and str(data.get("external_ref", "")).lower() == anchor.get("external_ref_hash")
+    )
+
+
+def matches_batch_action(request_payload: Dict[str, Any], action: Dict[str, Any]) -> bool:
+    if action.get("account") != request_payload.get("contract"):
+        return False
+
+    data = action.get("data", {})
+    anchor = request_payload.get("anchor", {})
+    action_name = action.get("name")
+
+    if action_name == "submitroot":
+        return (
+            str(data.get("submitter")) == request_payload.get("submitter")
+            and str(data.get("root_hash", "")).lower() == anchor.get("root_hash")
+            and str(data.get("external_ref", "")).lower() == anchor.get("external_ref_hash")
+            and coerce_positive_int(data.get("leaf_count")) == anchor.get("leaf_count")
+        )
+
+    batch_id = anchor.get("batch_id")
+    if batch_id is None:
+        return False
+
+    if action_name == "linkmanifest":
+        return (
+            coerce_positive_int(data.get("id")) == batch_id
+            and str(data.get("manifest_hash", "")).lower() == anchor.get("manifest_hash")
+        )
+
+    if action_name == "closebatch":
+        return coerce_positive_int(data.get("id")) == batch_id
+
+    return False
+
+
+def verify_inclusion(request_payload: Dict[str, Any]) -> Dict[str, Any]:
+    tx_id = request_payload.get("tx_id")
+    block_num = request_payload.get("block_num")
+    rpc_url = request_payload.get("rpc_url")
+    if not tx_id or not block_num or not rpc_url:
+        raise TransactionLookupPending("transaction metadata is incomplete")
+
+    tx_payload = fetch_transaction_details(rpc_url, tx_id, block_num)
+    actual_block_num = extract_transaction_block_num(tx_payload)
+    if actual_block_num is not None and actual_block_num != block_num:
+        raise ValueError("block_num does not match indexed transaction block")
+
+    matcher = matches_single_action if request_payload.get("mode") == "single" else matches_batch_action
+    for action in iter_transaction_actions(tx_payload):
+        if matcher(request_payload, action):
+            return {
+                "verified_at": iso_now(),
+                "verified_action": {
+                    "account": action.get("account"),
+                    "name": action.get("name"),
+                    "data": action.get("data", {}),
+                },
+            }
+
+    raise ValueError("indexed transaction does not match request anchor")
+
+
+def refresh_inclusion_verification(existing: Dict[str, Any], strict: bool = False) -> Dict[str, Any]:
+    if not existing.get("tx_id") or not existing.get("block_num"):
+        existing["inclusion_verified"] = False
+        existing["verified_action"] = None
+        return existing
+
+    try:
+        verification = verify_inclusion(existing)
+    except TransactionLookupPending as exc:
+        existing["inclusion_verified"] = False
+        existing["inclusion_verification_error"] = str(exc)
+        existing["verified_action"] = None
+        return existing
+    except ValueError:
+        existing["inclusion_verified"] = False
+        existing["verified_action"] = None
+        existing["inclusion_verification_error"] = "indexed transaction does not match request anchor"
+        if strict:
+            raise
+        return existing
+
+    existing["inclusion_verified"] = True
+    if not existing.get("inclusion_verified_at"):
+        existing["inclusion_verified_at"] = verification["verified_at"]
+    existing["inclusion_verification_error"] = None
+    existing["verified_action"] = verification["verified_action"]
+    return existing
 
 
 def update_to_included(existing: Dict[str, Any], body: Dict[str, Any]) -> Dict[str, Any]:
@@ -261,6 +523,8 @@ def update_to_included(existing: Dict[str, Any], body: Dict[str, Any]) -> Dict[s
         existing["included_at"] = iso_now()
     if existing.get("status") != "finalized":
         existing["status"] = "included"
+
+    refresh_inclusion_verification(existing, strict=True)
     existing["updated_at"] = iso_now()
     return existing
 
@@ -282,6 +546,8 @@ def update_anchor_metadata(existing: Dict[str, Any], body: Dict[str, Any]) -> Di
     anchor.update(validated_updates)
     existing["anchor"] = anchor
     existing["updated_at"] = iso_now()
+    if existing.get("tx_id") and existing.get("block_num"):
+        refresh_inclusion_verification(existing, strict=False)
     return existing
 
 
@@ -342,6 +608,8 @@ def poll_request(existing: Dict[str, Any]) -> Dict[str, Any]:
         existing["updated_at"] = iso_now()
         return existing
 
+    refresh_inclusion_verification(existing, strict=False)
+
     chain_info = fetch_chain_info(rpc_url)
     head_block_num = chain_info.get("head_block_num")
     last_irreversible_block_num = chain_info.get("last_irreversible_block_num")
@@ -352,7 +620,11 @@ def poll_request(existing: Dict[str, Any]) -> Dict[str, Any]:
     }
     existing["updated_at"] = iso_now()
 
-    if isinstance(last_irreversible_block_num, int) and last_irreversible_block_num >= block_num:
+    if (
+        existing.get("inclusion_verified")
+        and isinstance(last_irreversible_block_num, int)
+        and last_irreversible_block_num >= block_num
+    ):
         existing["status"] = "finalized"
         if not existing.get("finalized_at"):
             existing["finalized_at"] = iso_now()
@@ -363,11 +635,19 @@ def poll_request(existing: Dict[str, Any]) -> Dict[str, Any]:
 
 
 class FinalityWatcherHandler(BaseHTTPRequestHandler):
-    server_version = "DeNotaryFinalityWatcher/0.1"
+    server_version = "DeNotaryFinalityWatcher/0.2"
 
     def do_GET(self) -> None:
         if self.path == "/healthz":
-            self.write_json(HTTPStatus.OK, {"status": "ok", "service": "finality-watcher"})
+            self.write_json(
+                HTTPStatus.OK,
+                {
+                    "status": "ok",
+                    "service": "finality-watcher",
+                    "auth_required": bool(self.server.auth_token),
+                    "insecure_dev_mode": self.server.insecure_dev_mode,
+                },
+            )
             return
 
         prefix = "/v1/watch/"
@@ -394,6 +674,8 @@ class FinalityWatcherHandler(BaseHTTPRequestHandler):
             if self.path == "/v1/watch/register":
                 body = read_json_body(self)
                 payload = normalize_watch_request(body, self.server.default_rpc_url)
+                if payload.get("tx_id") and payload.get("block_num"):
+                    refresh_inclusion_verification(payload, strict=False)
                 try:
                     existing = self.server.store.get_request(payload["request_id"])
                 except KeyError:
@@ -401,7 +683,10 @@ class FinalityWatcherHandler(BaseHTTPRequestHandler):
                     self.write_json(HTTPStatus.OK, payload)
                     return
 
-                self.write_json(HTTPStatus.OK, ensure_registration_compatible(existing, payload))
+                ensure_registration_compatible(existing, payload)
+                if existing.get("tx_id") and existing.get("block_num"):
+                    refresh_inclusion_verification(existing, strict=False)
+                self.write_json(HTTPStatus.OK, existing)
                 return
 
             if self.path == "/v1/watch/poll":
@@ -475,12 +760,16 @@ class FinalityWatcherServer(ThreadingHTTPServer):
         default_rpc_url: str,
         poll_interval_sec: int,
         auth_token: str = "",
+        insecure_dev_mode: bool = False,
     ):
+        if not auth_token and not insecure_dev_mode:
+            raise ValueError("finality watcher requires --auth-token unless --insecure-dev-mode is enabled")
         super().__init__(server_address, handler)
         self.store = store
         self.default_rpc_url = default_rpc_url
         self.poll_interval_sec = poll_interval_sec
         self.auth_token = auth_token
+        self.insecure_dev_mode = insecure_dev_mode
         self._stop_event = threading.Event()
         self._poller = threading.Thread(target=self._poll_loop, daemon=True)
 
@@ -514,6 +803,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--state-file", default="runtime/finality-state.json")
     parser.add_argument("--poll-interval-sec", type=int, default=10)
     parser.add_argument("--auth-token", default="")
+    parser.add_argument("--insecure-dev-mode", action="store_true")
     return parser.parse_args()
 
 
@@ -527,6 +817,7 @@ def main() -> None:
         args.rpc_url,
         args.poll_interval_sec,
         args.auth_token,
+        args.insecure_dev_mode,
     )
     server.start_background_polling()
     print(f"Finality watcher listening on http://{args.host}:{args.port}")

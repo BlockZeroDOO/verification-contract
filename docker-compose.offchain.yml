@@ -14,8 +14,17 @@ services:
       - "8080"
       - --contract-account
       - ${CONTRACT_ACCOUNT:-verification}
+      - --watcher-url
+      - ${INGRESS_WATCHER_URL:-http://finality:8081}
+      - --watcher-auth-token
+      - ${INGRESS_WATCHER_AUTH_TOKEN:-${WATCHER_AUTH_TOKEN:?WATCHER_AUTH_TOKEN is required for the finality watcher}}
+      - --watcher-rpc-url
+      - ${INGRESS_WATCHER_RPC_URL:-${RPC_URL:-https://history.denotary.io}}
     environment:
       CONTRACT_ACCOUNT: ${CONTRACT_ACCOUNT:-verification}
+      INGRESS_WATCHER_URL: ${INGRESS_WATCHER_URL:-http://finality:8081}
+      INGRESS_WATCHER_AUTH_TOKEN: ${INGRESS_WATCHER_AUTH_TOKEN:-${WATCHER_AUTH_TOKEN:?WATCHER_AUTH_TOKEN is required for the finality watcher}}
+      INGRESS_WATCHER_RPC_URL: ${INGRESS_WATCHER_RPC_URL:-${RPC_URL:-https://history.denotary.io}}
     ports:
       - "${INGRESS_BIND:-127.0.0.1}:${INGRESS_PORT:-8080}:8080"
     healthcheck:

@@ -15,7 +15,7 @@ Completed epics:
 
 Current active next epic:
 
-- Epic 8: security hardening
+- Epic 9: rollout and orchestration depth
 
 Recently completed hardening items:
 
@@ -168,7 +168,7 @@ Open follow-ups:
 
 Status:
 
-- in progress
+- completed as current baseline
 
 Planned work:
 
@@ -184,14 +184,17 @@ Already added in the current pass:
 - safer ingress defaults without raw canonical material
 - watcher conflict protection for request re-registration
 - watcher protection against conflicting `tx_id`, `block_num`, and anchor-ID rewrites
-- optional watcher mutation auth token
+- watcher mutation auth by default
 - explicit failed-request tracking for dropped or rejected tx paths
+- trust-state signaling in receipt and audit paths
+- negative security regressions in smoke and live-chain validation
+- hardened off-chain deploy defaults and remediation report
 
 ## Epic 9. Testnet rollout
 
 Status:
 
-- in progress as baseline
+- in progress as active next epic
 
 Planned work:
 
@@ -209,6 +212,7 @@ Already added in the current pass:
 - live-chain integration runner for real `verification` broadcasts
 - receipt and audit verification against live `tx_id`, `commitment_id`, and `batch_id`
 - rollout dry-run runner that can combine build, local integration, live-chain integration, and smoke gates
+- optional ingress-to-watcher auto-registration handoff
 
 ## Epic 10. Optional proof layer
 

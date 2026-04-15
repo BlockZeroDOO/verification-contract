@@ -99,6 +99,7 @@ Current baseline artifact:
 - API rejects submit when policy/KYC prechecks fail
 - API creates traceable request id for single flow
 - API creates traceable batch id for batch flow
+- API can optionally auto-register prepared requests in `Finality Watcher`
 - API rejects oversized request bodies
 - API rejects overlarge batch manifests or canonicalized payloads
 - API hides raw canonical material unless debug mode is explicitly enabled

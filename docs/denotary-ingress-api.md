@@ -37,6 +37,7 @@ The service already does:
 - canonicalize the payload
 - compute `object_hash`, `external_ref_hash`, `root_hash`, and `manifest_hash`
 - prepare payloads for `submit` and `submitroot`
+- optionally hand prepared requests into `Finality Watcher`
 
 ## Endpoints
 
@@ -102,6 +103,21 @@ If deep debugging is needed, send:
 ```
 
 and the response will include `canonical_form`.
+
+Optional watcher handoff:
+
+```json
+{
+  "watcher": {
+    "register": true,
+    "url": "http://127.0.0.1:8081",
+    "auth_token": "shared-secret",
+    "rpc_url": "https://history.denotary.io"
+  }
+}
+```
+
+If watcher handoff is enabled, the response also includes `watcher_handoff`.
 
 ### `POST /v1/batch/prepare`
 
@@ -174,6 +190,13 @@ and the response will include:
 - `manifest`
 - `manifest_canonical_form`
 
+Optional watcher handoff works the same way for batch requests and uses the batch anchor fields:
+
+- `root_hash`
+- `manifest_hash`
+- `external_ref_hash`
+- `leaf_count`
+
 ## Canonicalization rules
 
 Current baseline profile:
@@ -225,7 +248,7 @@ The current intended flow after `prepare` is:
 
 1. take the returned `prepared_action`
 2. sign and broadcast it outside the service
-3. register the same `request_id` in the Finality Watcher
+3. register the same `request_id` in the Finality Watcher manually, or let `Ingress API` do watcher handoff automatically
 4. after inclusion, attach `tx_id` and `block_num`
 5. if available, attach `commitment_id` or `batch_id` into watcher anchor metadata
 
@@ -236,7 +259,7 @@ The current intended flow after `prepare` is:
 1. send the business payload to `Ingress API`
 2. receive hashes, `request_id`, `trace_id`, and `prepared_action`
 3. sign and broadcast outside the service
-4. hand the same request metadata to the watcher
+4. hand the same request metadata to the watcher manually or through optional ingress handoff
 
 ### Mode B. Direct client preparation
 
@@ -287,4 +310,4 @@ Logical next improvements after this baseline:
 - pull schema, policy, and KYC context from on-chain or indexed read models
 - add transaction assembly, signing, and broadcasting
 - publish a reusable direct-client canonicalization implementation
-- automate the handoff into finality tracking
+- extend watcher handoff toward richer broadcaster-orchestration flows

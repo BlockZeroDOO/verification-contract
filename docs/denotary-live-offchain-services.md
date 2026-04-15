@@ -28,6 +28,7 @@ The suite verifies:
 - `Ingress API` single and batch preparation
 - default redaction of debug material in ingress responses
 - explicit debug-material responses with `include_debug_material=true`
+- optional watcher auto-registration handoff from ingress
 - ingress validation rejection for invalid payloads
 - `Finality Watcher` auth enforcement when mutation token is enabled
 - idempotent watcher registration

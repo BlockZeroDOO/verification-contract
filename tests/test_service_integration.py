@@ -252,6 +252,54 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertNotIn("manifest", response)
         self.assertNotIn("leaf_hashes", response)
 
+    def test_ingress_can_auto_register_in_watcher(self) -> None:
+        payload = self._single_prepare_payload("single-auto-register")
+        payload["watcher"] = {
+            "url": f"http://127.0.0.1:{self.watcher_port}",
+            "auth_token": self.WATCHER_AUTH_TOKEN,
+            "rpc_url": self.mock_chain_url,
+        }
+
+        status, response = request_json(
+            f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
+            method="POST",
+            payload=payload,
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("watcher_handoff", response)
+        self.assertTrue(response["watcher_handoff"]["ok"])
+        self.assertEqual(response["watcher_handoff"]["status_code"], 200)
+        self.assertEqual(
+            response["watcher_handoff"]["response"]["request_id"],
+            response["request_id"],
+        )
+
+        status, watcher_record = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/{response['request_id']}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(watcher_record["status"], "submitted")
+
+    def test_ingress_reports_watcher_handoff_failure_without_losing_prepare_result(self) -> None:
+        payload = self._single_prepare_payload("single-auto-register-failure")
+        payload["watcher"] = {
+            "url": f"http://127.0.0.1:{self.watcher_port}",
+            "auth_token": "wrong-token",
+            "rpc_url": self.mock_chain_url,
+        }
+
+        status, response = request_json(
+            f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
+            method="POST",
+            payload=payload,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(response["mode"], "single")
+        self.assertIn("prepared_action", response)
+        self.assertIn("watcher_handoff", response)
+        self.assertFalse(response["watcher_handoff"]["ok"])
+        self.assertEqual(response["watcher_handoff"]["status_code"], 401)
+
     def test_single_pipeline_end_to_end(self) -> None:
         status, prepared = request_json(
             f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",

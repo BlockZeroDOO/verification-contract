@@ -272,6 +272,44 @@ def exercise_ingress_surface(
         },
     )
 
+    log("Checking ingress watcher auto-registration handoff")
+    watcher_prepare_payload = dict(single_payload)
+    watcher_prepare_payload["watcher"] = {
+        "url": services.watcher_base_url,
+        "auth_token": args.watcher_auth_token,
+        "rpc_url": args.rpc_url,
+    }
+    status_code, watcher_prepare = request_json(
+        f"{services.ingress_base_url}/v1/single/prepare",
+        method="POST",
+        payload=watcher_prepare_payload,
+    )
+    assert_status(status_code, 200, "single prepare with watcher handoff")
+    assert_true("watcher_handoff" in watcher_prepare, "single prepare watcher handoff presence")
+    assert_true(watcher_prepare["watcher_handoff"]["ok"], "single prepare watcher handoff success")
+    artifacts.event(
+        "ingress_single_prepare_watcher_handoff",
+        {
+            "request": watcher_prepare_payload,
+            "status_code": status_code,
+            "response": watcher_prepare,
+        },
+    )
+
+    status_code, watcher_record = request_json(
+        f"{services.watcher_base_url}/v1/watch/{watcher_prepare['request_id']}"
+    )
+    assert_status(status_code, 200, "watcher record after ingress handoff")
+    assert_equal(watcher_record["status"], "submitted", "watcher record status after ingress handoff")
+    artifacts.event(
+        "watcher_record_after_ingress_handoff",
+        {
+            "request_id": watcher_prepare["request_id"],
+            "status_code": status_code,
+            "response": watcher_record,
+        },
+    )
+
 
 def exercise_failed_request_surface(
     args: argparse.Namespace,

@@ -24,6 +24,9 @@ Adjust values if needed:
 ```bash
 CONTRACT_ACCOUNT=verification
 RPC_URL=https://history.denotary.io
+INGRESS_WATCHER_URL=http://finality:8081
+INGRESS_WATCHER_AUTH_TOKEN=replace-with-shared-secret
+INGRESS_WATCHER_RPC_URL=https://history.denotary.io
 CHAIN_ID=9714ab662f0899c3ac4c5a02220f3d7ab61aacae311974239cc75f22c999cc48
 POLL_INTERVAL_SEC=10
 WATCHER_AUTH_TOKEN=replace-with-shared-secret
@@ -43,6 +46,17 @@ docker compose --env-file .env.offchain -f docker-compose.offchain.yml up -d --b
 ```
 
 `WATCHER_AUTH_TOKEN` is required. The compose stack will fail fast if it is missing.
+
+With the default compose values, `Ingress API` is also preconfigured to reach the internal
+`Finality Watcher`. To trigger auto-registration from a prepare request, include:
+
+```json
+{
+  "watcher": {
+    "register": true
+  }
+}
+```
 
 ## 3. Check status
 

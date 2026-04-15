@@ -22,8 +22,7 @@ Implemented roadmap stages:
 
 Current next step:
 
-- Stage 9: security hardening
-- Stage 11: live-chain integration depth and rollout gates
+- Stage 11: rollout depth, orchestration follow-ups, and chain-native indexing improvements
 
 ## `verification` scope
 
@@ -135,6 +134,7 @@ Capabilities:
 - single request preparation for `submit`
 - batch request preparation for `submitroot`
 - generated `trace_id`, `request_id`, and content hashes
+- optional automatic handoff into `Finality Watcher` registration
 
 ### Finality Watcher
 

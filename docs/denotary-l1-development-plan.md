@@ -16,8 +16,8 @@ Already implemented in this repository:
 
 Current next step:
 
-- Stage 9: security hardening in progress
-- Stage 11 live-chain integration and rollout depth in progress
+- Stage 9: security hardening baseline completed
+- Stage 11: live-chain integration, orchestration follow-ups, and rollout depth in progress
 
 ## Initial gap against TSD v2
 

@@ -5,10 +5,12 @@ import hashlib
 import json
 import re
 import uuid
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 MAX_REQUEST_BODY_BYTES = 1024 * 1024
 MAX_EXTERNAL_REF_LENGTH = 256
@@ -186,6 +188,115 @@ def build_trace_metadata(submitter: str, external_ref_hash: str, content_hash: s
     }
 
 
+def request_watcher_json(
+    watcher_url: str,
+    payload: Dict[str, Any],
+    auth_token: str = "",
+) -> tuple[int, Dict[str, Any]]:
+    headers = {"Content-Type": "application/json"}
+    if auth_token:
+        headers["X-DeNotary-Token"] = auth_token
+
+    request = urllib.request.Request(
+        f"{watcher_url.rstrip('/')}/v1/watch/register",
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            body = response.read().decode("utf-8")
+            return response.status, json.loads(body) if body else {}
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8")
+        return exc.code, json.loads(body) if body else {}
+
+
+def require_optional_string(mapping: Dict[str, Any], field_name: str) -> Optional[str]:
+    value = mapping.get(field_name)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{field_name} must be non-empty string when provided")
+    return value
+
+
+def resolve_watcher_handoff(body: Dict[str, Any], server: "IngressHttpServer") -> Optional[Dict[str, str]]:
+    watcher = body.get("watcher")
+    if watcher is None:
+        return None
+    if not isinstance(watcher, dict):
+        raise ValueError("watcher must be an object when provided")
+
+    register = require_optional_bool(watcher, "register", True)
+    if not register:
+        return None
+
+    watcher_url = require_optional_string(watcher, "url") or server.watcher_url
+    if not watcher_url:
+        raise ValueError("watcher.url must be provided when watcher handoff is enabled")
+
+    auth_token = require_optional_string(watcher, "auth_token") or server.watcher_auth_token
+    rpc_url = require_optional_string(watcher, "rpc_url") or server.watcher_rpc_url
+
+    return {
+        "url": watcher_url,
+        "auth_token": auth_token,
+        "rpc_url": rpc_url,
+    }
+
+
+def build_watcher_register_payload(response: Dict[str, Any], watcher_rpc_url: str) -> Dict[str, Any]:
+    anchor: Dict[str, Any]
+    if response["mode"] == "single":
+        anchor = {
+            "object_hash": response["object_hash"],
+            "external_ref_hash": response["external_ref_hash"],
+        }
+    else:
+        anchor = {
+            "root_hash": response["root_hash"],
+            "manifest_hash": response["manifest_hash"],
+            "external_ref_hash": response["external_ref_hash"],
+            "leaf_count": response["leaf_count"],
+        }
+
+    payload = {
+        "request_id": response["request_id"],
+        "trace_id": response["trace_id"],
+        "mode": response["mode"],
+        "submitter": response["prepared_action"]["data"]["submitter"],
+        "contract": response["prepared_action"]["contract"],
+        "anchor": anchor,
+    }
+    if watcher_rpc_url:
+        payload["rpc_url"] = watcher_rpc_url
+    return payload
+
+
+def attach_watcher_handoff(response: Dict[str, Any], watcher_config: Dict[str, str]) -> None:
+    register_payload = build_watcher_register_payload(response, watcher_config["rpc_url"])
+    handoff: Dict[str, Any] = {
+        "attempted": True,
+        "ok": False,
+        "url": watcher_config["url"],
+        "register_payload": register_payload,
+    }
+    try:
+        status_code, watcher_response = request_watcher_json(
+            watcher_config["url"],
+            register_payload,
+            watcher_config["auth_token"],
+        )
+        handoff["status_code"] = status_code
+        handoff["response"] = watcher_response
+        handoff["ok"] = 200 <= status_code < 300
+    except urllib.error.URLError as exc:
+        handoff["error"] = str(exc)
+
+    response["watcher_handoff"] = handoff
+
+
 def build_single_response(body: Dict[str, Any], contract_account: str) -> Dict[str, Any]:
     submitter = validate_account_name(require_string(body, "submitter"), "submitter")
     external_ref = validate_limited_text(
@@ -360,6 +471,7 @@ class IngressApiHandler(BaseHTTPRequestHandler):
                 return
             body = self.rfile.read(content_length)
             payload = json.loads(body.decode("utf-8")) if body else {}
+            watcher_config = resolve_watcher_handoff(payload, self.server)
 
             if self.path == "/v1/single/prepare":
                 response = build_single_response(payload, self.server.contract_account)
@@ -368,6 +480,9 @@ class IngressApiHandler(BaseHTTPRequestHandler):
             else:
                 self.send_error(HTTPStatus.NOT_FOUND, "Not found")
                 return
+
+            if watcher_config is not None:
+                attach_watcher_handoff(response, watcher_config)
 
             self.write_json(HTTPStatus.OK, response)
         except json.JSONDecodeError:
@@ -388,9 +503,20 @@ class IngressApiHandler(BaseHTTPRequestHandler):
 
 
 class IngressHttpServer(ThreadingHTTPServer):
-    def __init__(self, server_address: tuple[str, int], handler: type[BaseHTTPRequestHandler], contract_account: str):
+    def __init__(
+        self,
+        server_address: tuple[str, int],
+        handler: type[BaseHTTPRequestHandler],
+        contract_account: str,
+        watcher_url: str = "",
+        watcher_auth_token: str = "",
+        watcher_rpc_url: str = "",
+    ):
         super().__init__(server_address, handler)
         self.contract_account = contract_account
+        self.watcher_url = watcher_url
+        self.watcher_auth_token = watcher_auth_token
+        self.watcher_rpc_url = watcher_rpc_url
 
 
 def parse_args() -> argparse.Namespace:
@@ -398,12 +524,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--contract-account", default="verification")
+    parser.add_argument("--watcher-url", default="")
+    parser.add_argument("--watcher-auth-token", default="")
+    parser.add_argument("--watcher-rpc-url", default="")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    server = IngressHttpServer((args.host, args.port), IngressApiHandler, args.contract_account)
+    server = IngressHttpServer(
+        (args.host, args.port),
+        IngressApiHandler,
+        args.contract_account,
+        args.watcher_url,
+        args.watcher_auth_token,
+        args.watcher_rpc_url,
+    )
     print(f"Ingress API listening on http://{args.host}:{args.port} for contract '{args.contract_account}'")
     server.serve_forever()
 

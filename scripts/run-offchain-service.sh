@@ -48,16 +48,30 @@ rpc_url="${RPC_URL:-https://history.denotary.io}"
 state_file="${STATE_FILE:-${project_root}/runtime/finality-state.json}"
 poll_interval_sec="${POLL_INTERVAL_SEC:-10}"
 auth_token="${WATCHER_AUTH_TOKEN:-}"
+ingress_watcher_url="${INGRESS_WATCHER_URL:-}"
+ingress_watcher_auth_token="${INGRESS_WATCHER_AUTH_TOKEN:-${WATCHER_AUTH_TOKEN:-}}"
+ingress_watcher_rpc_url="${INGRESS_WATCHER_RPC_URL:-${RPC_URL:-https://history.denotary.io}}"
 
 mkdir -p "$(dirname "${state_file}")"
 
 case "${service_name}" in
     ingress)
-        exec "${python_cmd}" "${project_root}/services/ingress_api.py" \
-            --host "${host}" \
-            --port "${ingress_port}" \
-            --contract-account "${contract_account}" \
-            "$@"
+        args=(
+            "${project_root}/services/ingress_api.py"
+            --host "${host}"
+            --port "${ingress_port}"
+            --contract-account "${contract_account}"
+        )
+        if [[ -n "${ingress_watcher_url}" ]]; then
+            args+=(--watcher-url "${ingress_watcher_url}")
+            if [[ -n "${ingress_watcher_auth_token}" ]]; then
+                args+=(--watcher-auth-token "${ingress_watcher_auth_token}")
+            fi
+            if [[ -n "${ingress_watcher_rpc_url}" ]]; then
+                args+=(--watcher-rpc-url "${ingress_watcher_rpc_url}")
+            fi
+        fi
+        exec "${python_cmd}" "${args[@]}" "$@"
         ;;
     finality)
         if [[ -z "${auth_token}" ]]; then

@@ -5,8 +5,8 @@ This repository is the canonical home of the on-chain `verification` contract.
 Repository boundary:
 
 - this repository owns the `verification` contract, its Ricardian files, and contract-facing runbooks
-- `C:\projects\deNotary` owns the off-chain backend and operational runtime around the contract
-- `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
+- `deNotary` owns the off-chain backend and operational runtime around the contract
+- `decentralized_storage\contracts\dfs` owns the DFS contract
 
 ## Scope
 

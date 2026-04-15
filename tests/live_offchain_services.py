@@ -163,6 +163,10 @@ def assert_healthz(services: ServiceEndpoints, artifacts: ArtifactLogger) -> Non
         assert_status(status_code, 200, f"{name} healthz")
         assert_equal(payload["status"], "ok", f"{name} health status")
         assert_equal(payload["service"], expected_service, f"{name} service label")
+        if name == "finality":
+            assert_true("store" in payload, "finality health should expose store details")
+            assert_true("verification_policy" in payload, "finality health should expose verification policy")
+            assert_true("verification_min_success" in payload, "finality health should expose verification min success")
         artifacts.event(
             f"healthz_{name}",
             {
@@ -885,6 +889,237 @@ def run_single_offchain_surface(
     )
 
 
+def run_quorum_policy_surface(
+    args: argparse.Namespace,
+    services: ServiceEndpoints,
+    schema_id: int,
+    single_policy_id: int,
+    suffix: str,
+    artifacts: ArtifactLogger,
+) -> None:
+    log("Running live quorum-policy flow with degraded provider set")
+
+    external_ref = f"svc-live-quorum-{suffix}"
+    permission = f"{args.submitter_account}@active"
+    prepare_payload = prepare_single_payload(
+        schema_id,
+        single_policy_id,
+        args.submitter_account,
+        external_ref,
+        args.kyc_expires_at,
+    )
+
+    status_code, prepared = request_json(
+        f"{services.ingress_base_url}/v1/single/prepare",
+        method="POST",
+        payload=prepare_payload,
+    )
+    assert_status(status_code, 200, "quorum live prepare")
+    artifacts.event(
+        "quorum_single_prepare",
+        {
+            "request": prepare_payload,
+            "status_code": status_code,
+            "response": prepared,
+        },
+    )
+
+    request_id = prepared["request_id"]
+    external_ref_hash = prepared["external_ref_hash"]
+
+    register_payload = {
+        "request_id": request_id,
+        "trace_id": prepared["trace_id"],
+        "mode": "single",
+        "submitter": args.submitter_account,
+        "contract": args.verification_account,
+        "verification_policy": "quorum",
+        "verification_min_success": 2,
+        "anchor": {
+            "object_hash": prepared["object_hash"],
+            "external_ref_hash": external_ref_hash,
+        },
+        "rpc_urls": [
+            "http://127.0.0.1:1",
+            args.rpc_url,
+        ],
+    }
+    status_code, registered = request_json(
+        f"{services.watcher_base_url}/v1/watch/register",
+        method="POST",
+        payload=register_payload,
+        headers=watcher_headers(args),
+    )
+    assert_status(status_code, 200, "quorum watcher register")
+    assert_equal(registered["status"], "submitted", "quorum watcher status")
+    assert_equal(registered["verification_policy"], "quorum", "quorum watcher verification policy")
+    assert_equal(registered["verification_min_success"], 2, "quorum watcher min success")
+    artifacts.event(
+        "quorum_watcher_register",
+        {
+            "request": register_payload,
+            "status_code": status_code,
+            "response": registered,
+        },
+    )
+
+    submit_result = run_cleos_push_action(
+        args.rpc_url,
+        args.verification_account,
+        "submit",
+        [
+            prepared["prepared_action"]["data"]["submitter"],
+            prepared["prepared_action"]["data"]["schema_id"],
+            prepared["prepared_action"]["data"]["policy_id"],
+            prepared["prepared_action"]["data"]["object_hash"],
+            prepared["prepared_action"]["data"]["external_ref"],
+        ],
+        permission,
+    )
+    tx_id, block_num = extract_tx_metadata(submit_result)
+    artifacts.event(
+        "quorum_submit_transaction",
+        {
+            "request_id": request_id,
+            "transaction": submit_result,
+            "tx_id": tx_id,
+            "block_num": block_num,
+        },
+    )
+
+    commitment_row = wait_for_row(
+        args.rpc_url,
+        args.verification_account,
+        args.verification_account,
+        "commitments",
+        "external_ref",
+        external_ref_hash,
+        args.wait_timeout_sec,
+        args.poll_interval_sec,
+    )
+    commitment_id = commitment_row["id"]
+    artifacts.event(
+        "quorum_commitment_row",
+        {
+            "request_id": request_id,
+            "row": commitment_row,
+        },
+    )
+
+    status_code, anchored = request_json(
+        f"{services.watcher_base_url}/v1/watch/{request_id}/anchor",
+        method="POST",
+        payload={"anchor": {"commitment_id": commitment_id}},
+        headers=watcher_headers(args),
+    )
+    assert_status(status_code, 200, "quorum watcher anchor")
+    artifacts.event(
+        "quorum_watcher_anchor",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": anchored,
+        },
+    )
+
+    status_code, included = request_json(
+        f"{services.watcher_base_url}/v1/watch/{request_id}/included",
+        method="POST",
+        payload={"tx_id": tx_id, "block_num": block_num},
+        headers=watcher_headers(args),
+    )
+    assert_status(status_code, 200, "quorum watcher included")
+    assert_equal(included["status"], "included", "quorum watcher included status")
+    assert_equal(included["inclusion_verified"], False, "quorum watcher should not verify with one provider")
+    assert_equal(included["verification_policy"], "quorum", "quorum included policy")
+    assert_equal(included["verification_min_success"], 2, "quorum included min success")
+    assert_true(included["verification_state"] is not None, "quorum verification_state presence")
+    assert_equal(included["verification_state"]["consensus"]["provider_count_ok"], 1, "quorum provider ok count")
+    assert_equal(included["verification_state"]["consensus"]["provider_count_total"], 2, "quorum provider total count")
+    assert_equal(included["verification_state"]["consensus"]["verified"], False, "quorum consensus verified flag")
+    artifacts.event(
+        "quorum_watcher_included",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": included,
+        },
+    )
+
+    status_code, polled = request_json(
+        f"{services.watcher_base_url}/v1/watch/{request_id}/poll",
+        method="POST",
+        payload={},
+        headers=watcher_headers(args),
+    )
+    assert_status(status_code, 200, "quorum watcher poll")
+    assert_equal(polled["status"], "included", "quorum watcher must stay included")
+    assert_equal(polled["inclusion_verified"], False, "quorum watcher must stay unverified")
+    artifacts.event(
+        "quorum_watcher_poll",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": polled,
+        },
+    )
+
+    status_code, receipt = request_json(f"{services.receipt_base_url}/v1/receipts/{request_id}")
+    assert_status(status_code, 409, "quorum receipt unavailable")
+    assert_equal(receipt["trust_state"], "included_unverified", "quorum receipt trust state")
+    assert_equal(receipt["verification_policy"], "quorum", "quorum receipt policy")
+    assert_equal(receipt["verification_min_success"], 2, "quorum receipt min success")
+    artifacts.event(
+        "quorum_receipt_unavailable",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": receipt,
+        },
+    )
+
+    status_code, audit_chain = request_json(f"{services.audit_base_url}/v1/audit/chain/{request_id}")
+    assert_status(status_code, 200, "quorum audit chain")
+    assert_equal(audit_chain["record"]["verification_policy"], "quorum", "quorum audit policy")
+    assert_equal(audit_chain["record"]["verification_min_success"], 2, "quorum audit min success")
+    assert_equal(audit_chain["record"]["receipt_available"], False, "quorum audit receipt availability")
+    assert_equal(audit_chain["record"]["trust_state"], "included_unverified", "quorum audit trust state")
+    assert_equal(
+        audit_chain["proof_chain"][-2]["details"]["verification_policy"],
+        "quorum",
+        "quorum proof-chain policy",
+    )
+    artifacts.event(
+        "quorum_audit_chain",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": audit_chain,
+        },
+    )
+
+    search_query = urllib.parse.urlencode(
+        {
+            "mode": "single",
+            "status": "included",
+            "trust_state": "included_unverified",
+            "commitment_id": commitment_id,
+            "limit": 10,
+        }
+    )
+    status_code, search_payload = request_json(f"{services.audit_base_url}/v1/audit/search?{search_query}")
+    assert_status(status_code, 200, "quorum audit search")
+    assert_true(search_payload["count"] >= 1, "quorum audit search should return at least one record")
+    artifacts.event(
+        "quorum_audit_search",
+        {
+            "query": search_query,
+            "status_code": status_code,
+            "response": search_payload,
+        },
+    )
+
+
 def run_batch_offchain_surface(
     args: argparse.Namespace,
     services: ServiceEndpoints,
@@ -1263,6 +1498,7 @@ def main() -> int:
             exercise_ingress_surface(args, services, schema_id, single_policy_id, batch_policy_id, suffix, artifacts)
             exercise_failed_request_surface(args, services, schema_id, single_policy_id, suffix, artifacts)
             run_single_offchain_surface(args, services, schema_id, single_policy_id, suffix, artifacts)
+            run_quorum_policy_surface(args, services, schema_id, single_policy_id, suffix, artifacts)
             run_batch_offchain_surface(args, services, schema_id, batch_policy_id, suffix, artifacts)
     except Exception as exc:
         artifacts.event("run_exception", {"type": type(exc).__name__, "message": str(exc)})

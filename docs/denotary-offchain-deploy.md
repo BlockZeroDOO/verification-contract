@@ -24,6 +24,8 @@ Shared runtime state:
 
 - `FINALITY_STATE_BACKEND=sqlite`
 - `FINALITY_STATE_DB=/var/lib/denotary/finality-state.sqlite3`
+- `WATCHER_VERIFICATION_POLICY=single-provider`
+- `WATCHER_VERIFICATION_MIN_SUCCESS=1`
 
 Default deNotary chain settings:
 
@@ -72,6 +74,8 @@ CONTRACT_ACCOUNT=verification
 RPC_URL=https://history.denotary.io
 FINALITY_STATE_BACKEND=sqlite
 FINALITY_STATE_DB=/var/lib/denotary/finality-state.sqlite3
+WATCHER_VERIFICATION_POLICY=single-provider
+WATCHER_VERIFICATION_MIN_SUCCESS=1
 CHAIN_ID=9714ab662f0899c3ac4c5a02220f3d7ab61aacae311974239cc75f22c999cc48
 POLL_INTERVAL_SEC=10
 WATCHER_AUTH_TOKEN=replace-with-shared-secret

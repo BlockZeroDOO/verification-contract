@@ -64,11 +64,17 @@ services:
       - ${POLL_INTERVAL_SEC:-10}
       - --auth-token
       - ${WATCHER_AUTH_TOKEN:?WATCHER_AUTH_TOKEN is required for the finality watcher}
+      - --verification-policy
+      - ${WATCHER_VERIFICATION_POLICY:-single-provider}
+      - --verification-min-success
+      - ${WATCHER_VERIFICATION_MIN_SUCCESS:-1}
     environment:
       RPC_URL: ${RPC_URL:-https://history.denotary.io}
       FINALITY_STATE_BACKEND: ${FINALITY_STATE_BACKEND:-sqlite}
       FINALITY_STATE_DB: ${FINALITY_STATE_DB:-/data/finality-state.sqlite3}
       POLL_INTERVAL_SEC: ${POLL_INTERVAL_SEC:-10}
+      WATCHER_VERIFICATION_POLICY: ${WATCHER_VERIFICATION_POLICY:-single-provider}
+      WATCHER_VERIFICATION_MIN_SUCCESS: ${WATCHER_VERIFICATION_MIN_SUCCESS:-1}
       WATCHER_AUTH_TOKEN: ${WATCHER_AUTH_TOKEN:?WATCHER_AUTH_TOKEN is required for the finality watcher}
     volumes:
       - denotary-offchain-state:/data

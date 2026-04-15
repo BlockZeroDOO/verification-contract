@@ -21,6 +21,7 @@ MAX_REQUEST_BODY_BYTES = 256 * 1024
 HEX_64_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 TRACE_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 ACCOUNT_NAME_RE = re.compile(r"^[a-z1-5.]{1,12}$")
+SUPPORTED_VERIFICATION_POLICIES = {"single-provider", "quorum"}
 
 
 class TransactionLookupPending(Exception):
@@ -69,6 +70,32 @@ def require_optional_reason(mapping: Dict[str, Any], field_name: str) -> Optiona
         raise ValueError(f"{field_name} must be non-empty string when provided")
     if len(value) > 256:
         raise ValueError(f"{field_name} is too long")
+    return value
+
+
+def require_optional_verification_policy(
+    mapping: Dict[str, Any],
+    field_name: str,
+    default_value: str,
+) -> str:
+    value = mapping.get(field_name, default_value)
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{field_name} must be non-empty string")
+    if value not in SUPPORTED_VERIFICATION_POLICIES:
+        raise ValueError(
+            f"{field_name} must be one of: {', '.join(sorted(SUPPORTED_VERIFICATION_POLICIES))}"
+        )
+    return value
+
+
+def require_optional_min_success(
+    mapping: Dict[str, Any],
+    field_name: str,
+    default_value: int,
+) -> int:
+    value = mapping.get(field_name, default_value)
+    if not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{field_name} must be a positive integer")
     return value
 
 
@@ -265,7 +292,12 @@ def validate_anchor_metadata(anchor: Dict[str, Any], mode: str) -> Dict[str, Any
     return anchor
 
 
-def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[str, Any]:
+def normalize_watch_request(
+    body: Dict[str, Any],
+    default_rpc_url: str,
+    default_verification_policy: str,
+    default_verification_min_success: int,
+) -> Dict[str, Any]:
     request_id = require_hex_64(body, "request_id")
     trace_id = require_trace_id(body, "trace_id")
     mode = require_string(body, "mode")
@@ -280,6 +312,16 @@ def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[
     expected_request_id = derive_request_id(submitter, external_ref_hash, content_hash, mode)
     if request_id != expected_request_id:
         raise ValueError("request_id does not match derived canonical request id")
+    verification_policy = require_optional_verification_policy(
+        body,
+        "verification_policy",
+        default_verification_policy,
+    )
+    verification_min_success = require_optional_min_success(
+        body,
+        "verification_min_success",
+        default_verification_min_success,
+    )
 
     tx_id = body.get("tx_id")
     if tx_id is not None:
@@ -322,8 +364,8 @@ def normalize_watch_request(body: Dict[str, Any], default_rpc_url: str) -> Dict[
         "inclusion_verified_at": None,
         "inclusion_verification_error": None,
         "verified_action": None,
-        "verification_policy": "single-provider",
-        "verification_min_success": 1,
+        "verification_policy": verification_policy,
+        "verification_min_success": verification_min_success,
         "verification_state": None,
         "provider_disagreement": False,
         "chain_state": {
@@ -555,14 +597,25 @@ def verify_inclusion(request_payload: Dict[str, Any]) -> Dict[str, Any]:
             provider_result["error"] = str(exc)
             providers_checked.append(provider_result)
 
-    if matched_results:
+    verification_policy = str(request_payload.get("verification_policy") or "single-provider")
+    verification_min_success = int(request_payload.get("verification_min_success") or 1)
+    verification_success = False
+    if verification_policy == "single-provider":
+        verification_success = len(matched_results) >= 1
+    elif verification_policy == "quorum":
+        verification_success = len(matched_results) >= verification_min_success
+    else:
+        raise ValueError(f"unsupported verification policy: {verification_policy}")
+
+    if verification_success and matched_results:
         primary_match = matched_results[0]
         return {
             "verified_at": iso_now(),
             "verified_block_num": primary_match["verified_block_num"],
             "verified_action": primary_match["verified_action"],
             "verification_state": {
-                "policy": request_payload.get("verification_policy", "single-provider"),
+                "policy": verification_policy,
+                "min_success": verification_min_success,
                 "providers_checked": providers_checked,
                 "consensus": {
                     "verified": True,
@@ -572,6 +625,29 @@ def verify_inclusion(request_payload: Dict[str, Any]) -> Dict[str, Any]:
                 },
             },
             "provider_disagreement": had_mismatch,
+        }
+
+    if matched_results:
+        return {
+            "verified_at": iso_now(),
+            "verified_block_num": matched_results[0]["verified_block_num"],
+            "verified_action": matched_results[0]["verified_action"],
+            "verification_state": {
+                "policy": verification_policy,
+                "min_success": verification_min_success,
+                "providers_checked": providers_checked,
+                "consensus": {
+                    "verified": False,
+                    "provider_count_ok": len(matched_results),
+                    "provider_count_total": len(providers_checked),
+                    "provider_disagreement": had_mismatch,
+                },
+            },
+            "provider_disagreement": had_mismatch,
+            "verification_error": (
+                f"verification policy '{verification_policy}' requires "
+                f"{verification_min_success} successful providers, got {len(matched_results)}"
+            ),
         }
 
     if pending_messages and not had_mismatch:
@@ -607,6 +683,16 @@ def refresh_inclusion_verification(existing: Dict[str, Any], strict: bool = Fals
         return existing
 
     existing["inclusion_verified"] = True
+    if verification_state := verification.get("verification_state"):
+        existing["verification_state"] = verification_state
+        existing["provider_disagreement"] = verification.get("provider_disagreement", False)
+    if verification_error := verification.get("verification_error"):
+        existing["inclusion_verified"] = False
+        existing["inclusion_verification_error"] = verification_error
+        existing["verified_action"] = verification.get("verified_action")
+        existing["provider_disagreement"] = verification.get("provider_disagreement", False)
+        return existing
+
     if not existing.get("inclusion_verified_at"):
         existing["inclusion_verified_at"] = verification["verified_at"]
     verified_block_num = verification.get("verified_block_num")
@@ -614,8 +700,6 @@ def refresh_inclusion_verification(existing: Dict[str, Any], strict: bool = Fals
         existing["block_num"] = verified_block_num
     existing["inclusion_verification_error"] = None
     existing["verified_action"] = verification["verified_action"]
-    existing["verification_state"] = verification.get("verification_state")
-    existing["provider_disagreement"] = verification.get("provider_disagreement", False)
     return existing
 
 
@@ -779,6 +863,8 @@ class FinalityWatcherHandler(BaseHTTPRequestHandler):
                     "service": "finality-watcher",
                     "auth_required": bool(self.server.auth_token),
                     "insecure_dev_mode": self.server.insecure_dev_mode,
+                    "verification_policy": self.server.verification_policy,
+                    "verification_min_success": self.server.verification_min_success,
                     "store": self.server.store.describe(),
                     "startup_checks": self.server.startup_checks,
                     "startup_recovery": self.server.startup_recovery,
@@ -809,7 +895,12 @@ class FinalityWatcherHandler(BaseHTTPRequestHandler):
 
             if self.path == "/v1/watch/register":
                 body = read_json_body(self)
-                payload = normalize_watch_request(body, self.server.default_rpc_url)
+                payload = normalize_watch_request(
+                    body,
+                    self.server.default_rpc_url,
+                    self.server.verification_policy,
+                    self.server.verification_min_success,
+                )
                 if payload.get("tx_id") and payload.get("block_num"):
                     refresh_inclusion_verification(payload, strict=False)
                 try:
@@ -897,6 +988,8 @@ class FinalityWatcherServer(ThreadingHTTPServer):
         poll_interval_sec: int,
         auth_token: str = "",
         insecure_dev_mode: bool = False,
+        verification_policy: str = "single-provider",
+        verification_min_success: int = 1,
     ):
         if not auth_token and not insecure_dev_mode:
             raise ValueError("finality watcher requires --auth-token unless --insecure-dev-mode is enabled")
@@ -906,6 +999,8 @@ class FinalityWatcherServer(ThreadingHTTPServer):
         self.poll_interval_sec = poll_interval_sec
         self.auth_token = auth_token
         self.insecure_dev_mode = insecure_dev_mode
+        self.verification_policy = verification_policy
+        self.verification_min_success = verification_min_success
         self._stop_event = threading.Event()
         self._poller = threading.Thread(target=self._poll_loop, daemon=True)
         self.startup_checks = self.run_startup_checks()
@@ -986,12 +1081,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8081)
     parser.add_argument("--rpc-url", default="https://history.denotary.io")
-    parser.add_argument("--state-backend", default="file")
+    parser.add_argument("--state-backend", default="sqlite")
     parser.add_argument("--state-file", default="runtime/finality-state.json")
     parser.add_argument("--state-db", default="runtime/finality-state.sqlite3")
     parser.add_argument("--poll-interval-sec", type=int, default=10)
     parser.add_argument("--auth-token", default="")
     parser.add_argument("--insecure-dev-mode", action="store_true")
+    parser.add_argument("--verification-policy", default="single-provider")
+    parser.add_argument("--verification-min-success", type=int, default=1)
     return parser.parse_args()
 
 
@@ -1010,6 +1107,8 @@ def main() -> None:
         args.poll_interval_sec,
         args.auth_token,
         args.insecure_dev_mode,
+        args.verification_policy,
+        args.verification_min_success,
     )
     server.start_background_polling()
     print(f"Finality watcher listening on http://{args.host}:{args.port}")

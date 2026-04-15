@@ -59,6 +59,10 @@ The file currently tracks:
 - `inclusion_verified_at`
 - `inclusion_verification_error`
 - `verified_action`
+- `verification_policy`
+- `verification_min_success`
+- `verification_state`
+- `provider_disagreement`
 - `chain_state`
 - `anchor` metadata
 
@@ -213,6 +217,7 @@ When a receipt is not yet available, the service returns `409` with:
 - `receipt_available`
 - `inclusion_verified`
 - failure metadata for `failed` requests
+- verification policy metadata for provider-based trust decisions
 
 ## Expected flow
 
@@ -238,8 +243,15 @@ The current watcher baseline now enforces:
 - rejection of conflicting re-use of an existing `request_id`
 - rejection of `tx_id` and `block_num` rewrites once recorded
 - explicit transaction verification against indexed chain history before trust is upgraded to finalized receipt eligibility
+- configurable verification policy across `single-provider` and `quorum`
 - explicit `failed` state for dropped or rejected requests
 - no regression from `finalized` back to `included`
+
+Provider policy behavior:
+
+- `single-provider`: one successful provider verification is enough
+- `quorum`: at least `verification_min_success` providers must verify the same request
+- provider disagreement is recorded in `verification_state` and `provider_disagreement`
 
 ## Run
 

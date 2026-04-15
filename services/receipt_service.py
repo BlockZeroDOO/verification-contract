@@ -136,6 +136,10 @@ def build_openapi_spec() -> Dict[str, Any]:
                         "trust_state": {"type": "string"},
                         "receipt_available": {"type": "boolean"},
                         "inclusion_verified": {"type": "boolean"},
+                        "verification_policy": {"type": "string"},
+                        "verification_min_success": {"type": "integer"},
+                        "provider_disagreement": {"type": "boolean"},
+                        "verification_state": {"type": "object", "additionalProperties": True},
                     },
                     "required": [
                         "issued_at",
@@ -151,6 +155,9 @@ def build_openapi_spec() -> Dict[str, Any]:
                         "trust_state",
                         "receipt_available",
                         "inclusion_verified",
+                        "verification_policy",
+                        "verification_min_success",
+                        "provider_disagreement",
                     ],
                 },
                 "SingleReceipt": {
@@ -189,6 +196,9 @@ def build_openapi_spec() -> Dict[str, Any]:
                         "trust_state": {"type": "string"},
                         "receipt_available": {"type": "boolean"},
                         "inclusion_verified": {"type": "boolean"},
+                        "verification_policy": {"type": "string"},
+                        "verification_min_success": {"type": "integer"},
+                        "provider_disagreement": {"type": "boolean"},
                         "error": {"type": "string"},
                         "failed_at": {"type": "string", "format": "date-time"},
                         "failure_reason": {"type": "string"},
@@ -226,6 +236,10 @@ def build_single_receipt(payload: Dict[str, Any]) -> Dict[str, Any]:
         "trust_state": derive_trust_state(payload),
         "receipt_available": True,
         "inclusion_verified": payload.get("inclusion_verified", False),
+        "verification_policy": payload.get("verification_policy"),
+        "verification_min_success": payload.get("verification_min_success"),
+        "provider_disagreement": payload.get("provider_disagreement", False),
+        "verification_state": payload.get("verification_state"),
         "inclusion_verified_at": payload.get("inclusion_verified_at"),
         "verified_action": payload.get("verified_action"),
         "chain_state": payload.get("chain_state", {}),
@@ -252,6 +266,10 @@ def build_batch_receipt(payload: Dict[str, Any]) -> Dict[str, Any]:
         "trust_state": derive_trust_state(payload),
         "receipt_available": True,
         "inclusion_verified": payload.get("inclusion_verified", False),
+        "verification_policy": payload.get("verification_policy"),
+        "verification_min_success": payload.get("verification_min_success"),
+        "provider_disagreement": payload.get("provider_disagreement", False),
+        "verification_state": payload.get("verification_state"),
         "inclusion_verified_at": payload.get("inclusion_verified_at"),
         "verified_action": payload.get("verified_action"),
         "chain_state": payload.get("chain_state", {}),
@@ -294,6 +312,9 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
                     "trust_state": derive_trust_state(payload),
                     "receipt_available": False,
                     "inclusion_verified": payload.get("inclusion_verified", False),
+                    "verification_policy": payload.get("verification_policy"),
+                    "verification_min_success": payload.get("verification_min_success"),
+                    "provider_disagreement": payload.get("provider_disagreement", False),
                 }
                 if payload.get("status") == "failed":
                     response.update(
@@ -357,7 +378,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the DeNotary receipt service.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8082)
-    parser.add_argument("--state-backend", default="file")
+    parser.add_argument("--state-backend", default="sqlite")
     parser.add_argument("--state-file", default="runtime/finality-state.json")
     parser.add_argument("--state-db", default="runtime/finality-state.sqlite3")
     return parser.parse_args()

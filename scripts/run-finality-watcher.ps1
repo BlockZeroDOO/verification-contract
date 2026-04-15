@@ -6,7 +6,9 @@ param(
     [string]$StateFile = "runtime/finality-state.json",
     [string]$StateDb = "runtime/finality-state.sqlite3",
     [int]$PollIntervalSec = 10,
-    [string]$AuthToken = ""
+    [string]$AuthToken = "",
+    [string]$VerificationPolicy = "single-provider",
+    [int]$VerificationMinSuccess = 1
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,7 +41,9 @@ $arguments = @(
     "--state-backend", $StateBackend,
     "--state-file", $StateFile,
     "--state-db", $StateDb,
-    "--poll-interval-sec", $PollIntervalSec
+    "--poll-interval-sec", $PollIntervalSec,
+    "--verification-policy", $VerificationPolicy,
+    "--verification-min-success", $VerificationMinSuccess
 )
 
 if ($AuthToken) {

@@ -17,6 +17,8 @@ Recommended runtime:
 
 - `FINALITY_STATE_BACKEND=sqlite`
 - `FINALITY_STATE_DB=/data/finality-state.sqlite3`
+- `WATCHER_VERIFICATION_POLICY=single-provider`
+- `WATCHER_VERIFICATION_MIN_SUCCESS=1`
 
 ## 1. Prepare the env file
 
@@ -31,6 +33,8 @@ CONTRACT_ACCOUNT=verification
 RPC_URL=https://history.denotary.io
 FINALITY_STATE_BACKEND=sqlite
 FINALITY_STATE_DB=/data/finality-state.sqlite3
+WATCHER_VERIFICATION_POLICY=single-provider
+WATCHER_VERIFICATION_MIN_SUCCESS=1
 INGRESS_WATCHER_URL=http://finality:8081
 INGRESS_WATCHER_AUTH_TOKEN=replace-with-shared-secret
 INGRESS_WATCHER_RPC_URL=https://history.denotary.io

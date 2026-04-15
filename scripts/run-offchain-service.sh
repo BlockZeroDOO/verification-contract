@@ -50,6 +50,8 @@ state_file="${STATE_FILE:-${project_root}/runtime/finality-state.json}"
 state_db="${FINALITY_STATE_DB:-${project_root}/runtime/finality-state.sqlite3}"
 poll_interval_sec="${POLL_INTERVAL_SEC:-10}"
 auth_token="${WATCHER_AUTH_TOKEN:-}"
+verification_policy="${WATCHER_VERIFICATION_POLICY:-single-provider}"
+verification_min_success="${WATCHER_VERIFICATION_MIN_SUCCESS:-1}"
 ingress_watcher_url="${INGRESS_WATCHER_URL:-}"
 ingress_watcher_auth_token="${INGRESS_WATCHER_AUTH_TOKEN:-${WATCHER_AUTH_TOKEN:-}}"
 ingress_watcher_rpc_url="${INGRESS_WATCHER_RPC_URL:-${RPC_URL:-https://history.denotary.io}}"
@@ -91,6 +93,8 @@ case "${service_name}" in
             --state-db "${state_db}"
             --poll-interval-sec "${poll_interval_sec}"
             --auth-token "${auth_token}"
+            --verification-policy "${verification_policy}"
+            --verification-min-success "${verification_min_success}"
         )
         exec "${python_cmd}" "${args[@]}" "$@"
         ;;

@@ -77,6 +77,10 @@ def build_proof_chain(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "details": {
                     "verified_action": payload.get("verified_action"),
                     "verification_error": payload.get("inclusion_verification_error"),
+                    "verification_policy": payload.get("verification_policy"),
+                    "verification_min_success": payload.get("verification_min_success"),
+                    "provider_disagreement": payload.get("provider_disagreement", False),
+                    "verification_state": payload.get("verification_state"),
                 },
             }
         )
@@ -133,6 +137,10 @@ def build_audit_record(payload: Dict[str, Any]) -> Dict[str, Any]:
         "inclusion_verified": payload.get("inclusion_verified", False),
         "inclusion_verified_at": payload.get("inclusion_verified_at"),
         "inclusion_verification_error": payload.get("inclusion_verification_error"),
+        "verification_policy": payload.get("verification_policy"),
+        "verification_min_success": payload.get("verification_min_success"),
+        "provider_disagreement": payload.get("provider_disagreement", False),
+        "verification_state": payload.get("verification_state"),
         "verified_action": payload.get("verified_action"),
         "anchor": anchor,
         "chain_state": payload.get("chain_state", {}),
@@ -396,6 +404,10 @@ def build_openapi_spec() -> Dict[str, Any]:
                         "inclusion_verified": {"type": "boolean"},
                         "inclusion_verified_at": {"type": "string", "format": "date-time"},
                         "inclusion_verification_error": {"type": "string"},
+                        "verification_policy": {"type": "string"},
+                        "verification_min_success": {"type": "integer"},
+                        "provider_disagreement": {"type": "boolean"},
+                        "verification_state": {"type": "object", "additionalProperties": True},
                         "verified_action": {"type": "object", "additionalProperties": True},
                         "anchor": {"type": "object", "additionalProperties": True},
                         "chain_state": {"type": "object", "additionalProperties": True},
@@ -697,7 +709,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the DeNotary audit API.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8083)
-    parser.add_argument("--state-backend", default="file")
+    parser.add_argument("--state-backend", default="sqlite")
     parser.add_argument("--state-file", default="runtime/finality-state.json")
     parser.add_argument("--state-db", default="runtime/finality-state.sqlite3")
     return parser.parse_args()

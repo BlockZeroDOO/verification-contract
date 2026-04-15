@@ -294,6 +294,8 @@ class ServiceIntegrationTest(unittest.TestCase):
         status, watcher_health = request_json(f"http://127.0.0.1:{self.watcher_port}/healthz")
         self.assertEqual(status, 200)
         self.assertEqual(watcher_health["store"]["backend"], "file")
+        self.assertEqual(watcher_health["verification_policy"], "single-provider")
+        self.assertEqual(watcher_health["verification_min_success"], 1)
         self.assertIn("startup_checks", watcher_health)
         self.assertIn("startup_recovery", watcher_health)
 
@@ -776,11 +778,112 @@ class ServiceIntegrationTest(unittest.TestCase):
             headers=self._watcher_headers(),
         )
         self.assertEqual(status, 200)
+        self.assertEqual(included["verification_policy"], "single-provider")
+        self.assertEqual(included["verification_min_success"], 1)
         self.assertTrue(included["inclusion_verified"])
         self.assertIsNotNone(included["verification_state"])
         self.assertEqual(included["verification_state"]["consensus"]["provider_count_ok"], 1)
         self.assertEqual(included["verification_state"]["consensus"]["provider_count_total"], 2)
         self.assertFalse(included["provider_disagreement"])
+
+    def test_watcher_quorum_policy_blocks_single_provider_match(self) -> None:
+        status, prepared = request_json(
+            f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
+            method="POST",
+            payload=self._single_prepare_payload("single-quorum-provider"),
+        )
+        self.assertEqual(status, 200)
+
+        request_id = prepared["request_id"]
+        tx_id = "5" * 64
+        block_num = 146
+        self._mock_transaction(
+            tx_id,
+            block_num,
+            [
+                {
+                    "block_num": block_num,
+                    "act": {
+                        "account": "verification",
+                        "name": "submit",
+                        "data": {
+                            "submitter": "alice",
+                            "object_hash": prepared["object_hash"],
+                            "external_ref": prepared["external_ref_hash"],
+                        },
+                    },
+                }
+            ],
+        )
+
+        status, _ = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/register",
+            method="POST",
+            payload={
+                "request_id": request_id,
+                "trace_id": prepared["trace_id"],
+                "mode": "single",
+                "submitter": "alice",
+                "contract": "verification",
+                "verification_policy": "quorum",
+                "verification_min_success": 2,
+                "anchor": {
+                    "object_hash": prepared["object_hash"],
+                    "external_ref_hash": prepared["external_ref_hash"],
+                },
+                "rpc_urls": [
+                    "http://127.0.0.1:1",
+                    self.mock_chain_url,
+                ],
+            },
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+
+        status, included = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/included",
+            method="POST",
+            payload={"tx_id": tx_id, "block_num": block_num},
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(included["status"], "included")
+        self.assertFalse(included["inclusion_verified"])
+        self.assertEqual(included["verification_policy"], "quorum")
+        self.assertEqual(included["verification_min_success"], 2)
+        self.assertIn("requires 2 successful providers", included["inclusion_verification_error"])
+        self.assertEqual(included["verification_state"]["consensus"]["provider_count_ok"], 1)
+        self.assertEqual(included["verification_state"]["consensus"]["provider_count_total"], 2)
+        self.assertFalse(included["verification_state"]["consensus"]["verified"])
+
+        self.mock_chain_server.chain_state = {
+            "head_block_num": 147,
+            "last_irreversible_block_num": 147,
+        }
+        status, polled = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/poll",
+            method="POST",
+            payload={},
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(polled["status"], "included")
+        self.assertFalse(polled["inclusion_verified"])
+
+        status, receipt = request_json(f"http://127.0.0.1:{self.receipt_port}/v1/receipts/{request_id}")
+        self.assertEqual(status, 409)
+        self.assertEqual(receipt["trust_state"], "included_unverified")
+        self.assertEqual(receipt["verification_policy"], "quorum")
+        self.assertEqual(receipt["verification_min_success"], 2)
+
+        status, audit_chain = request_json(f"http://127.0.0.1:{self.audit_port}/v1/audit/chain/{request_id}")
+        self.assertEqual(status, 200)
+        self.assertEqual(audit_chain["record"]["verification_policy"], "quorum")
+        self.assertEqual(audit_chain["record"]["verification_min_success"], 2)
+        self.assertEqual(
+            audit_chain["proof_chain"][-2]["details"]["verification_policy"],
+            "quorum",
+        )
 
     def test_failed_request_blocks_receipt_and_is_visible_in_audit(self) -> None:
         status, prepared = request_json(

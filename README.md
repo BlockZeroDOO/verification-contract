@@ -312,6 +312,7 @@ This live suite:
 - pushes actual `submit`, `submitroot`, `linkmanifest`, and `closebatch` transactions with `cleos`
 - waits for irreversible finality on the live chain
 - verifies finalized receipts and audit lookups by `tx_id`, `commitment_id`, `batch_id`, and `external_ref_hash`
+- verifies provider-policy behavior for both normal `single-provider` finalization and degraded `quorum` reads
 
 ## Documentation map
 

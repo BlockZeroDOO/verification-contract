@@ -31,6 +31,7 @@ The suite verifies:
 - optional watcher auto-registration handoff from ingress
 - ingress validation rejection for invalid payloads
 - `Finality Watcher` auth enforcement when mutation token is enabled
+- watcher provider-policy behavior for both `single-provider` and `quorum`
 - idempotent watcher registration
 - conflicting watcher re-registration rejection
 - watcher request lookup by `request_id`
@@ -47,6 +48,7 @@ The suite verifies:
 - `Audit API` search in both JSON and `jsonl` output modes
 - watcher global poll endpoint
 - real-chain finality for both single and batch requests
+- live degraded-provider behavior where `quorum` intentionally remains `included_unverified`
 
 ## Prerequisites
 
@@ -125,6 +127,11 @@ Available options:
 - `--poll-interval-sec`
 - `--dump-dir`
 - `--print-json-events`
+- `--use-external-services`
+- `--ingress-base-url`
+- `--watcher-base-url`
+- `--receipt-base-url`
+- `--audit-base-url`
 
 ## Full logs
 
@@ -146,3 +153,5 @@ If `--print-json-events` is also enabled, the same structured events are printed
 - this suite is intentionally broader than [docs/denotary-live-chain-integration.md](/c:/projects/verification-contract/docs/denotary-live-chain-integration.md:1)
 - use `run-live-chain-integration` as the compact end-to-end gate
 - use `run-live-offchain-services` when you want service-surface confidence before rollout or environment changes
+- when `--use-external-services` is set, the suite targets an already running Docker Compose stack
+- this external-services path now validates both normal finalized flow and a live degraded-provider `quorum` scenario

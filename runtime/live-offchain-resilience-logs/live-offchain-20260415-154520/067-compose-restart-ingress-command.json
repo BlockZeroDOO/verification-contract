@@ -1,0 +1,13 @@
+{
+  "sequence": 67,
+  "event": "compose_restart_ingress_command",
+  "timestamp": "2026-04-15T15:46:24Z",
+  "payload": {
+    "stdout": "",
+    "stderr": " Container denotary-ingress Restarting \n Container denotary-ingress Started \n"
+  },
+  "request_kind": "compose-recovery",
+  "request_label": "Restart Ingress Command",
+  "stage_summary": "Compose restart command for ingress service.",
+  "comment": "Operational artifact showing the ingress container restart."
+}

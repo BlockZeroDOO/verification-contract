@@ -1,0 +1,62 @@
+{
+  "sequence": 10,
+  "event": "ingress_single_prepare_debug",
+  "timestamp": "2026-04-15T15:45:23Z",
+  "payload": {
+    "request": {
+      "submitter": "vadim1111111",
+      "external_ref": "svc-single-1776267920",
+      "schema": {
+        "id": 1776271920,
+        "version": "1.0.0",
+        "active": true,
+        "canonicalization_profile": "json-sorted-v1"
+      },
+      "policy": {
+        "id": 1776272920,
+        "active": true,
+        "allow_single": true,
+        "allow_batch": false,
+        "require_kyc": false,
+        "min_kyc_level": 0
+      },
+      "kyc": {
+        "active": true,
+        "level": 2,
+        "expires_at": "2030-01-01T00:00:00"
+      },
+      "payload": {
+        "doc_id": "svc-single-1776267920",
+        "kind": "invoice",
+        "amount": 42
+      },
+      "include_debug_material": true
+    },
+    "status_code": 200,
+    "response": {
+      "trace_id": "5ec5564d-142d-4116-805b-589f0a778c45",
+      "request_id": "60606ae79adb81d4ab9b91ecf7c95b88524fd6c44ef623121dc38dc751781741",
+      "received_at": "2026-04-15T15:45:23Z",
+      "mode": "single",
+      "canonicalization_profile": "json-sorted-v1",
+      "object_hash": "acf075b0a14e95a4a8cf13da785ad2c38fcf12b24bfb2b076d27092b605af255",
+      "external_ref_hash": "0dc3329275bce1d1b9cd33af89655ac54189f6dfa92af22eca78f146e92e5db4",
+      "prepared_action": {
+        "contract": "verification",
+        "action": "submit",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": 1776271920,
+          "policy_id": 1776272920,
+          "object_hash": "acf075b0a14e95a4a8cf13da785ad2c38fcf12b24bfb2b076d27092b605af255",
+          "external_ref": "0dc3329275bce1d1b9cd33af89655ac54189f6dfa92af22eca78f146e92e5db4"
+        }
+      },
+      "canonical_form": "{\"amount\":42,\"doc_id\":\"svc-single-1776267920\",\"kind\":\"invoice\"}"
+    }
+  },
+  "request_kind": "ingress-surface",
+  "request_label": "Ingress Single Debug",
+  "stage_summary": "Single prepare with debug material enabled.",
+  "comment": "Checks the optional debug surface and shows the canonical form returned when explicitly requested."
+}

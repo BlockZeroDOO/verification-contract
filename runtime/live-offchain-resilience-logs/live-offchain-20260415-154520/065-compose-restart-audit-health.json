@@ -1,0 +1,16 @@
+{
+  "sequence": 65,
+  "event": "compose_restart_audit_health",
+  "timestamp": "2026-04-15T15:46:22Z",
+  "payload": {
+    "response": {
+      "status": "ok",
+      "service": "audit-api",
+      "privacy_mode": "full"
+    }
+  },
+  "request_kind": "compose-recovery",
+  "request_label": "Restart Audit Health",
+  "stage_summary": "Audit health after restart.",
+  "comment": "Confirms the audit service is healthy again before querying recovered proof chains."
+}

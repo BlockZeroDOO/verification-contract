@@ -1,0 +1,27 @@
+{
+  "sequence": 17,
+  "event": "watcher_register_unauthorized",
+  "timestamp": "2026-04-15T15:45:23Z",
+  "payload": {
+    "request": {
+      "request_id": "164aba259670cdd9234700c42be239509a4f10eef26c86fa7d6d3f4acf961341",
+      "trace_id": "138a0965-38b2-4249-a11d-1a874f385a4a",
+      "mode": "single",
+      "submitter": "vadim1111111",
+      "contract": "verification",
+      "anchor": {
+        "object_hash": "31e5164ba9e6b9301130c6aad24de39f3458dfbcaa8962b023443c30c3d55460",
+        "external_ref_hash": "9077b617531bb0febbcc8751d9e53e437176848654ebd4e3c7060f5617c58d75"
+      },
+      "rpc_url": "https://jungle4.cryptolions.io"
+    },
+    "status_code": 401,
+    "response": {
+      "error": "watcher mutation endpoint requires valid auth token"
+    }
+  },
+  "request_kind": "failure-path",
+  "request_label": "Unauthorized Register",
+  "stage_summary": "Watcher rejects register without auth.",
+  "comment": "Negative test proving mutation endpoints are protected and cannot be called anonymously."
+}

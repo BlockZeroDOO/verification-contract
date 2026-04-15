@@ -1,0 +1,90 @@
+{
+  "sequence": 56,
+  "event": "compose_restart_submit_transaction",
+  "timestamp": "2026-04-15T15:45:46Z",
+  "payload": {
+    "request_id": "e56d045a10ef08f0c0119bb86b24a849d80c651577723e8399373efb1ee6b790",
+    "transaction": {
+      "transaction_id": "ef964c4cd2525ef273b80e85d029fb01de15799b1f634ab57dec053b0b67be88",
+      "processed": {
+        "id": "ef964c4cd2525ef273b80e85d029fb01de15799b1f634ab57dec053b0b67be88",
+        "block_num": 260818408,
+        "block_time": "2026-04-15T15:45:47.000",
+        "producer_block_id": null,
+        "receipt": {
+          "status": "executed",
+          "cpu_usage_us": 317,
+          "net_usage_words": 23
+        },
+        "elapsed": 317,
+        "net_usage": 184,
+        "scheduled": false,
+        "action_traces": [
+          {
+            "action_ordinal": 1,
+            "creator_action_ordinal": 0,
+            "closest_unnotified_ancestor_action_ordinal": 0,
+            "receipt": {
+              "receiver": "verification",
+              "act_digest": "07625f43f2de53f279ecce0d5df72b46f93f9b044867b3dbcb0bd054ab9ce8f9",
+              "global_sequence": 338512445,
+              "recv_sequence": 224,
+              "auth_sequence": [
+                [
+                  "vadim1111111",
+                  86
+                ]
+              ],
+              "code_sequence": 2,
+              "abi_sequence": 2
+            },
+            "receiver": "verification",
+            "act": {
+              "account": "verification",
+              "name": "submit",
+              "authorization": [
+                {
+                  "actor": "vadim1111111",
+                  "permission": "active"
+                }
+              ],
+              "data": {
+                "submitter": "vadim1111111",
+                "schema_id": 1776271920,
+                "policy_id": 1776272920,
+                "object_hash": "d6bdc772b9eacacfc593d29f47adf6da49931afcdfdd27baeb3ce85858681893",
+                "external_ref": "ed8e098350f7a2bfce48458a36124876cd6ae2a2500728ed52ed913646f0d96c"
+              },
+              "hex_data": "1042082104e992d930c2df690000000018c6df6900000000d6bdc772b9eacacfc593d29f47adf6da49931afcdfdd27baeb3ce85858681893ed8e098350f7a2bfce48458a36124876cd6ae2a2500728ed52ed913646f0d96c"
+            },
+            "context_free": false,
+            "elapsed": 193,
+            "console": "",
+            "trx_id": "ef964c4cd2525ef273b80e85d029fb01de15799b1f634ab57dec053b0b67be88",
+            "block_num": 260818408,
+            "block_time": "2026-04-15T15:45:47.000",
+            "producer_block_id": null,
+            "account_ram_deltas": [
+              {
+                "account": "verification",
+                "delta": 1093
+              }
+            ],
+            "except": null,
+            "error_code": null,
+            "return_value_hex_data": ""
+          }
+        ],
+        "account_ram_delta": null,
+        "except": null,
+        "error_code": null
+      }
+    },
+    "tx_id": "ef964c4cd2525ef273b80e85d029fb01de15799b1f634ab57dec053b0b67be88",
+    "block_num": 260818408
+  },
+  "request_kind": "compose-recovery",
+  "request_label": "Compose Restart Submit TX",
+  "stage_summary": "Broadcast the restart drill transaction.",
+  "comment": "Creates the chain record that must survive watcher, receipt, audit, and ingress restarts."
+}

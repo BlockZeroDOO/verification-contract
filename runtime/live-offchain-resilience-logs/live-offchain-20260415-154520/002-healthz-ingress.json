@@ -1,0 +1,17 @@
+{
+  "sequence": 2,
+  "event": "healthz_ingress",
+  "timestamp": "2026-04-15T15:45:20Z",
+  "payload": {
+    "url": "http://127.0.0.1:8080/healthz",
+    "status_code": 200,
+    "response": {
+      "status": "ok",
+      "service": "ingress-api"
+    }
+  },
+  "request_kind": "health",
+  "request_label": "Ingress Health",
+  "stage_summary": "Ingress service health check.",
+  "comment": "Confirms the public prepare service is reachable before any live requests begin."
+}

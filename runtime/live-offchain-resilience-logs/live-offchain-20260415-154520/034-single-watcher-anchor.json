@@ -1,0 +1,51 @@
+{
+  "sequence": 34,
+  "event": "single_watcher_anchor",
+  "timestamp": "2026-04-15T15:45:24Z",
+  "payload": {
+    "request_id": "e37f4dcbdb9fb7c71bb309f6ec65ddb4348540b3621b173433f2af44c8a47862",
+    "status_code": 200,
+    "response": {
+      "anchor": {
+        "external_ref_hash": "6b7e2d1ed700b3eff68d7ae84eff8c5b4aca8da4d32c71862b126e75ae39f9e3",
+        "object_hash": "9d2aafa9da5636f151c69b4c2dba8c5ac2fbc6c12f6fd4b9e7d085c74089d6d9",
+        "commitment_id": 39
+      },
+      "block_num": null,
+      "chain_state": {
+        "head_block_num": null,
+        "last_irreversible_block_num": null
+      },
+      "contract": "verification",
+      "failed_at": null,
+      "failure_details": null,
+      "failure_reason": null,
+      "finalized_at": null,
+      "included_at": null,
+      "inclusion_verification_error": null,
+      "inclusion_verified": false,
+      "inclusion_verified_at": null,
+      "mode": "single",
+      "provider_disagreement": false,
+      "registered_at": "2026-04-15T15:45:23Z",
+      "request_id": "e37f4dcbdb9fb7c71bb309f6ec65ddb4348540b3621b173433f2af44c8a47862",
+      "rpc_url": "https://jungle4.cryptolions.io",
+      "rpc_urls": [
+        "https://jungle4.cryptolions.io"
+      ],
+      "status": "submitted",
+      "submitter": "vadim1111111",
+      "trace_id": "f0bc29bd-3ec4-4a54-b1ae-30a920bd579d",
+      "tx_id": null,
+      "updated_at": "2026-04-15T15:45:24Z",
+      "verification_min_success": 1,
+      "verification_policy": "single-provider",
+      "verification_state": null,
+      "verified_action": null
+    }
+  },
+  "request_kind": "single-flow",
+  "request_label": "Single Anchor",
+  "stage_summary": "Attach chain anchor metadata to the request.",
+  "comment": "Adds commitment identifiers and chain-facing metadata to the watcher state."
+}

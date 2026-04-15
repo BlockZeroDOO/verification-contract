@@ -1,0 +1,45 @@
+{
+  "sequence": 59,
+  "event": "compose_restart_finality_health",
+  "timestamp": "2026-04-15T15:46:11Z",
+  "payload": {
+    "response": {
+      "status": "ok",
+      "service": "finality-watcher",
+      "auth_required": true,
+      "insecure_dev_mode": false,
+      "verification_policy": "single-provider",
+      "verification_min_success": 1,
+      "store": {
+        "backend": "sqlite",
+        "path": "/data/finality-state.sqlite3",
+        "exists": true,
+        "schema_version": "1"
+      },
+      "startup_checks": {
+        "checked_at": "2026-04-15T15:45:53Z",
+        "request_count": 63,
+        "recoverable_request_count": 32,
+        "status_counts": {
+          "failed": 12,
+          "submitted": 19,
+          "finalized": 21,
+          "included": 11
+        }
+      },
+      "startup_recovery": {
+        "started_at": "2026-04-15T15:45:53Z",
+        "attempted": 32,
+        "updated": 0,
+        "finalized": 1,
+        "failed": 0,
+        "errors": [],
+        "completed_at": "2026-04-15T15:46:11Z"
+      }
+    }
+  },
+  "request_kind": "compose-recovery",
+  "request_label": "Restart Finality Health",
+  "stage_summary": "Watcher health after restart.",
+  "comment": "Confirms watcher comes back on SQLite state with startup recovery information intact."
+}

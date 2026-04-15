@@ -1,0 +1,51 @@
+{
+  "sequence": 15,
+  "event": "watcher_record_after_ingress_handoff",
+  "timestamp": "2026-04-15T15:45:23Z",
+  "payload": {
+    "request_id": "60606ae79adb81d4ab9b91ecf7c95b88524fd6c44ef623121dc38dc751781741",
+    "status_code": 200,
+    "response": {
+      "anchor": {
+        "external_ref_hash": "0dc3329275bce1d1b9cd33af89655ac54189f6dfa92af22eca78f146e92e5db4",
+        "object_hash": "acf075b0a14e95a4a8cf13da785ad2c38fcf12b24bfb2b076d27092b605af255"
+      },
+      "block_num": null,
+      "chain_state": {
+        "head_block_num": null,
+        "last_irreversible_block_num": null
+      },
+      "contract": "verification",
+      "failed_at": null,
+      "failure_details": null,
+      "failure_reason": null,
+      "finalized_at": null,
+      "included_at": null,
+      "inclusion_verification_error": null,
+      "inclusion_verified": false,
+      "inclusion_verified_at": null,
+      "mode": "single",
+      "provider_disagreement": false,
+      "registered_at": "2026-04-15T15:45:23Z",
+      "request_id": "60606ae79adb81d4ab9b91ecf7c95b88524fd6c44ef623121dc38dc751781741",
+      "rpc_url": "https://jungle4.cryptolions.io",
+      "rpc_urls": [
+        "https://jungle4.cryptolions.io",
+        "https://jungle4.api.eosnation.io"
+      ],
+      "status": "submitted",
+      "submitter": "vadim1111111",
+      "trace_id": "6de3d1dc-8559-4ecd-8570-090bd74e4e32",
+      "tx_id": null,
+      "updated_at": "2026-04-15T15:45:23Z",
+      "verification_min_success": 1,
+      "verification_policy": "single-provider",
+      "verification_state": null,
+      "verified_action": null
+    }
+  },
+  "request_kind": "ingress-surface",
+  "request_label": "Watcher Record After Handoff",
+  "stage_summary": "Watcher state after ingress auto-registration.",
+  "comment": "Confirms the request created by ingress handoff is already persisted in the watcher store."
+}

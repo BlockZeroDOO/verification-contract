@@ -1,0 +1,81 @@
+{
+  "sequence": 74,
+  "event": "batch_linkmanifest_transaction",
+  "timestamp": "2026-04-15T15:46:32Z",
+  "payload": {
+    "request_id": "61a50ee27894414021f11d08cfc74285abf17312fc43b9c34e3f1ddc6a4a7286",
+    "transaction": {
+      "transaction_id": "13942d9f7eb3504db00dce7e0eb252c52d40d420ea4733e902a734eeca6b7d21",
+      "processed": {
+        "id": "13942d9f7eb3504db00dce7e0eb252c52d40d420ea4733e902a734eeca6b7d21",
+        "block_num": 260818499,
+        "block_time": "2026-04-15T15:46:32.500",
+        "producer_block_id": null,
+        "receipt": {
+          "status": "executed",
+          "cpu_usage_us": 617,
+          "net_usage_words": 17
+        },
+        "elapsed": 617,
+        "net_usage": 136,
+        "scheduled": false,
+        "action_traces": [
+          {
+            "action_ordinal": 1,
+            "creator_action_ordinal": 0,
+            "closest_unnotified_ancestor_action_ordinal": 0,
+            "receipt": {
+              "receiver": "verification",
+              "act_digest": "d2f56c060c7244cf8c61977166497aff21daad9aa7b224d541ff065b6b320679",
+              "global_sequence": 338512550,
+              "recv_sequence": 226,
+              "auth_sequence": [
+                [
+                  "vadim1111111",
+                  88
+                ]
+              ],
+              "code_sequence": 2,
+              "abi_sequence": 2
+            },
+            "receiver": "verification",
+            "act": {
+              "account": "verification",
+              "name": "linkmanifest",
+              "authorization": [
+                {
+                  "actor": "vadim1111111",
+                  "permission": "active"
+                }
+              ],
+              "data": {
+                "id": 11,
+                "manifest_hash": "9cffa7d142da0e6653157c4fdbffda2ead0947885c6fbd07256d36e4271d84c4"
+              },
+              "hex_data": "0b000000000000009cffa7d142da0e6653157c4fdbffda2ead0947885c6fbd07256d36e4271d84c4"
+            },
+            "context_free": false,
+            "elapsed": 130,
+            "console": "",
+            "trx_id": "13942d9f7eb3504db00dce7e0eb252c52d40d420ea4733e902a734eeca6b7d21",
+            "block_num": 260818499,
+            "block_time": "2026-04-15T15:46:32.500",
+            "producer_block_id": null,
+            "account_ram_deltas": [],
+            "except": null,
+            "error_code": null,
+            "return_value_hex_data": ""
+          }
+        ],
+        "account_ram_delta": null,
+        "except": null,
+        "error_code": null
+      }
+    },
+    "tx_id": "13942d9f7eb3504db00dce7e0eb252c52d40d420ea4733e902a734eeca6b7d21"
+  },
+  "request_kind": "batch-flow",
+  "request_label": "Batch Link Manifest TX",
+  "stage_summary": "Broadcast linkmanifest for the batch.",
+  "comment": "Links the manifest hash to the open batch so it can later be closed."
+}

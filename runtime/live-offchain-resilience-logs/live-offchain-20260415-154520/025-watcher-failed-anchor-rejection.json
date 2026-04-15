@@ -1,0 +1,16 @@
+{
+  "sequence": 25,
+  "event": "watcher_failed_anchor_rejection",
+  "timestamp": "2026-04-15T15:45:23Z",
+  "payload": {
+    "request_id": "164aba259670cdd9234700c42be239509a4f10eef26c86fa7d6d3f4acf961341",
+    "status_code": 400,
+    "response": {
+      "error": "terminal request cannot accept new anchor mutations"
+    }
+  },
+  "request_kind": "failure-path",
+  "request_label": "Reject Anchor After Failure",
+  "stage_summary": "Watcher blocks anchor updates on a failed request.",
+  "comment": "Guards the state machine against mutating a terminal failed request."
+}

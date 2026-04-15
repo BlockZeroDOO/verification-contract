@@ -1,0 +1,26 @@
+{
+  "sequence": 49,
+  "event": "quorum_commitment_row",
+  "timestamp": "2026-04-15T15:45:45Z",
+  "payload": {
+    "request_id": "dc0c7af55d3312616481591fc86311c4c858672d70156cd0978d033a65b38b08",
+    "row": {
+      "id": 40,
+      "submitter": "vadim1111111",
+      "schema_id": 1776271920,
+      "policy_id": 1776272920,
+      "object_hash": "5eff4c87c80ad1a25eebf0d9d0906d37d2dea042d5841283e4c7f87e9b303829",
+      "external_ref": "88f29a21539417e5095a38ec5f52c3b0f853838d95aceb2e2093f50984f50025",
+      "request_key": "7c59b3a13879844332f700b2bd11ebd4096c3e6396338faef6d4c9696f42adf8",
+      "block_num": 50651,
+      "created_at": "2026-04-15T15:45:42",
+      "status_changed_at": "2026-04-15T15:45:42",
+      "status": 0,
+      "superseded_by": 0
+    }
+  },
+  "request_kind": "quorum-flow",
+  "request_label": "Quorum Commitment Row",
+  "stage_summary": "Read the on-chain row for quorum test.",
+  "comment": "Confirms the chain write succeeded even though the verification policy should stay degraded."
+}

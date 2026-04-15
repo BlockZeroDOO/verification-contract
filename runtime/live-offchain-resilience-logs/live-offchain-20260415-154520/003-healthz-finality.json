@@ -1,0 +1,47 @@
+{
+  "sequence": 3,
+  "event": "healthz_finality",
+  "timestamp": "2026-04-15T15:45:20Z",
+  "payload": {
+    "url": "http://127.0.0.1:8081/healthz",
+    "status_code": 200,
+    "response": {
+      "status": "ok",
+      "service": "finality-watcher",
+      "auth_required": true,
+      "insecure_dev_mode": false,
+      "verification_policy": "single-provider",
+      "verification_min_success": 1,
+      "store": {
+        "backend": "sqlite",
+        "path": "/data/finality-state.sqlite3",
+        "exists": true,
+        "schema_version": "1"
+      },
+      "startup_checks": {
+        "checked_at": "2026-04-15T15:43:16Z",
+        "request_count": 56,
+        "recoverable_request_count": 29,
+        "status_counts": {
+          "failed": 11,
+          "finalized": 19,
+          "submitted": 16,
+          "included": 10
+        }
+      },
+      "startup_recovery": {
+        "started_at": "2026-04-15T15:43:16Z",
+        "attempted": 29,
+        "updated": 0,
+        "finalized": 1,
+        "failed": 0,
+        "errors": [],
+        "completed_at": "2026-04-15T15:43:31Z"
+      }
+    }
+  },
+  "request_kind": "health",
+  "request_label": "Finality Health",
+  "stage_summary": "Finality watcher health and startup state.",
+  "comment": "Shows watcher auth, verification policy, durable store backend, and startup recovery status."
+}

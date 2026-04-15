@@ -1,0 +1,26 @@
+{
+  "sequence": 33,
+  "event": "single_commitment_row",
+  "timestamp": "2026-04-15T15:45:24Z",
+  "payload": {
+    "request_id": "e37f4dcbdb9fb7c71bb309f6ec65ddb4348540b3621b173433f2af44c8a47862",
+    "row": {
+      "id": 39,
+      "submitter": "vadim1111111",
+      "schema_id": 1776271920,
+      "policy_id": 1776272920,
+      "object_hash": "9d2aafa9da5636f151c69b4c2dba8c5ac2fbc6c12f6fd4b9e7d085c74089d6d9",
+      "external_ref": "6b7e2d1ed700b3eff68d7ae84eff8c5b4aca8da4d32c71862b126e75ae39f9e3",
+      "request_key": "819fc405904892722ed46c515b0eefb81d6b48a3b5188a671c1845992e92d243",
+      "block_num": 50616,
+      "created_at": "2026-04-15T15:45:24",
+      "status_changed_at": "2026-04-15T15:45:24",
+      "status": 0,
+      "superseded_by": 0
+    }
+  },
+  "request_kind": "single-flow",
+  "request_label": "Single Commitment Row",
+  "stage_summary": "Read the on-chain commitment row.",
+  "comment": "Confirms the commitment exists in the verification contract table before finality processing completes."
+}

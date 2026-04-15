@@ -1,0 +1,89 @@
+{
+  "sequence": 8,
+  "event": "governance_setpolicy_batch",
+  "timestamp": "2026-04-15T15:45:23Z",
+  "payload": {
+    "result": {
+      "transaction_id": "67380c00ae466faeffd8510b3d03ea6cb9b97c0f22972220e59802d8be9ecba7",
+      "processed": {
+        "id": "67380c00ae466faeffd8510b3d03ea6cb9b97c0f22972220e59802d8be9ecba7",
+        "block_num": 260818362,
+        "block_time": "2026-04-15T15:45:24.000",
+        "producer_block_id": null,
+        "receipt": {
+          "status": "executed",
+          "cpu_usage_us": 199,
+          "net_usage_words": 14
+        },
+        "elapsed": 199,
+        "net_usage": 112,
+        "scheduled": false,
+        "action_traces": [
+          {
+            "action_ordinal": 1,
+            "creator_action_ordinal": 0,
+            "closest_unnotified_ancestor_action_ordinal": 0,
+            "receipt": {
+              "receiver": "verification",
+              "act_digest": "238bc6df58829f9a9986219a7033b9c7c21cfebf09676fa66ef22a6de49a9e0a",
+              "global_sequence": 338512390,
+              "recv_sequence": 221,
+              "auth_sequence": [
+                [
+                  "verification",
+                  194
+                ]
+              ],
+              "code_sequence": 2,
+              "abi_sequence": 2
+            },
+            "receiver": "verification",
+            "act": {
+              "account": "verification",
+              "name": "setpolicy",
+              "authorization": [
+                {
+                  "actor": "verification",
+                  "permission": "active"
+                }
+              ],
+              "data": {
+                "id": 1776272921,
+                "allow_single": 0,
+                "allow_batch": 1,
+                "require_kyc": 0,
+                "min_kyc_level": 0,
+                "active": 1
+              },
+              "hex_data": "19c6df69000000000001000001"
+            },
+            "context_free": false,
+            "elapsed": 72,
+            "console": "",
+            "trx_id": "67380c00ae466faeffd8510b3d03ea6cb9b97c0f22972220e59802d8be9ecba7",
+            "block_num": 260818362,
+            "block_time": "2026-04-15T15:45:24.000",
+            "producer_block_id": null,
+            "account_ram_deltas": [
+              {
+                "account": "verification",
+                "delta": 134
+              }
+            ],
+            "except": null,
+            "error_code": null,
+            "return_value_hex_data": ""
+          }
+        ],
+        "account_ram_delta": null,
+        "except": null,
+        "error_code": null
+      }
+    },
+    "policy_id": 1776272921
+  },
+  "request_kind": "governance",
+  "request_label": "Batch Policy Setup",
+  "stage_summary": "Creates the batch-submit policy for live tests.",
+  "comment": "Administrative preparation step that enables the batch-request path used at the end of the drill."
+}

@@ -1,0 +1,28 @@
+{
+  "sequence": 73,
+  "event": "batch_row_after_submitroot",
+  "timestamp": "2026-04-15T15:46:31Z",
+  "payload": {
+    "request_id": "61a50ee27894414021f11d08cfc74285abf17312fc43b9c34e3f1ddc6a4a7286",
+    "row": {
+      "id": 11,
+      "submitter": "vadim1111111",
+      "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+      "leaf_count": 2,
+      "schema_id": 1776271920,
+      "policy_id": 1776272921,
+      "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "external_ref": "fdc12020791dbdb98010081bf086ffed857abed6f694e6bbddb84984314d0b7c",
+      "request_key": "4ccc0538cb6bddb0a1f02fe85ea67505242e6a699a3a9295920d81e86aa3bb68",
+      "block_num": 50743,
+      "created_at": "2026-04-15T15:46:29",
+      "manifest_linked_at": "1970-01-01T00:00:00",
+      "status_changed_at": "2026-04-15T15:46:29",
+      "status": 0
+    }
+  },
+  "request_kind": "batch-flow",
+  "request_label": "Batch Row After Submitroot",
+  "stage_summary": "Read the batch row after submitroot.",
+  "comment": "Confirms the batch row exists before manifest linkage and closure continue."
+}

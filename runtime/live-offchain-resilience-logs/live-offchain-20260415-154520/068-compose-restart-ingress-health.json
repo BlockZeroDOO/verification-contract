@@ -1,0 +1,15 @@
+{
+  "sequence": 68,
+  "event": "compose_restart_ingress_health",
+  "timestamp": "2026-04-15T15:46:27Z",
+  "payload": {
+    "response": {
+      "status": "ok",
+      "service": "ingress-api"
+    }
+  },
+  "request_kind": "compose-recovery",
+  "request_label": "Restart Ingress Health",
+  "stage_summary": "Ingress health after restart.",
+  "comment": "Confirms the public prepare service is healthy again before testing a fresh handoff."
+}

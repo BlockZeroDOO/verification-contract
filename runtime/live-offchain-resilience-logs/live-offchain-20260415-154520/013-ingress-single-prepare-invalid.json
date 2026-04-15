@@ -1,0 +1,39 @@
+{
+  "sequence": 13,
+  "event": "ingress_single_prepare_invalid",
+  "timestamp": "2026-04-15T15:45:23Z",
+  "payload": {
+    "request": {
+      "submitter": "vadim1111111",
+      "external_ref": "svc-single-1776267920",
+      "schema": {
+        "id": 1776271920,
+        "version": "1.0.0",
+        "active": true,
+        "canonicalization_profile": "json-sorted-v1"
+      },
+      "policy": {
+        "id": 1776272920,
+        "active": true,
+        "allow_single": true,
+        "allow_batch": false,
+        "require_kyc": false,
+        "min_kyc_level": 0
+      },
+      "kyc": {
+        "active": true,
+        "level": 2,
+        "expires_at": "2030-01-01T00:00:00"
+      },
+      "payload": null
+    },
+    "status_code": 400,
+    "response": {
+      "error": "payload must not be null"
+    }
+  },
+  "request_kind": "ingress-surface",
+  "request_label": "Ingress Invalid Payload",
+  "stage_summary": "Rejects malformed single payload.",
+  "comment": "Negative test proving ingress validation blocks malformed requests before they reach chain or watcher logic."
+}

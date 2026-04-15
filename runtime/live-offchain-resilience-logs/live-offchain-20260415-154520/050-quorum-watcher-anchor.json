@@ -1,0 +1,52 @@
+{
+  "sequence": 50,
+  "event": "quorum_watcher_anchor",
+  "timestamp": "2026-04-15T15:45:45Z",
+  "payload": {
+    "request_id": "dc0c7af55d3312616481591fc86311c4c858672d70156cd0978d033a65b38b08",
+    "status_code": 200,
+    "response": {
+      "anchor": {
+        "external_ref_hash": "88f29a21539417e5095a38ec5f52c3b0f853838d95aceb2e2093f50984f50025",
+        "object_hash": "5eff4c87c80ad1a25eebf0d9d0906d37d2dea042d5841283e4c7f87e9b303829",
+        "commitment_id": 40
+      },
+      "block_num": null,
+      "chain_state": {
+        "head_block_num": null,
+        "last_irreversible_block_num": null
+      },
+      "contract": "verification",
+      "failed_at": null,
+      "failure_details": null,
+      "failure_reason": null,
+      "finalized_at": null,
+      "included_at": null,
+      "inclusion_verification_error": null,
+      "inclusion_verified": false,
+      "inclusion_verified_at": null,
+      "mode": "single",
+      "provider_disagreement": false,
+      "registered_at": "2026-04-15T15:45:40Z",
+      "request_id": "dc0c7af55d3312616481591fc86311c4c858672d70156cd0978d033a65b38b08",
+      "rpc_url": "http://127.0.0.1:1",
+      "rpc_urls": [
+        "http://127.0.0.1:1",
+        "https://jungle4.cryptolions.io"
+      ],
+      "status": "submitted",
+      "submitter": "vadim1111111",
+      "trace_id": "2c0a270c-ec2a-4f79-bdf0-d139bd29814e",
+      "tx_id": null,
+      "updated_at": "2026-04-15T15:45:45Z",
+      "verification_min_success": 2,
+      "verification_policy": "quorum",
+      "verification_state": null,
+      "verified_action": null
+    }
+  },
+  "request_kind": "quorum-flow",
+  "request_label": "Quorum Anchor",
+  "stage_summary": "Attach anchor metadata for the quorum test.",
+  "comment": "Stores identifiers needed for later receipt and audit assertions."
+}

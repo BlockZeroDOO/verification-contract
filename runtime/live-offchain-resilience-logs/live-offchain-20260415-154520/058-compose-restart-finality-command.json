@@ -1,0 +1,13 @@
+{
+  "sequence": 58,
+  "event": "compose_restart_finality_command",
+  "timestamp": "2026-04-15T15:45:52Z",
+  "payload": {
+    "stdout": "",
+    "stderr": " Container denotary-finality Restarting \n Container denotary-finality Started \n"
+  },
+  "request_kind": "compose-recovery",
+  "request_label": "Restart Finality Command",
+  "stage_summary": "Compose restart command for finality service.",
+  "comment": "Operational artifact showing the exact container restart invoked for the watcher."
+}

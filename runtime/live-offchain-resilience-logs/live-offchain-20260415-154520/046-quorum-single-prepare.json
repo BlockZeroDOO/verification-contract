@@ -1,0 +1,60 @@
+{
+  "sequence": 46,
+  "event": "quorum_single_prepare",
+  "timestamp": "2026-04-15T15:45:40Z",
+  "payload": {
+    "request": {
+      "submitter": "vadim1111111",
+      "external_ref": "svc-live-quorum-1776267920",
+      "schema": {
+        "id": 1776271920,
+        "version": "1.0.0",
+        "active": true,
+        "canonicalization_profile": "json-sorted-v1"
+      },
+      "policy": {
+        "id": 1776272920,
+        "active": true,
+        "allow_single": true,
+        "allow_batch": false,
+        "require_kyc": false,
+        "min_kyc_level": 0
+      },
+      "kyc": {
+        "active": true,
+        "level": 2,
+        "expires_at": "2030-01-01T00:00:00"
+      },
+      "payload": {
+        "doc_id": "svc-live-quorum-1776267920",
+        "kind": "invoice",
+        "amount": 42
+      }
+    },
+    "status_code": 200,
+    "response": {
+      "trace_id": "2c0a270c-ec2a-4f79-bdf0-d139bd29814e",
+      "request_id": "dc0c7af55d3312616481591fc86311c4c858672d70156cd0978d033a65b38b08",
+      "received_at": "2026-04-15T15:45:40Z",
+      "mode": "single",
+      "canonicalization_profile": "json-sorted-v1",
+      "object_hash": "5eff4c87c80ad1a25eebf0d9d0906d37d2dea042d5841283e4c7f87e9b303829",
+      "external_ref_hash": "88f29a21539417e5095a38ec5f52c3b0f853838d95aceb2e2093f50984f50025",
+      "prepared_action": {
+        "contract": "verification",
+        "action": "submit",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": 1776271920,
+          "policy_id": 1776272920,
+          "object_hash": "5eff4c87c80ad1a25eebf0d9d0906d37d2dea042d5841283e4c7f87e9b303829",
+          "external_ref": "88f29a21539417e5095a38ec5f52c3b0f853838d95aceb2e2093f50984f50025"
+        }
+      }
+    }
+  },
+  "request_kind": "quorum-flow",
+  "request_label": "Quorum Prepare",
+  "stage_summary": "Prepare the degraded-provider single request.",
+  "comment": "Creates a request used to prove quorum policy does not over-trust a partially available provider set."
+}

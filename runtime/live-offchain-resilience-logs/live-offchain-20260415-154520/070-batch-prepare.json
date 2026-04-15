@@ -1,0 +1,104 @@
+{
+  "sequence": 70,
+  "event": "batch_prepare",
+  "timestamp": "2026-04-15T15:46:27Z",
+  "payload": {
+    "request": {
+      "submitter": "vadim1111111",
+      "external_ref": "svc-live-batch-1776267920",
+      "schema": {
+        "id": 1776271920,
+        "version": "1.0.0",
+        "active": true,
+        "canonicalization_profile": "json-sorted-v1"
+      },
+      "policy": {
+        "id": 1776272921,
+        "active": true,
+        "allow_single": false,
+        "allow_batch": true,
+        "require_kyc": false,
+        "min_kyc_level": 0
+      },
+      "kyc": {
+        "active": true,
+        "level": 2,
+        "expires_at": "2030-01-01T00:00:00"
+      },
+      "items": [
+        {
+          "external_leaf_ref": "svc-live-batch-1776267920-leaf-a",
+          "payload": {
+            "doc_id": "a",
+            "amount": 1
+          }
+        },
+        {
+          "external_leaf_ref": "svc-live-batch-1776267920-leaf-b",
+          "payload": {
+            "doc_id": "b",
+            "amount": 2
+          }
+        }
+      ],
+      "include_debug_material": true
+    },
+    "status_code": 200,
+    "response": {
+      "trace_id": "9f7b031e-a98c-4dab-a6db-9882fafeea17",
+      "request_id": "61a50ee27894414021f11d08cfc74285abf17312fc43b9c34e3f1ddc6a4a7286",
+      "received_at": "2026-04-15T15:46:27Z",
+      "mode": "batch",
+      "canonicalization_profile": "json-sorted-v1",
+      "leaf_count": 2,
+      "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+      "external_ref_hash": "fdc12020791dbdb98010081bf086ffed857abed6f694e6bbddb84984314d0b7c",
+      "manifest_hash": "9cffa7d142da0e6653157c4fdbffda2ead0947885c6fbd07256d36e4271d84c4",
+      "prepared_action": {
+        "contract": "verification",
+        "action": "submitroot",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": 1776271920,
+          "policy_id": 1776272921,
+          "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+          "leaf_count": 2,
+          "external_ref": "fdc12020791dbdb98010081bf086ffed857abed6f694e6bbddb84984314d0b7c"
+        }
+      },
+      "leaf_hashes": [
+        "837cb7d6841b6cda373b2d9e91f189f4bd800c03118583bcf0ad74efdf467446",
+        "0add712648932f475e75dcdf1b6324aa88658fcd0df507f9ddda927af764f043"
+      ],
+      "manifest": {
+        "manifest_version": "batch-manifest-v1",
+        "submitter": "vadim1111111",
+        "schema_id": 1776271920,
+        "schema_version": "1.0.0",
+        "policy_id": 1776272921,
+        "external_ref_hash": "fdc12020791dbdb98010081bf086ffed857abed6f694e6bbddb84984314d0b7c",
+        "leaf_count": 2,
+        "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa",
+        "leafs": [
+          {
+            "index": 0,
+            "leaf_hash": "837cb7d6841b6cda373b2d9e91f189f4bd800c03118583bcf0ad74efdf467446",
+            "external_leaf_ref": "svc-live-batch-1776267920-leaf-a",
+            "canonical_form": "{\"amount\":1,\"doc_id\":\"a\"}"
+          },
+          {
+            "index": 1,
+            "leaf_hash": "0add712648932f475e75dcdf1b6324aa88658fcd0df507f9ddda927af764f043",
+            "external_leaf_ref": "svc-live-batch-1776267920-leaf-b",
+            "canonical_form": "{\"amount\":2,\"doc_id\":\"b\"}"
+          }
+        ]
+      },
+      "manifest_canonical_form": "{\"external_ref_hash\":\"fdc12020791dbdb98010081bf086ffed857abed6f694e6bbddb84984314d0b7c\",\"leaf_count\":2,\"leafs\":[{\"canonical_form\":\"{\\\"amount\\\":1,\\\"doc_id\\\":\\\"a\\\"}\",\"external_leaf_ref\":\"svc-live-batch-1776267920-leaf-a\",\"index\":0,\"leaf_hash\":\"837cb7d6841b6cda373b2d9e91f189f4bd800c03118583bcf0ad74efdf467446\"},{\"canonical_form\":\"{\\\"amount\\\":2,\\\"doc_id\\\":\\\"b\\\"}\",\"external_leaf_ref\":\"svc-live-batch-1776267920-leaf-b\",\"index\":1,\"leaf_hash\":\"0add712648932f475e75dcdf1b6324aa88658fcd0df507f9ddda927af764f043\"}],\"manifest_version\":\"batch-manifest-v1\",\"policy_id\":1776272921,\"root_hash\":\"cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa\",\"schema_id\":1776271920,\"schema_version\":\"1.0.0\",\"submitter\":\"vadim1111111\"}"
+    }
+  },
+  "request_kind": "batch-flow",
+  "request_label": "Batch Prepare",
+  "stage_summary": "Prepare the live batch request.",
+  "comment": "Ingress derives leaf hashes, root hash, manifest hash, and the submitroot action for the batch flow."
+}

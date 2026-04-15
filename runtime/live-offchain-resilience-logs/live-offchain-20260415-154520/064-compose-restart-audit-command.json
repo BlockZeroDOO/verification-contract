@@ -1,0 +1,13 @@
+{
+  "sequence": 64,
+  "event": "compose_restart_audit_command",
+  "timestamp": "2026-04-15T15:46:19Z",
+  "payload": {
+    "stdout": "",
+    "stderr": " Container denotary-audit Restarting \n Container denotary-audit Started \n"
+  },
+  "request_kind": "compose-recovery",
+  "request_label": "Restart Audit Command",
+  "stage_summary": "Compose restart command for audit service.",
+  "comment": "Operational artifact showing the audit container restart."
+}

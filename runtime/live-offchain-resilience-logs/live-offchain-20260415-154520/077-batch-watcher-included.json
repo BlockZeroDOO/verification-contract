@@ -1,0 +1,83 @@
+{
+  "sequence": 77,
+  "event": "batch_watcher_included",
+  "timestamp": "2026-04-15T15:46:32Z",
+  "payload": {
+    "request_id": "61a50ee27894414021f11d08cfc74285abf17312fc43b9c34e3f1ddc6a4a7286",
+    "status_code": 200,
+    "response": {
+      "anchor": {
+        "batch_id": 11,
+        "external_ref_hash": "fdc12020791dbdb98010081bf086ffed857abed6f694e6bbddb84984314d0b7c",
+        "leaf_count": 2,
+        "manifest_hash": "9cffa7d142da0e6653157c4fdbffda2ead0947885c6fbd07256d36e4271d84c4",
+        "root_hash": "cdc8d10455139969e8f17506777b8d0c29f99e3f8ca81d27864b25a9c97a1afa"
+      },
+      "block_num": 260818492,
+      "chain_state": {
+        "head_block_num": null,
+        "last_irreversible_block_num": null
+      },
+      "contract": "verification",
+      "failed_at": null,
+      "failure_details": null,
+      "failure_reason": null,
+      "finalized_at": null,
+      "included_at": "2026-04-15T15:46:32Z",
+      "inclusion_verification_error": null,
+      "inclusion_verified": true,
+      "inclusion_verified_at": "2026-04-15T15:46:32Z",
+      "mode": "batch",
+      "provider_disagreement": false,
+      "registered_at": "2026-04-15T15:46:27Z",
+      "request_id": "61a50ee27894414021f11d08cfc74285abf17312fc43b9c34e3f1ddc6a4a7286",
+      "rpc_url": "https://jungle4.cryptolions.io",
+      "rpc_urls": [
+        "https://jungle4.cryptolions.io"
+      ],
+      "status": "included",
+      "submitter": "vadim1111111",
+      "trace_id": "9f7b031e-a98c-4dab-a6db-9882fafeea17",
+      "tx_id": "579720ec99aaf00eed854f3021660c5410a610769e6acc7be83ba6e88a8b761a",
+      "updated_at": "2026-04-15T15:46:32Z",
+      "verification_min_success": 1,
+      "verification_policy": "single-provider",
+      "verification_state": {
+        "policy": "single-provider",
+        "min_success": 1,
+        "providers_checked": [
+          {
+            "rpc_url": "https://jungle4.cryptolions.io",
+            "ok": true,
+            "block_num": 260818492,
+            "action_name": "submitroot",
+            "verified_at": "2026-04-15T15:46:32Z",
+            "error": null
+          }
+        ],
+        "consensus": {
+          "verified": true,
+          "provider_count_ok": 1,
+          "provider_count_total": 1,
+          "provider_disagreement": false
+        }
+      },
+      "verified_action": {
+        "account": "verification",
+        "name": "submitroot",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": "1776271920",
+          "policy_id": "1776272921",
+          "root_hash": "CDC8D10455139969E8F17506777B8D0C29F99E3F8CA81D27864B25A9C97A1AFA",
+          "leaf_count": 2,
+          "external_ref": "FDC12020791DBDB98010081BF086FFED857ABED6F694E6BBDDB84984314D0B7C"
+        }
+      }
+    }
+  },
+  "request_kind": "batch-flow",
+  "request_label": "Batch Included",
+  "stage_summary": "Mark batch submitroot transaction as included.",
+  "comment": "Supplies the canonical submitroot tx/block metadata that watcher verifies and finalizes for the batch request."
+}

@@ -1,0 +1,62 @@
+{
+  "sequence": 29,
+  "event": "single_prepare",
+  "timestamp": "2026-04-15T15:45:23Z",
+  "payload": {
+    "request": {
+      "submitter": "vadim1111111",
+      "external_ref": "svc-live-single-1776267920",
+      "schema": {
+        "id": 1776271920,
+        "version": "1.0.0",
+        "active": true,
+        "canonicalization_profile": "json-sorted-v1"
+      },
+      "policy": {
+        "id": 1776272920,
+        "active": true,
+        "allow_single": true,
+        "allow_batch": false,
+        "require_kyc": false,
+        "min_kyc_level": 0
+      },
+      "kyc": {
+        "active": true,
+        "level": 2,
+        "expires_at": "2030-01-01T00:00:00"
+      },
+      "payload": {
+        "doc_id": "svc-live-single-1776267920",
+        "kind": "invoice",
+        "amount": 42
+      },
+      "include_debug_material": true
+    },
+    "status_code": 200,
+    "response": {
+      "trace_id": "f0bc29bd-3ec4-4a54-b1ae-30a920bd579d",
+      "request_id": "e37f4dcbdb9fb7c71bb309f6ec65ddb4348540b3621b173433f2af44c8a47862",
+      "received_at": "2026-04-15T15:45:23Z",
+      "mode": "single",
+      "canonicalization_profile": "json-sorted-v1",
+      "object_hash": "9d2aafa9da5636f151c69b4c2dba8c5ac2fbc6c12f6fd4b9e7d085c74089d6d9",
+      "external_ref_hash": "6b7e2d1ed700b3eff68d7ae84eff8c5b4aca8da4d32c71862b126e75ae39f9e3",
+      "prepared_action": {
+        "contract": "verification",
+        "action": "submit",
+        "data": {
+          "submitter": "vadim1111111",
+          "schema_id": 1776271920,
+          "policy_id": 1776272920,
+          "object_hash": "9d2aafa9da5636f151c69b4c2dba8c5ac2fbc6c12f6fd4b9e7d085c74089d6d9",
+          "external_ref": "6b7e2d1ed700b3eff68d7ae84eff8c5b4aca8da4d32c71862b126e75ae39f9e3"
+        }
+      },
+      "canonical_form": "{\"amount\":42,\"doc_id\":\"svc-live-single-1776267920\",\"kind\":\"invoice\"}"
+    }
+  },
+  "request_kind": "single-flow",
+  "request_label": "Single Prepare",
+  "stage_summary": "Prepare the main live single request.",
+  "comment": "Ingress produces the canonicalized single payload and the exact submit action that will be broadcast on-chain."
+}

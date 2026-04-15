@@ -12,6 +12,8 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, List, Optional
 
+from openapi_docs import swagger_ui_html
+
 MAX_REQUEST_BODY_BYTES = 1024 * 1024
 MAX_EXTERNAL_REF_LENGTH = 256
 MAX_EXTERNAL_LEAF_REF_LENGTH = 128
@@ -297,6 +299,304 @@ def attach_watcher_handoff(response: Dict[str, Any], watcher_config: Dict[str, s
     response["watcher_handoff"] = handoff
 
 
+def build_openapi_spec(contract_account: str) -> Dict[str, Any]:
+    return {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "DeNotary Ingress API",
+            "version": "1.0.0",
+            "description": (
+                "Deterministic preparation API for single and batch anchoring requests, with optional "
+                "handoff into Finality Watcher registration."
+            ),
+        },
+        "servers": [
+            {"url": "http://127.0.0.1:8080", "description": "Local default"},
+        ],
+        "paths": {
+            "/healthz": {
+                "get": {
+                    "summary": "Health check",
+                    "responses": {
+                        "200": {
+                            "description": "Service health",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/HealthResponse"}
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+            "/v1/single/prepare": {
+                "post": {
+                    "summary": "Prepare a single anchoring request",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/SinglePrepareRequest"}
+                            }
+                        },
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Prepared single anchoring payload",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/SinglePrepareResponse"}
+                                }
+                            },
+                        },
+                        "400": {
+                            "description": "Validation error",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                }
+                            },
+                        },
+                        "413": {
+                            "description": "Body too large",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                }
+                            },
+                        },
+                    },
+                }
+            },
+            "/v1/batch/prepare": {
+                "post": {
+                    "summary": "Prepare a batch anchoring request",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/BatchPrepareRequest"}
+                            }
+                        },
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Prepared batch anchoring payload",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/BatchPrepareResponse"}
+                                }
+                            },
+                        },
+                        "400": {
+                            "description": "Validation error",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                }
+                            },
+                        },
+                        "413": {
+                            "description": "Body too large",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                                }
+                            },
+                        },
+                    },
+                }
+            },
+            "/openapi.json": {
+                "get": {
+                    "summary": "OpenAPI specification",
+                    "responses": {"200": {"description": "OpenAPI JSON"}},
+                }
+            },
+            "/docs": {
+                "get": {
+                    "summary": "Swagger UI",
+                    "responses": {"200": {"description": "Interactive API documentation"}},
+                }
+            },
+        },
+        "components": {
+            "schemas": {
+                "HealthResponse": {
+                    "type": "object",
+                    "properties": {
+                        "status": {"type": "string", "example": "ok"},
+                        "service": {"type": "string", "example": "ingress-api"},
+                    },
+                    "required": ["status", "service"],
+                },
+                "ErrorResponse": {
+                    "type": "object",
+                    "properties": {"error": {"type": "string"}},
+                    "required": ["error"],
+                },
+                "SchemaContext": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "version": {"type": "string"},
+                        "active": {"type": "boolean"},
+                        "canonicalization_profile": {"type": "string", "example": "json-sorted-v1"},
+                    },
+                    "required": ["id", "version", "active", "canonicalization_profile"],
+                },
+                "PolicyContext": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "active": {"type": "boolean"},
+                        "allow_single": {"type": "boolean"},
+                        "allow_batch": {"type": "boolean"},
+                        "require_kyc": {"type": "boolean"},
+                        "min_kyc_level": {"type": "integer"},
+                    },
+                    "required": ["id", "active", "allow_single", "allow_batch", "require_kyc", "min_kyc_level"],
+                },
+                "KycContext": {
+                    "type": "object",
+                    "properties": {
+                        "active": {"type": "boolean"},
+                        "level": {"type": "integer"},
+                        "expires_at": {"type": "string", "format": "date-time"},
+                    },
+                    "required": ["active", "level", "expires_at"],
+                },
+                "WatcherOptions": {
+                    "type": "object",
+                    "properties": {
+                        "register": {"type": "boolean", "default": True},
+                        "url": {"type": "string", "format": "uri"},
+                        "auth_token": {"type": "string"},
+                        "rpc_url": {"type": "string", "format": "uri"},
+                    },
+                },
+                "PreparedAction": {
+                    "type": "object",
+                    "properties": {
+                        "contract": {"type": "string", "example": contract_account},
+                        "action": {"type": "string"},
+                        "data": {"type": "object", "additionalProperties": True},
+                    },
+                    "required": ["contract", "action", "data"],
+                },
+                "WatcherHandoff": {
+                    "type": "object",
+                    "properties": {
+                        "attempted": {"type": "boolean"},
+                        "ok": {"type": "boolean"},
+                        "url": {"type": "string", "format": "uri"},
+                        "status_code": {"type": "integer"},
+                        "register_payload": {"type": "object", "additionalProperties": True},
+                        "response": {"type": "object", "additionalProperties": True},
+                        "error": {"type": "string"},
+                    },
+                    "required": ["attempted", "ok", "url", "register_payload"],
+                },
+                "SinglePrepareRequest": {
+                    "type": "object",
+                    "properties": {
+                        "submitter": {"type": "string"},
+                        "external_ref": {"type": "string"},
+                        "schema": {"$ref": "#/components/schemas/SchemaContext"},
+                        "policy": {"$ref": "#/components/schemas/PolicyContext"},
+                        "kyc": {"$ref": "#/components/schemas/KycContext"},
+                        "payload": {"type": "object", "additionalProperties": True},
+                        "include_debug_material": {"type": "boolean"},
+                        "watcher": {"$ref": "#/components/schemas/WatcherOptions"},
+                    },
+                    "required": ["submitter", "external_ref", "schema", "policy", "payload"],
+                },
+                "SinglePrepareResponse": {
+                    "type": "object",
+                    "properties": {
+                        "trace_id": {"type": "string"},
+                        "request_id": {"type": "string"},
+                        "received_at": {"type": "string", "format": "date-time"},
+                        "mode": {"type": "string", "enum": ["single"]},
+                        "canonicalization_profile": {"type": "string"},
+                        "object_hash": {"type": "string"},
+                        "external_ref_hash": {"type": "string"},
+                        "canonical_form": {"type": "string"},
+                        "prepared_action": {"$ref": "#/components/schemas/PreparedAction"},
+                        "watcher_handoff": {"$ref": "#/components/schemas/WatcherHandoff"},
+                    },
+                    "required": [
+                        "trace_id",
+                        "request_id",
+                        "received_at",
+                        "mode",
+                        "canonicalization_profile",
+                        "object_hash",
+                        "external_ref_hash",
+                        "prepared_action",
+                    ],
+                },
+                "BatchItem": {
+                    "type": "object",
+                    "properties": {
+                        "external_leaf_ref": {"type": "string"},
+                        "payload": {"type": "object", "additionalProperties": True},
+                    },
+                    "required": ["payload"],
+                },
+                "BatchPrepareRequest": {
+                    "type": "object",
+                    "properties": {
+                        "submitter": {"type": "string"},
+                        "external_ref": {"type": "string"},
+                        "schema": {"$ref": "#/components/schemas/SchemaContext"},
+                        "policy": {"$ref": "#/components/schemas/PolicyContext"},
+                        "kyc": {"$ref": "#/components/schemas/KycContext"},
+                        "items": {
+                            "type": "array",
+                            "items": {"$ref": "#/components/schemas/BatchItem"},
+                        },
+                        "include_debug_material": {"type": "boolean"},
+                        "watcher": {"$ref": "#/components/schemas/WatcherOptions"},
+                    },
+                    "required": ["submitter", "external_ref", "schema", "policy", "items"],
+                },
+                "BatchPrepareResponse": {
+                    "type": "object",
+                    "properties": {
+                        "trace_id": {"type": "string"},
+                        "request_id": {"type": "string"},
+                        "received_at": {"type": "string", "format": "date-time"},
+                        "mode": {"type": "string", "enum": ["batch"]},
+                        "canonicalization_profile": {"type": "string"},
+                        "leaf_count": {"type": "integer"},
+                        "root_hash": {"type": "string"},
+                        "external_ref_hash": {"type": "string"},
+                        "manifest_hash": {"type": "string"},
+                        "leaf_hashes": {"type": "array", "items": {"type": "string"}},
+                        "manifest": {"type": "object", "additionalProperties": True},
+                        "manifest_canonical_form": {"type": "string"},
+                        "prepared_action": {"$ref": "#/components/schemas/PreparedAction"},
+                        "watcher_handoff": {"$ref": "#/components/schemas/WatcherHandoff"},
+                    },
+                    "required": [
+                        "trace_id",
+                        "request_id",
+                        "received_at",
+                        "mode",
+                        "canonicalization_profile",
+                        "leaf_count",
+                        "root_hash",
+                        "external_ref_hash",
+                        "manifest_hash",
+                        "prepared_action",
+                    ],
+                },
+            }
+        },
+    }
+
+
 def build_single_response(body: Dict[str, Any], contract_account: str) -> Dict[str, Any]:
     submitter = validate_account_name(require_string(body, "submitter"), "submitter")
     external_ref = validate_limited_text(
@@ -457,11 +757,21 @@ class IngressApiHandler(BaseHTTPRequestHandler):
     server_version = "DeNotaryIngress/0.1"
 
     def do_GET(self) -> None:
+        if self.path == "/healthz":
+            self.write_json(HTTPStatus.OK, {"status": "ok", "service": "ingress-api"})
+            return
+
+        if self.path == "/openapi.json":
+            self.write_json(HTTPStatus.OK, build_openapi_spec(self.server.contract_account))
+            return
+
+        if self.path == "/docs":
+            self.write_html(HTTPStatus.OK, swagger_ui_html("DeNotary Ingress API", "/openapi.json"))
+            return
+
         if self.path != "/healthz":
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
             return
-
-        self.write_json(HTTPStatus.OK, {"status": "ok", "service": "ingress-api"})
 
     def do_POST(self) -> None:
         try:
@@ -497,6 +807,14 @@ class IngressApiHandler(BaseHTTPRequestHandler):
         encoded = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
+
+    def write_html(self, status: HTTPStatus, payload: str) -> None:
+        encoded = payload.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         self.wfile.write(encoded)

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 from finality_store import FinalityStore
+from openapi_docs import swagger_ui_html
 from receipt_service import build_batch_receipt, build_single_receipt, derive_trust_state, receipt_available
 
 
@@ -145,6 +146,321 @@ def build_audit_chain(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def build_openapi_spec() -> Dict[str, Any]:
+    return {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "DeNotary Audit API",
+            "version": "1.0.0",
+            "description": "Read-only audit surface for request, receipt, and proof-chain lookups.",
+        },
+        "servers": [{"url": "http://127.0.0.1:8083", "description": "Local default"}],
+        "paths": {
+            "/healthz": {
+                "get": {
+                    "summary": "Health check",
+                    "responses": {
+                        "200": {
+                            "description": "Service health",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/HealthResponse"}
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+            "/v1/audit/requests/{request_id}": {
+                "get": {
+                    "summary": "Get audit record by request ID",
+                    "parameters": [
+                        {
+                            "name": "request_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Audit record",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/AuditRecord"}
+                                }
+                            },
+                        },
+                        "404": {"description": "Record not found"},
+                    },
+                }
+            },
+            "/v1/audit/chain/{request_id}": {
+                "get": {
+                    "summary": "Get audit chain by request ID",
+                    "parameters": [
+                        {
+                            "name": "request_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Audit chain",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/AuditChain"}
+                                }
+                            },
+                        },
+                        "404": {"description": "Record not found"},
+                    },
+                }
+            },
+            "/v1/audit/search": {
+                "get": {
+                    "summary": "Search audit records",
+                    "parameters": [
+                        {"name": "mode", "in": "query", "schema": {"type": "string"}},
+                        {"name": "status", "in": "query", "schema": {"type": "string"}},
+                        {"name": "trust_state", "in": "query", "schema": {"type": "string"}},
+                        {"name": "submitter", "in": "query", "schema": {"type": "string"}},
+                        {"name": "contract", "in": "query", "schema": {"type": "string"}},
+                        {"name": "external_ref_hash", "in": "query", "schema": {"type": "string"}},
+                        {"name": "commitment_id", "in": "query", "schema": {"type": "integer"}},
+                        {"name": "batch_id", "in": "query", "schema": {"type": "integer"}},
+                        {"name": "limit", "in": "query", "schema": {"type": "integer"}},
+                        {"name": "offset", "in": "query", "schema": {"type": "integer"}},
+                        {"name": "format", "in": "query", "schema": {"type": "string", "enum": ["json", "jsonl"]}},
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Search results",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/AuditSearchResponse"}
+                                },
+                                "application/x-ndjson": {
+                                    "schema": {"type": "string"}
+                                },
+                            },
+                        },
+                        "400": {"description": "Validation error"},
+                    },
+                }
+            },
+            "/v1/audit/by-external-ref/{external_ref_hash}": {
+                "get": {
+                    "summary": "Lookup by external_ref_hash",
+                    "parameters": [
+                        {
+                            "name": "external_ref_hash",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Audit chain",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/AuditChain"}
+                                }
+                            },
+                        },
+                        "404": {"description": "Record not found"},
+                    },
+                }
+            },
+            "/v1/audit/by-tx/{tx_id}": {
+                "get": {
+                    "summary": "Lookup by transaction ID",
+                    "parameters": [
+                        {
+                            "name": "tx_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Audit chain",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/AuditChain"}
+                                }
+                            },
+                        },
+                        "404": {"description": "Record not found"},
+                    },
+                }
+            },
+            "/v1/audit/by-commitment/{commitment_id}": {
+                "get": {
+                    "summary": "Lookup by commitment ID",
+                    "parameters": [
+                        {
+                            "name": "commitment_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "integer"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Audit chain",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/AuditChain"}
+                                }
+                            },
+                        },
+                        "404": {"description": "Record not found"},
+                    },
+                }
+            },
+            "/v1/audit/by-batch/{batch_id}": {
+                "get": {
+                    "summary": "Lookup by batch ID",
+                    "parameters": [
+                        {
+                            "name": "batch_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "integer"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Audit chain",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/AuditChain"}
+                                }
+                            },
+                        },
+                        "404": {"description": "Record not found"},
+                    },
+                }
+            },
+            "/openapi.json": {
+                "get": {
+                    "summary": "OpenAPI specification",
+                    "responses": {"200": {"description": "OpenAPI JSON"}},
+                }
+            },
+            "/docs": {
+                "get": {
+                    "summary": "Swagger UI",
+                    "responses": {"200": {"description": "Interactive API documentation"}},
+                }
+            },
+        },
+        "components": {
+            "schemas": {
+                "HealthResponse": {
+                    "type": "object",
+                    "properties": {
+                        "status": {"type": "string", "example": "ok"},
+                        "service": {"type": "string", "example": "audit-api"},
+                    },
+                    "required": ["status", "service"],
+                },
+                "AuditRecord": {
+                    "type": "object",
+                    "properties": {
+                        "request_id": {"type": "string"},
+                        "trace_id": {"type": "string"},
+                        "mode": {"type": "string"},
+                        "submitter": {"type": "string"},
+                        "contract": {"type": "string"},
+                        "status": {"type": "string"},
+                        "trust_state": {"type": "string"},
+                        "receipt_available": {"type": "boolean"},
+                        "commitment_id": {"type": "integer"},
+                        "batch_id": {"type": "integer"},
+                        "external_ref_hash": {"type": "string"},
+                        "tx_id": {"type": "string"},
+                        "block_num": {"type": "integer"},
+                        "registered_at": {"type": "string", "format": "date-time"},
+                        "updated_at": {"type": "string", "format": "date-time"},
+                        "finalized_at": {"type": "string", "format": "date-time"},
+                        "failed_at": {"type": "string", "format": "date-time"},
+                        "failure_reason": {"type": "string"},
+                        "failure_details": {"type": "object", "additionalProperties": True},
+                        "inclusion_verified": {"type": "boolean"},
+                        "inclusion_verified_at": {"type": "string", "format": "date-time"},
+                        "inclusion_verification_error": {"type": "string"},
+                        "verified_action": {"type": "object", "additionalProperties": True},
+                        "anchor": {"type": "object", "additionalProperties": True},
+                        "chain_state": {"type": "object", "additionalProperties": True},
+                    },
+                    "required": [
+                        "request_id",
+                        "mode",
+                        "submitter",
+                        "contract",
+                        "status",
+                        "trust_state",
+                        "receipt_available",
+                        "anchor",
+                        "chain_state",
+                    ],
+                },
+                "AuditChainStage": {
+                    "type": "object",
+                    "properties": {
+                        "stage": {"type": "string"},
+                        "status": {"type": "string"},
+                        "timestamp": {"type": "string", "format": "date-time"},
+                        "details": {"type": "object", "additionalProperties": True},
+                    },
+                    "required": ["stage", "status", "details"],
+                },
+                "AuditChain": {
+                    "type": "object",
+                    "properties": {
+                        "record": {"$ref": "#/components/schemas/AuditRecord"},
+                        "receipt": {
+                            "oneOf": [
+                                {"$ref": "#/components/schemas/AuditReceipt"},
+                                {"type": "null"},
+                            ]
+                        },
+                        "proof_chain": {
+                            "type": "array",
+                            "items": {"$ref": "#/components/schemas/AuditChainStage"},
+                        },
+                    },
+                    "required": ["record", "receipt", "proof_chain"],
+                },
+                "AuditReceipt": {
+                    "type": "object",
+                    "additionalProperties": True,
+                },
+                "AuditSearchResponse": {
+                    "type": "object",
+                    "properties": {
+                        "count": {"type": "integer"},
+                        "total": {"type": "integer"},
+                        "limit": {"type": "integer"},
+                        "offset": {"type": "integer"},
+                        "results": {
+                            "type": "array",
+                            "items": {"$ref": "#/components/schemas/AuditRecord"},
+                        },
+                    },
+                    "required": ["count", "total", "limit", "offset", "results"],
+                },
+            }
+        },
+    }
+
+
 def first_or_404(handler: BaseHTTPRequestHandler, payloads: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     if not payloads:
         handler.send_error(HTTPStatus.NOT_FOUND, "Record not found")
@@ -189,6 +505,14 @@ class AuditApiHandler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/healthz":
                 self.write_json(HTTPStatus.OK, {"status": "ok", "service": "audit-api"})
+                return
+
+            if parsed.path == "/openapi.json":
+                self.write_json(HTTPStatus.OK, build_openapi_spec())
+                return
+
+            if parsed.path == "/docs":
+                self.write_html(HTTPStatus.OK, swagger_ui_html("DeNotary Audit API", "/openapi.json"))
                 return
 
             if parsed.path == "/v1/audit/search":
@@ -349,6 +673,14 @@ class AuditApiHandler(BaseHTTPRequestHandler):
         encoded = lines.encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
+
+    def write_html(self, status: HTTPStatus, payload: str) -> None:
+        encoded = payload.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         self.wfile.write(encoded)

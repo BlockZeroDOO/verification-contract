@@ -135,6 +135,7 @@ Capabilities:
 - batch request preparation for `submitroot`
 - generated `trace_id`, `request_id`, and content hashes
 - optional automatic handoff into `Finality Watcher` registration
+- built-in OpenAPI JSON and Swagger UI at `/openapi.json` and `/docs`
 
 ### Finality Watcher
 
@@ -163,6 +164,7 @@ Capabilities:
 - reject receipt reads before finality or before inclusion verification
 - expose `trust_state` and `receipt_available` for non-receiptable requests
 - surface failure metadata for explicitly failed requests
+- built-in OpenAPI JSON and Swagger UI at `/openapi.json` and `/docs`
 
 ### Audit API
 
@@ -179,6 +181,7 @@ Capabilities:
 - expose `trust_state` and `receipt_available` on audit records
 - paginated search and `jsonl` export
 - read path returning `record + receipt + proof_chain`
+- built-in OpenAPI JSON and Swagger UI at `/openapi.json` and `/docs`
 
 ## Build
 

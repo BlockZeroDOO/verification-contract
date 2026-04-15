@@ -53,6 +53,17 @@ def request_json(
         return exc.code, json.loads(body) if body else {}
 
 
+def request_text(url: str) -> tuple[int, str, Dict[str, str]]:
+    request = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:
+            body = response.read().decode("utf-8")
+            return response.status, body, dict(response.headers.items())
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8")
+        return exc.code, body, dict(exc.headers.items())
+
+
 class MockChainHandler(BaseHTTPRequestHandler):
     server_version = "MockChain/0.1"
 
@@ -251,6 +262,34 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertNotIn("manifest", response)
         self.assertNotIn("leaf_hashes", response)
+
+    def test_public_services_expose_openapi_and_docs(self) -> None:
+        status, ingress_spec = request_json(f"http://127.0.0.1:{self.ingress_port}/openapi.json")
+        self.assertEqual(status, 200)
+        self.assertEqual(ingress_spec["info"]["title"], "DeNotary Ingress API")
+
+        status, receipt_spec = request_json(f"http://127.0.0.1:{self.receipt_port}/openapi.json")
+        self.assertEqual(status, 200)
+        self.assertEqual(receipt_spec["info"]["title"], "DeNotary Receipt Service")
+
+        status, audit_spec = request_json(f"http://127.0.0.1:{self.audit_port}/openapi.json")
+        self.assertEqual(status, 200)
+        self.assertEqual(audit_spec["info"]["title"], "DeNotary Audit API")
+
+        status, ingress_docs, ingress_headers = request_text(f"http://127.0.0.1:{self.ingress_port}/docs")
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", ingress_headers.get("Content-Type", ""))
+        self.assertIn("swagger-ui", ingress_docs.lower())
+
+        status, receipt_docs, receipt_headers = request_text(f"http://127.0.0.1:{self.receipt_port}/docs")
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", receipt_headers.get("Content-Type", ""))
+        self.assertIn("swagger-ui", receipt_docs.lower())
+
+        status, audit_docs, audit_headers = request_text(f"http://127.0.0.1:{self.audit_port}/docs")
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", audit_headers.get("Content-Type", ""))
+        self.assertIn("swagger-ui", audit_docs.lower())
 
     def test_ingress_can_auto_register_in_watcher(self) -> None:
         payload = self._single_prepare_payload("single-auto-register")

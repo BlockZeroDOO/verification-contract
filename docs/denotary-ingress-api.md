@@ -45,6 +45,14 @@ The service already does:
 
 Returns a health-check response.
 
+### `GET /openapi.json`
+
+Returns the OpenAPI specification for the public `Ingress API` surface.
+
+### `GET /docs`
+
+Returns Swagger UI for interactive API exploration.
+
 ### `POST /v1/single/prepare`
 
 Prepares a single anchoring request.
@@ -302,6 +310,11 @@ Windows PowerShell:
 ```powershell
 scripts/run-ingress-api.ps1 -Host 127.0.0.1 -Port 8080 -ContractAccount verification
 ```
+
+Swagger UI:
+
+- `http://127.0.0.1:8080/docs`
+- `http://127.0.0.1:8080/openapi.json`
 
 ## Next step
 

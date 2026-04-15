@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict
 
 from finality_store import FinalityStore
+from openapi_docs import swagger_ui_html
 
 
 def iso_now() -> str:
@@ -31,6 +32,179 @@ def derive_trust_state(payload: Dict[str, Any]) -> str:
 
 def receipt_available(payload: Dict[str, Any]) -> bool:
     return payload.get("status") == "finalized" and payload.get("inclusion_verified", False)
+
+
+def build_openapi_spec() -> Dict[str, Any]:
+    return {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "DeNotary Receipt Service",
+            "version": "1.0.0",
+            "description": "Public receipt surface for finalized and inclusion-verified DeNotary requests.",
+        },
+        "servers": [{"url": "http://127.0.0.1:8082", "description": "Local default"}],
+        "paths": {
+            "/healthz": {
+                "get": {
+                    "summary": "Health check",
+                    "responses": {
+                        "200": {
+                            "description": "Service health",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/HealthResponse"}
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+            "/v1/receipts/{request_id}": {
+                "get": {
+                    "summary": "Fetch receipt by request ID",
+                    "parameters": [
+                        {
+                            "name": "request_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Receipt is available",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "oneOf": [
+                                            {"$ref": "#/components/schemas/SingleReceipt"},
+                                            {"$ref": "#/components/schemas/BatchReceipt"},
+                                        ]
+                                    }
+                                }
+                            },
+                        },
+                        "404": {"description": "Request not found"},
+                        "409": {
+                            "description": "Receipt not yet available",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ReceiptUnavailable"}
+                                }
+                            },
+                        },
+                    },
+                }
+            },
+            "/openapi.json": {
+                "get": {
+                    "summary": "OpenAPI specification",
+                    "responses": {"200": {"description": "OpenAPI JSON"}},
+                }
+            },
+            "/docs": {
+                "get": {
+                    "summary": "Swagger UI",
+                    "responses": {"200": {"description": "Interactive API documentation"}},
+                }
+            },
+        },
+        "components": {
+            "schemas": {
+                "HealthResponse": {
+                    "type": "object",
+                    "properties": {
+                        "status": {"type": "string", "example": "ok"},
+                        "service": {"type": "string", "example": "receipt-service"},
+                    },
+                    "required": ["status", "service"],
+                },
+                "ReceiptBase": {
+                    "type": "object",
+                    "properties": {
+                        "issued_at": {"type": "string", "format": "date-time"},
+                        "request_id": {"type": "string"},
+                        "trace_id": {"type": "string"},
+                        "mode": {"type": "string"},
+                        "submitter": {"type": "string"},
+                        "contract": {"type": "string"},
+                        "tx_id": {"type": "string"},
+                        "block_num": {"type": "integer"},
+                        "finality_flag": {"type": "boolean"},
+                        "finalized_at": {"type": "string", "format": "date-time"},
+                        "trust_state": {"type": "string"},
+                        "receipt_available": {"type": "boolean"},
+                        "inclusion_verified": {"type": "boolean"},
+                    },
+                    "required": [
+                        "issued_at",
+                        "request_id",
+                        "trace_id",
+                        "mode",
+                        "submitter",
+                        "contract",
+                        "tx_id",
+                        "block_num",
+                        "finality_flag",
+                        "finalized_at",
+                        "trust_state",
+                        "receipt_available",
+                        "inclusion_verified",
+                    ],
+                },
+                "SingleReceipt": {
+                    "allOf": [
+                        {"$ref": "#/components/schemas/ReceiptBase"},
+                        {
+                            "type": "object",
+                            "properties": {
+                                "object_hash": {"type": "string"},
+                                "external_ref_hash": {"type": "string"},
+                            },
+                            "required": ["object_hash", "external_ref_hash"],
+                        },
+                    ]
+                },
+                "BatchReceipt": {
+                    "allOf": [
+                        {"$ref": "#/components/schemas/ReceiptBase"},
+                        {
+                            "type": "object",
+                            "properties": {
+                                "root_hash": {"type": "string"},
+                                "manifest_hash": {"type": "string"},
+                                "external_ref_hash": {"type": "string"},
+                                "leaf_count": {"type": "integer"},
+                            },
+                            "required": ["root_hash", "manifest_hash", "external_ref_hash", "leaf_count"],
+                        },
+                    ]
+                },
+                "ReceiptUnavailable": {
+                    "type": "object",
+                    "properties": {
+                        "request_id": {"type": "string"},
+                        "status": {"type": "string"},
+                        "trust_state": {"type": "string"},
+                        "receipt_available": {"type": "boolean"},
+                        "inclusion_verified": {"type": "boolean"},
+                        "error": {"type": "string"},
+                        "failed_at": {"type": "string", "format": "date-time"},
+                        "failure_reason": {"type": "string"},
+                        "inclusion_verification_error": {"type": "string"},
+                    },
+                    "required": [
+                        "request_id",
+                        "status",
+                        "trust_state",
+                        "receipt_available",
+                        "inclusion_verified",
+                        "error",
+                    ],
+                },
+            }
+        },
+    }
 
 
 def build_single_receipt(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -89,6 +263,14 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == "/healthz":
             self.write_json(HTTPStatus.OK, {"status": "ok", "service": "receipt-service"})
+            return
+
+        if self.path == "/openapi.json":
+            self.write_json(HTTPStatus.OK, build_openapi_spec())
+            return
+
+        if self.path == "/docs":
+            self.write_html(HTTPStatus.OK, swagger_ui_html("DeNotary Receipt Service", "/openapi.json"))
             return
 
         prefix = "/v1/receipts/"
@@ -151,6 +333,14 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
         encoded = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
+
+    def write_html(self, status: HTTPStatus, payload: str) -> None:
+        encoded = payload.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         self.wfile.write(encoded)

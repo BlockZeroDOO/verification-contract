@@ -26,6 +26,14 @@ This is a temporary baseline before a fuller indexer over chain tables and trans
 
 Health check.
 
+### `GET /openapi.json`
+
+Returns the OpenAPI specification for the public `Audit API` surface.
+
+### `GET /docs`
+
+Returns Swagger UI for interactive API exploration.
+
 ### `GET /v1/audit/requests/<request_id>`
 
 Returns the audit record for a request.
@@ -145,6 +153,11 @@ Windows PowerShell:
 ```powershell
 scripts/run-audit-api.ps1
 ```
+
+Swagger UI:
+
+- `http://127.0.0.1:8083/docs`
+- `http://127.0.0.1:8083/openapi.json`
 
 ## Next step
 

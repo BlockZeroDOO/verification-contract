@@ -68,6 +68,11 @@ The file currently tracks:
 
 Health check.
 
+Public documentation endpoints for `Receipt Service`:
+
+- `GET /openapi.json`
+- `GET /docs`
+
 ### `POST /v1/watch/register`
 
 Registers a request for watching.
@@ -262,6 +267,11 @@ Windows PowerShell:
 scripts/run-finality-watcher.ps1 -RpcUrl https://history.denotary.io
 scripts/run-receipt-service.ps1
 ```
+
+Receipt Service Swagger UI:
+
+- `http://127.0.0.1:8082/docs`
+- `http://127.0.0.1:8082/openapi.json`
 
 ## Next step
 

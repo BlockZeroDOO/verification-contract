@@ -214,6 +214,7 @@ Current baseline already added:
 - zero-hash rejection for `verification.submit(...)`
 - legacy `verification` proof-payment path disabled
 - DFS storage payments gated by explicit quotes
+- explicit `trust_state` / `receipt_available` signaling in receipt and audit responses
 
 ### Stage 10. Optional proof layer and ZKP
 

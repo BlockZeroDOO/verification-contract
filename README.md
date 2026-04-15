@@ -150,6 +150,7 @@ Capabilities:
 - explicitly mark requests as failed when broadcasting or reconciliation fails
 - verify inclusion against chain history before finalized trust is granted
 - poll chain finality until irreversible
+- expose explicit trust states across `submitted`, `included_unverified`, `included_verified`, `finalized_verified`, and `failed`
 
 ### Receipt Service
 
@@ -158,9 +159,9 @@ Capabilities:
 
 Capabilities:
 
-- issue finalized single receipts
-- issue finalized batch receipts
-- reject receipt reads before finality
+- issue receipts only for `finalized_verified` requests
+- reject receipt reads before finality or before inclusion verification
+- expose `trust_state` and `receipt_available` for non-receiptable requests
 - surface failure metadata for explicitly failed requests
 
 ### Audit API
@@ -175,6 +176,7 @@ Capabilities:
 - lookup by `tx_id`
 - lookup by `commitment_id`
 - lookup by `batch_id`
+- expose `trust_state` and `receipt_available` on audit records
 - paginated search and `jsonl` export
 - read path returning `record + receipt + proof_chain`
 

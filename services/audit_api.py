@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 from finality_store import FinalityStore
-from receipt_service import build_batch_receipt, build_single_receipt
+from receipt_service import build_batch_receipt, build_single_receipt, derive_trust_state, receipt_available
 
 
 def select_requests(store: FinalityStore, predicate) -> List[Dict[str, Any]]:
@@ -21,7 +21,7 @@ def select_requests(store: FinalityStore, predicate) -> List[Dict[str, Any]]:
 
 
 def maybe_build_receipt(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    if payload.get("status") != "finalized" or not payload.get("inclusion_verified", False):
+    if not receipt_available(payload):
         return None
 
     mode = payload.get("mode")
@@ -61,10 +61,16 @@ def build_proof_chain(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         )
 
     if payload.get("tx_id"):
+        verification_status = "pending"
+        if payload.get("inclusion_verified"):
+            verification_status = "completed"
+        elif payload.get("inclusion_verification_error"):
+            verification_status = "failed"
+
         chain.append(
             {
                 "stage": "transaction_verified",
-                "status": "completed" if payload.get("inclusion_verified") else "pending",
+                "status": verification_status,
                 "timestamp": payload.get("inclusion_verified_at"),
                 "details": {
                     "verified_action": payload.get("verified_action"),
@@ -77,9 +83,14 @@ def build_proof_chain(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         chain.append(
             {
                 "stage": "block_finalized",
-                "status": "completed" if payload.get("inclusion_verified") else "pending",
+                "status": "completed",
                 "timestamp": payload.get("finalized_at"),
-                "details": payload.get("chain_state", {}),
+                "details": {
+                    **payload.get("chain_state", {}),
+                    "verification_gate_satisfied": payload.get("inclusion_verified", False),
+                    "trust_state": derive_trust_state(payload),
+                    "receipt_available": receipt_available(payload),
+                },
             }
         )
     else:
@@ -115,6 +126,8 @@ def build_audit_record(payload: Dict[str, Any]) -> Dict[str, Any]:
         "failed_at": payload.get("failed_at"),
         "failure_reason": payload.get("failure_reason"),
         "failure_details": payload.get("failure_details"),
+        "trust_state": derive_trust_state(payload),
+        "receipt_available": receipt_available(payload),
         "inclusion_verified": payload.get("inclusion_verified", False),
         "inclusion_verified_at": payload.get("inclusion_verified_at"),
         "inclusion_verification_error": payload.get("inclusion_verification_error"),
@@ -296,6 +309,7 @@ class AuditApiHandler(BaseHTTPRequestHandler):
         status = query.get("status", [None])[0]
         submitter = query.get("submitter", [None])[0]
         contract = query.get("contract", [None])[0]
+        trust_state = query.get("trust_state", [None])[0]
         external_ref_hash = query.get("external_ref_hash", [None])[0]
         commitment_id = parse_positive_int(query.get("commitment_id", [None])[0], "commitment_id")
         batch_id = parse_positive_int(query.get("batch_id", [None])[0], "batch_id")
@@ -308,6 +322,8 @@ class AuditApiHandler(BaseHTTPRequestHandler):
         if submitter and payload.get("submitter") != submitter:
             return False
         if contract and payload.get("contract") != contract:
+            return False
+        if trust_state and derive_trust_state(payload) != trust_state:
             return False
         if external_ref_hash and anchor.get("external_ref_hash") != external_ref_hash:
             return False

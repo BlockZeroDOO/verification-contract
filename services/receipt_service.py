@@ -14,6 +14,25 @@ def iso_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def derive_trust_state(payload: Dict[str, Any]) -> str:
+    status = payload.get("status")
+    inclusion_verified = payload.get("inclusion_verified", False)
+
+    if status == "failed":
+        return "failed"
+    if status == "finalized":
+        return "finalized_verified" if inclusion_verified else "finalized_unverified"
+    if status == "included":
+        return "included_verified" if inclusion_verified else "included_unverified"
+    if status == "submitted":
+        return "submitted"
+    return "unknown"
+
+
+def receipt_available(payload: Dict[str, Any]) -> bool:
+    return payload.get("status") == "finalized" and payload.get("inclusion_verified", False)
+
+
 def build_single_receipt(payload: Dict[str, Any]) -> Dict[str, Any]:
     anchor = payload["anchor"]
     return {
@@ -29,6 +48,8 @@ def build_single_receipt(payload: Dict[str, Any]) -> Dict[str, Any]:
         "block_num": payload["block_num"],
         "finality_flag": True,
         "finalized_at": payload["finalized_at"],
+        "trust_state": derive_trust_state(payload),
+        "receipt_available": True,
         "inclusion_verified": payload.get("inclusion_verified", False),
         "inclusion_verified_at": payload.get("inclusion_verified_at"),
         "verified_action": payload.get("verified_action"),
@@ -53,6 +74,8 @@ def build_batch_receipt(payload: Dict[str, Any]) -> Dict[str, Any]:
         "block_num": payload["block_num"],
         "finality_flag": True,
         "finalized_at": payload["finalized_at"],
+        "trust_state": derive_trust_state(payload),
+        "receipt_available": True,
         "inclusion_verified": payload.get("inclusion_verified", False),
         "inclusion_verified_at": payload.get("inclusion_verified_at"),
         "verified_action": payload.get("verified_action"),
@@ -81,10 +104,12 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
                 self.send_error(HTTPStatus.NOT_FOUND, "Request not found")
                 return
 
-            if payload.get("status") != "finalized" or not payload.get("inclusion_verified", False):
+            if not receipt_available(payload):
                 response = {
                     "request_id": request_id,
                     "status": payload.get("status"),
+                    "trust_state": derive_trust_state(payload),
+                    "receipt_available": False,
                     "inclusion_verified": payload.get("inclusion_verified", False),
                 }
                 if payload.get("status") == "failed":

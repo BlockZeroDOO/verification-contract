@@ -55,6 +55,10 @@ The file currently tracks:
 - `failed_at`
 - `failure_reason`
 - `failure_details`
+- `inclusion_verified`
+- `inclusion_verified_at`
+- `inclusion_verification_error`
+- `verified_action`
 - `chain_state`
 - `anchor` metadata
 
@@ -167,7 +171,7 @@ Health check.
 
 ### `GET /v1/receipts/<request_id>`
 
-Returns a receipt only when the request is already finalized.
+Returns a receipt only when the request is `finalized` and chain inclusion has already been verified.
 
 Single receipt fields:
 
@@ -179,6 +183,8 @@ Single receipt fields:
 - `block_num`
 - `finality_flag`
 - `finalized_at`
+- `trust_state`
+- `receipt_available`
 
 Batch receipt fields:
 
@@ -192,6 +198,16 @@ Batch receipt fields:
 - `block_num`
 - `finality_flag`
 - `finalized_at`
+- `trust_state`
+- `receipt_available`
+
+When a receipt is not yet available, the service returns `409` with:
+
+- `status`
+- `trust_state`
+- `receipt_available`
+- `inclusion_verified`
+- failure metadata for `failed` requests
 
 ## Expected flow
 
@@ -212,10 +228,11 @@ The current watcher baseline now enforces:
 - strict `request_id` validation as 64-char hex
 - strict `tx_id` validation as 64-char hex
 - Antelope account-name validation for `submitter` and `contract`
-- optional shared-token auth for watcher mutation endpoints
+- shared-token auth for watcher mutation endpoints by default
 - idempotent `register` behavior for matching requests
 - rejection of conflicting re-use of an existing `request_id`
 - rejection of `tx_id` and `block_num` rewrites once recorded
+- explicit transaction verification against indexed chain history before trust is upgraded to finalized receipt eligibility
 - explicit `failed` state for dropped or rejected requests
 - no regression from `finalized` back to `included`
 

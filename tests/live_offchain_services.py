@@ -422,7 +422,9 @@ def exercise_failed_request_surface(
     )
     assert_status(status_code, 409, "failed request receipt conflict")
     assert_equal(pending_receipt["status"], "failed", "failed receipt status")
+    assert_equal(pending_receipt["receipt_available"], False, "failed receipt availability")
     assert_equal(pending_receipt["failure_reason"], "tx_dropped", "failed receipt reason")
+    assert_equal(pending_receipt["trust_state"], "failed", "failed receipt trust state")
     artifacts.event(
         "receipt_failed_request",
         {
@@ -469,6 +471,8 @@ def exercise_failed_request_surface(
     status_code, audit_record = request_json(f"{services.audit_base_url}/v1/audit/requests/{prepared['request_id']}")
     assert_status(status_code, 200, "failed audit request record")
     assert_equal(audit_record["status"], "failed", "failed audit request status")
+    assert_equal(audit_record["receipt_available"], False, "failed audit receipt availability")
+    assert_equal(audit_record["trust_state"], "failed", "failed audit trust state")
     artifacts.event(
         "audit_failed_request_record",
         {
@@ -481,6 +485,7 @@ def exercise_failed_request_surface(
     status_code, audit_chain = request_json(f"{services.audit_base_url}/v1/audit/chain/{prepared['request_id']}")
     assert_status(status_code, 200, "failed audit chain")
     assert_equal(audit_chain["record"]["status"], "failed", "failed audit chain record status")
+    assert_equal(audit_chain["record"]["trust_state"], "failed", "failed audit chain trust state")
     assert_equal(audit_chain["receipt"], None, "failed audit chain receipt")
     artifacts.event(
         "audit_failed_request_chain",
@@ -697,6 +702,8 @@ def run_single_offchain_surface(
 
     status_code, receipt = request_json(f"{services.receipt_base_url}/v1/receipts/{request_id}")
     assert_status(status_code, 200, "single receipt finalized")
+    assert_equal(receipt["receipt_available"], True, "single receipt availability")
+    assert_equal(receipt["trust_state"], "finalized_verified", "single receipt trust state")
     assert_equal(receipt["tx_id"], tx_id, "single receipt tx_id")
     assert_equal(receipt["block_num"], block_num, "single receipt block_num")
     artifacts.event(
@@ -711,6 +718,8 @@ def run_single_offchain_surface(
     status_code, audit_request = request_json(f"{services.audit_base_url}/v1/audit/requests/{request_id}")
     assert_status(status_code, 200, "single audit request endpoint")
     assert_equal(audit_request["commitment_id"], commitment_id, "single audit request commitment_id")
+    assert_equal(audit_request["receipt_available"], True, "single audit request receipt availability")
+    assert_equal(audit_request["trust_state"], "finalized_verified", "single audit request trust state")
     artifacts.event(
         "single_audit_request",
         {
@@ -723,6 +732,7 @@ def run_single_offchain_surface(
     status_code, audit_chain = request_json(f"{services.audit_base_url}/v1/audit/chain/{request_id}")
     assert_status(status_code, 200, "single audit chain endpoint")
     assert_equal(audit_chain["record"]["tx_id"], tx_id, "single audit chain tx_id")
+    assert_equal(audit_chain["record"]["trust_state"], "finalized_verified", "single audit chain trust state")
     assert_equal(audit_chain["receipt"]["request_id"], request_id, "single audit chain receipt request_id")
     artifacts.event(
         "single_audit_chain",
@@ -1013,6 +1023,8 @@ def run_batch_offchain_surface(
 
     status_code, receipt = request_json(f"{services.receipt_base_url}/v1/receipts/{request_id}")
     assert_status(status_code, 200, "batch receipt finalized")
+    assert_equal(receipt["receipt_available"], True, "batch receipt availability")
+    assert_equal(receipt["trust_state"], "finalized_verified", "batch receipt trust state")
     assert_equal(receipt["tx_id"], closebatch_tx_id, "batch receipt tx_id")
     assert_equal(receipt["manifest_hash"], prepared["manifest_hash"], "batch receipt manifest_hash")
     assert_equal(receipt["root_hash"], prepared["root_hash"], "batch receipt root_hash")
@@ -1028,6 +1040,8 @@ def run_batch_offchain_surface(
     status_code, audit_request = request_json(f"{services.audit_base_url}/v1/audit/requests/{request_id}")
     assert_status(status_code, 200, "batch audit request endpoint")
     assert_equal(audit_request["batch_id"], batch_id, "batch audit request batch_id")
+    assert_equal(audit_request["receipt_available"], True, "batch audit request receipt availability")
+    assert_equal(audit_request["trust_state"], "finalized_verified", "batch audit request trust state")
     artifacts.event(
         "batch_audit_request",
         {
@@ -1039,6 +1053,7 @@ def run_batch_offchain_surface(
 
     status_code, audit_chain = request_json(f"{services.audit_base_url}/v1/audit/chain/{request_id}")
     assert_status(status_code, 200, "batch audit chain endpoint")
+    assert_equal(audit_chain["record"]["trust_state"], "finalized_verified", "batch audit chain trust state")
     assert_equal(audit_chain["receipt"]["request_id"], request_id, "batch audit chain receipt request_id")
     artifacts.event(
         "batch_audit_chain",

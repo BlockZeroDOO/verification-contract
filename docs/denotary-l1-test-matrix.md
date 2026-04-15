@@ -145,6 +145,8 @@ Current baseline artifact:
 - single receipt contains `hash`, `tx_id`, `block_num`, `finality_flag`
 - batch receipt contains `root`, `inclusion_proof`, `tx_id`, `finality_flag`
 - receipt is not issued before finality
+- receipt is not issued for `finalized` requests unless `inclusion_verified == true`
+- receipt conflict responses expose `trust_state` and `receipt_available`
 - receipt verification fails for mismatched inclusion proof
 
 ### Indexer and Audit API
@@ -153,6 +155,7 @@ Current baseline artifact:
 - can query record by `external_ref`
 - can query batch by `batch_id`
 - returns business status separately from technical finality state
+- returns explicit `trust_state` and `receipt_available`
 - returns receipt chain with linked chain metadata
 
 ### Security and negative scenarios

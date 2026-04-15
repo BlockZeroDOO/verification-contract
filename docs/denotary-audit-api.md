@@ -60,6 +60,7 @@ Supported query parameters:
 
 - `mode`
 - `status`
+- `trust_state`
 - `submitter`
 - `contract`
 - `external_ref_hash`
@@ -88,10 +89,20 @@ If `format=jsonl`, the API returns newline-delimited JSON for export-friendly do
 The baseline `proof_chain` contains these stages:
 
 - `request_registered`
+- `transaction_verified`
 - `transaction_included`
 - `block_finalized`
 
-If finality is not reached yet, the last stage is returned with `pending` status.
+`record` responses now also expose:
+
+- `trust_state`
+- `receipt_available`
+- `inclusion_verified`
+- `inclusion_verification_error`
+
+If finality is not reached yet, the last stage is returned with `pending` status. If a block is finalized but
+transaction verification is still missing or failed, `block_finalized` stays `completed` while `transaction_verified`
+shows the verification outcome separately.
 
 ## Attaching anchor IDs
 

@@ -361,7 +361,9 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(receipt["request_id"], request_id)
         self.assertTrue(receipt["finality_flag"])
+        self.assertTrue(receipt["receipt_available"])
         self.assertTrue(receipt["inclusion_verified"])
+        self.assertEqual(receipt["trust_state"], "finalized_verified")
 
         status, audit_chain = request_json(
             f"http://127.0.0.1:{self.audit_port}/v1/audit/by-commitment/42",
@@ -369,9 +371,12 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(audit_chain["record"]["request_id"], request_id)
         self.assertEqual(audit_chain["record"]["tx_id"], tx_id)
+        self.assertTrue(audit_chain["record"]["receipt_available"])
         self.assertTrue(audit_chain["record"]["inclusion_verified"])
+        self.assertEqual(audit_chain["record"]["trust_state"], "finalized_verified")
         self.assertEqual(audit_chain["receipt"]["request_id"], request_id)
         self.assertEqual(audit_chain["proof_chain"][-1]["stage"], "block_finalized")
+        self.assertEqual(audit_chain["proof_chain"][-1]["status"], "completed")
 
     def test_batch_pipeline_end_to_end(self) -> None:
         status, prepared = request_json(
@@ -463,7 +468,9 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(audit_chain["record"]["request_id"], request_id)
         self.assertEqual(audit_chain["record"]["batch_id"], 7)
+        self.assertTrue(audit_chain["record"]["receipt_available"])
         self.assertTrue(audit_chain["record"]["inclusion_verified"])
+        self.assertEqual(audit_chain["record"]["trust_state"], "finalized_verified")
         self.assertEqual(audit_chain["receipt"]["manifest_hash"], prepared["manifest_hash"])
 
     def test_watcher_rejects_conflicting_reregistration(self) -> None:
@@ -663,7 +670,9 @@ class ServiceIntegrationTest(unittest.TestCase):
         )
         self.assertEqual(status, 409)
         self.assertEqual(receipt["status"], "failed")
+        self.assertFalse(receipt["receipt_available"])
         self.assertEqual(receipt["failure_reason"], "tx_dropped")
+        self.assertEqual(receipt["trust_state"], "failed")
 
         status, audit_chain = request_json(
             f"http://127.0.0.1:{self.audit_port}/v1/audit/chain/{request_id}",
@@ -671,7 +680,65 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(audit_chain["record"]["status"], "failed")
         self.assertEqual(audit_chain["record"]["failure_reason"], "tx_dropped")
+        self.assertFalse(audit_chain["record"]["receipt_available"])
+        self.assertEqual(audit_chain["record"]["trust_state"], "failed")
         self.assertIsNone(audit_chain["receipt"])
+
+        status, search = request_json(
+            f"http://127.0.0.1:{self.audit_port}/v1/audit/search?trust_state=failed&limit=10",
+        )
+        self.assertEqual(status, 200)
+        self.assertGreaterEqual(search["count"], 1)
+        self.assertTrue(any(item["request_id"] == request_id for item in search["results"]))
+
+    def test_finalized_unverified_state_exposes_trust_state_without_receipt(self) -> None:
+        request_id = "9" * 64
+        payload = {
+            "request_id": request_id,
+            "trace_id": "manual-finalized-unverified",
+            "mode": "single",
+            "submitter": "alice",
+            "contract": "verification",
+            "anchor": {
+                "object_hash": "a" * 64,
+                "external_ref_hash": "b" * 64,
+                "commitment_id": 4242,
+            },
+            "tx_id": "c" * 64,
+            "block_num": 222,
+            "status": "finalized",
+            "registered_at": "2026-04-15T00:00:00Z",
+            "updated_at": "2026-04-15T00:02:00Z",
+            "finalized_at": "2026-04-15T00:02:00Z",
+            "failed_at": None,
+            "failure_reason": None,
+            "failure_details": None,
+            "inclusion_verified": False,
+            "inclusion_verified_at": None,
+            "inclusion_verification_error": "history backend unavailable",
+            "verified_action": None,
+            "chain_state": {
+                "head_block_num": 223,
+                "last_irreversible_block_num": 223,
+            },
+        }
+        self.watcher_server.store.upsert_request(request_id, payload)
+
+        status, receipt = request_json(f"http://127.0.0.1:{self.receipt_port}/v1/receipts/{request_id}")
+        self.assertEqual(status, 409)
+        self.assertEqual(receipt["status"], "finalized")
+        self.assertFalse(receipt["receipt_available"])
+        self.assertEqual(receipt["trust_state"], "finalized_unverified")
+        self.assertEqual(receipt["error"], "receipt is not available before inclusion verification")
+
+        status, audit_chain = request_json(f"http://127.0.0.1:{self.audit_port}/v1/audit/chain/{request_id}")
+        self.assertEqual(status, 200)
+        self.assertEqual(audit_chain["record"]["trust_state"], "finalized_unverified")
+        self.assertFalse(audit_chain["record"]["receipt_available"])
+        self.assertIsNone(audit_chain["receipt"])
+        self.assertEqual(audit_chain["proof_chain"][-1]["stage"], "block_finalized")
+        self.assertEqual(audit_chain["proof_chain"][-1]["status"], "completed")
+        self.assertFalse(audit_chain["proof_chain"][-1]["details"]["verification_gate_satisfied"])
 
 
 if __name__ == "__main__":

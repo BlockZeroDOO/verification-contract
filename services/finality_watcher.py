@@ -452,14 +452,13 @@ def verify_inclusion(request_payload: Dict[str, Any]) -> Dict[str, Any]:
 
     tx_payload = fetch_transaction_details(rpc_url, tx_id, block_num)
     actual_block_num = extract_transaction_block_num(tx_payload)
-    if actual_block_num is not None and actual_block_num != block_num:
-        raise ValueError("block_num does not match indexed transaction block")
 
     matcher = matches_single_action if request_payload.get("mode") == "single" else matches_batch_action
     for action in iter_transaction_actions(tx_payload):
         if matcher(request_payload, action):
             return {
                 "verified_at": iso_now(),
+                "verified_block_num": actual_block_num or block_num,
                 "verified_action": {
                     "account": action.get("account"),
                     "name": action.get("name"),
@@ -494,6 +493,9 @@ def refresh_inclusion_verification(existing: Dict[str, Any], strict: bool = Fals
     existing["inclusion_verified"] = True
     if not existing.get("inclusion_verified_at"):
         existing["inclusion_verified_at"] = verification["verified_at"]
+    verified_block_num = verification.get("verified_block_num")
+    if isinstance(verified_block_num, int) and verified_block_num > 0:
+        existing["block_num"] = verified_block_num
     existing["inclusion_verification_error"] = None
     existing["verified_action"] = verification["verified_action"]
     return existing

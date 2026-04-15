@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from contextlib import nullcontext
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -48,7 +51,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--poll-interval-sec", type=float, default=3.0)
     parser.add_argument("--dump-dir", default="")
     parser.add_argument("--print-json-events", action="store_true")
+    parser.add_argument("--use-external-services", action="store_true")
+    parser.add_argument("--ingress-base-url", default="http://127.0.0.1:8080")
+    parser.add_argument("--watcher-base-url", default="http://127.0.0.1:8081")
+    parser.add_argument("--receipt-base-url", default="http://127.0.0.1:8082")
+    parser.add_argument("--audit-base-url", default="http://127.0.0.1:8083")
     return parser.parse_args()
+
+
+@dataclass(frozen=True)
+class ServiceEndpoints:
+    ingress_base_url: str
+    watcher_base_url: str
+    receipt_base_url: str
+    audit_base_url: str
 
 
 class ArtifactLogger:
@@ -115,6 +131,10 @@ def request_text(
         return exc.code, body, dict(exc.headers.items())
 
 
+def derive_request_id(submitter: str, external_ref_hash: str, content_hash: str, mode: str) -> str:
+    return hashlib.sha256(f"{submitter}:{external_ref_hash}:{content_hash}:{mode}".encode("utf-8")).hexdigest()
+
+
 def watcher_headers(args: argparse.Namespace) -> Dict[str, str]:
     if not args.watcher_auth_token:
         return {}
@@ -131,7 +151,7 @@ def assert_in(member: str, container: str, context: str) -> None:
         raise AssertionError(f"{context}: expected {member!r} to be present")
 
 
-def assert_healthz(services: LocalServiceStack, artifacts: ArtifactLogger) -> None:
+def assert_healthz(services: ServiceEndpoints, artifacts: ArtifactLogger) -> None:
     log("Checking health endpoints for all off-chain services")
     for name, base_url, expected_service in (
         ("ingress", services.ingress_base_url, "ingress-api"),
@@ -155,7 +175,7 @@ def assert_healthz(services: LocalServiceStack, artifacts: ArtifactLogger) -> No
 
 def exercise_ingress_surface(
     args: argparse.Namespace,
-    services: LocalServiceStack,
+    services: ServiceEndpoints,
     schema_id: int,
     single_policy_id: int,
     batch_policy_id: int,
@@ -274,11 +294,16 @@ def exercise_ingress_surface(
 
     log("Checking ingress watcher auto-registration handoff")
     watcher_prepare_payload = dict(single_payload)
-    watcher_prepare_payload["watcher"] = {
-        "url": services.watcher_base_url,
-        "auth_token": args.watcher_auth_token,
-        "rpc_url": args.rpc_url,
-    }
+    if args.use_external_services:
+        watcher_prepare_payload["watcher"] = {
+            "register": True,
+        }
+    else:
+        watcher_prepare_payload["watcher"] = {
+            "url": services.watcher_base_url,
+            "auth_token": args.watcher_auth_token,
+            "rpc_url": args.rpc_url,
+        }
     status_code, watcher_prepare = request_json(
         f"{services.ingress_base_url}/v1/single/prepare",
         method="POST",
@@ -313,7 +338,7 @@ def exercise_ingress_surface(
 
 def exercise_failed_request_surface(
     args: argparse.Namespace,
-    services: LocalServiceStack,
+    services: ServiceEndpoints,
     schema_id: int,
     single_policy_id: int,
     suffix: str,
@@ -414,10 +439,10 @@ def exercise_failed_request_surface(
         payload=conflict_payload,
         headers=watcher_headers(args),
     )
-    assert_status(status_code, 400, "watcher conflicting re-register")
-    assert_in("does not match existing request", conflict_response["error"], "watcher conflicting re-register message")
+    assert_status(status_code, 400, "watcher mismatched request_id rejection")
+    assert_in("request_id does not match derived canonical request id", conflict_response["error"], "watcher mismatched request_id message")
     artifacts.event(
-        "watcher_register_conflict",
+        "watcher_register_request_id_mismatch",
         {
             "request": conflict_payload,
             "status_code": status_code,
@@ -550,7 +575,7 @@ def exercise_failed_request_surface(
 
 def run_single_offchain_surface(
     args: argparse.Namespace,
-    services: LocalServiceStack,
+    services: ServiceEndpoints,
     schema_id: int,
     single_policy_id: int,
     suffix: str,
@@ -862,7 +887,7 @@ def run_single_offchain_surface(
 
 def run_batch_offchain_surface(
     args: argparse.Namespace,
-    services: LocalServiceStack,
+    services: ServiceEndpoints,
     schema_id: int,
     batch_policy_id: int,
     suffix: str,
@@ -1165,9 +1190,20 @@ def main() -> int:
     schema_id = int(time.time()) + 4000
     single_policy_id = schema_id + 1000
     batch_policy_id = schema_id + 1001
+    external_services = ServiceEndpoints(
+        ingress_base_url=args.ingress_base_url.rstrip("/"),
+        watcher_base_url=args.watcher_base_url.rstrip("/"),
+        receipt_base_url=args.receipt_base_url.rstrip("/"),
+        audit_base_url=args.audit_base_url.rstrip("/"),
+    )
+    service_context = (
+        nullcontext(external_services)
+        if args.use_external_services
+        else LocalServiceStack(args.rpc_url, args.verification_account, args.watcher_auth_token)
+    )
 
     try:
-        with LocalServiceStack(args.rpc_url, args.verification_account, args.watcher_auth_token) as services:
+        with service_context as services:
             artifacts.event(
                 "run_context",
                 {
@@ -1180,6 +1216,13 @@ def main() -> int:
                     "watcher_auth_token_enabled": bool(args.watcher_auth_token),
                     "wait_timeout_sec": args.wait_timeout_sec,
                     "poll_interval_sec": args.poll_interval_sec,
+                    "use_external_services": args.use_external_services,
+                    "service_urls": {
+                        "ingress": services.ingress_base_url,
+                        "watcher": services.watcher_base_url,
+                        "receipt": services.receipt_base_url,
+                        "audit": services.audit_base_url,
+                    },
                 },
             )
             assert_healthz(services, artifacts)

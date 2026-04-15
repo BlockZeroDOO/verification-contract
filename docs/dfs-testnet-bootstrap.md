@@ -258,6 +258,17 @@ And it should update the matching `storquotes` row from `open` to `consumed`.
 
 ## Submit a settlement
 
+Settlement now has additional on-chain eligibility guards for each payout owner:
+
+- payout owners must be unique within the settlement
+- each payout owner must control at least one active `storage` or `both` node
+- that node must have active stake meeting `stake_minimum`
+- that node must have a fresh matching price offer for the settlement token
+- the final payout set must satisfy `min_eligible_price_nodes`
+
+Operationally this means `settlement_authority` still decides the payout amounts, but it can no longer
+distribute revenue to arbitrary non-eligible accounts.
+
 Example:
 
 ```powershell

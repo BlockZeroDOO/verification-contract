@@ -559,13 +559,30 @@ void dfs::settle(
     check(receipt_itr->distributed_quantity.amount == 0, "storage payment receipt already has distributed quantity");
 
     asset distributed_quantity = asset(0, gross_quantity.symbol);
+    uint32_t eligible_payout_owners = 0;
     for (const auto& payout : payouts) {
         check(is_account(payout.owner_account), "payout owner_account does not exist");
         validate_nonnegative_asset(payout.quantity, "payout quantity");
         check(payout.quantity.amount > 0, "payout quantity must be positive");
         check(payout.quantity.symbol == gross_quantity.symbol, "payout quantity symbol mismatch");
+        for (const auto& prior_payout : payouts) {
+            if (&prior_payout == &payout) {
+                break;
+            }
+            check(prior_payout.owner_account != payout.owner_account, "payout owner_account must be unique");
+        }
+        check(
+            has_eligible_settlement_node(payout.owner_account, token_contract, gross_quantity.symbol, policy),
+            "payout owner_account is not an eligible active storage node"
+        );
+        eligible_payout_owners += 1;
         distributed_quantity += payout.quantity;
     }
+
+    check(
+        eligible_payout_owners >= policy.min_eligible_price_nodes,
+        "payout set does not satisfy min_eligible_price_nodes"
+    );
 
     check(
         distributed_quantity.amount + protocol_fee_quantity.amount <= gross_quantity.amount,
@@ -881,6 +898,73 @@ void dfs::validate_nonnegative_asset(const asset& quantity, const char* field_na
 
 void dfs::validate_future_time(const time_point_sec& value, const char* field_name) const {
     check(value > time_point_sec(current_time_point()), string(field_name) + " must be in the future");
+}
+
+bool dfs::has_eligible_settlement_node(
+    const name& owner_account,
+    const name& payout_token_contract,
+    const symbol& payout_symbol,
+    const pricing_policy& policy
+) const {
+    node_table nodes(get_self(), get_self().value);
+    auto by_owner = nodes.get_index<"byowner"_n>();
+    auto owner_itr = by_owner.lower_bound(owner_account.value);
+    const time_point_sec now = time_point_sec(current_time_point());
+
+    while (owner_itr != by_owner.end() && owner_itr->owner_account == owner_account) {
+        if (owner_itr->status != status_active) {
+            ++owner_itr;
+            continue;
+        }
+
+        if (owner_itr->role != role_storage && owner_itr->role != role_both) {
+            ++owner_itr;
+            continue;
+        }
+
+        stake_table stakes(get_self(), get_self().value);
+        auto by_stake_node = stakes.get_index<"bynodeid"_n>();
+        auto stake_itr = by_stake_node.find(compute_text_key(owner_itr->node_id));
+        if (stake_itr == by_stake_node.end()) {
+            ++owner_itr;
+            continue;
+        }
+
+        if (
+            stake_itr->owner_account != owner_account ||
+            stake_itr->token_contract != policy.stake_token_contract ||
+            stake_itr->quantity.symbol != policy.stake_minimum.symbol ||
+            stake_itr->quantity.amount < policy.stake_minimum.amount ||
+            stake_itr->status != status_active
+        ) {
+            ++owner_itr;
+            continue;
+        }
+
+        price_offer_table offers(get_self(), get_self().value);
+        auto by_offer_node = offers.get_index<"bynodeid"_n>();
+        auto offer_itr = by_offer_node.find(compute_text_key(owner_itr->node_id));
+        if (offer_itr == by_offer_node.end()) {
+            ++owner_itr;
+            continue;
+        }
+
+        const bool price_matches_token =
+            offer_itr->owner_account == owner_account &&
+            offer_itr->token_contract == payout_token_contract &&
+            offer_itr->unit_price.symbol == payout_symbol;
+        const bool price_is_fresh =
+            policy.max_price_age_sec == 0 ||
+            offer_itr->effective_from + policy.max_price_age_sec > now;
+
+        if (price_matches_token && price_is_fresh) {
+            return true;
+        }
+
+        ++owner_itr;
+    }
+
+    return false;
 }
 
 void dfs::upsert_stake_after_deposit(

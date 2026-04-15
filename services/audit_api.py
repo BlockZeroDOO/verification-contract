@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlparse
 from finality_store import build_finality_store
 from finality_store_base import FinalityStoreBase
 from openapi_docs import swagger_ui_html
+from privacy_mode import redact_audit_record, redact_proof_chain, redact_receipt_payload, require_privacy_mode
 from receipt_service import build_batch_receipt, build_single_receipt, derive_trust_state, receipt_available
 
 
@@ -376,8 +377,9 @@ def build_openapi_spec() -> Dict[str, Any]:
                     "properties": {
                         "status": {"type": "string", "example": "ok"},
                         "service": {"type": "string", "example": "audit-api"},
+                        "privacy_mode": {"type": "string", "example": "full"},
                     },
-                    "required": ["status", "service"],
+                    "required": ["status", "service", "privacy_mode"],
                 },
                 "AuditRecord": {
                     "type": "object",
@@ -517,7 +519,14 @@ class AuditApiHandler(BaseHTTPRequestHandler):
 
         try:
             if parsed.path == "/healthz":
-                self.write_json(HTTPStatus.OK, {"status": "ok", "service": "audit-api"})
+                self.write_json(
+                    HTTPStatus.OK,
+                    {
+                        "status": "ok",
+                        "service": "audit-api",
+                        "privacy_mode": self.server.privacy_mode,
+                    },
+                )
                 return
 
             if parsed.path == "/openapi.json":
@@ -532,7 +541,7 @@ class AuditApiHandler(BaseHTTPRequestHandler):
                 query = parse_qs(parsed.query)
                 payloads = select_requests(self.server.store, lambda item: self.matches_query(item, query))
                 paged = apply_pagination(payloads, query)
-                record_items = [build_audit_record(item) for item in paged["items"]]
+                record_items = [redact_audit_record(build_audit_record(item), self.server.privacy_mode) for item in paged["items"]]
                 response = {
                     "count": len(record_items),
                     "total": paged["total"],
@@ -557,7 +566,7 @@ class AuditApiHandler(BaseHTTPRequestHandler):
                 except KeyError:
                     self.send_error(HTTPStatus.NOT_FOUND, "Record not found")
                     return
-                self.write_json(HTTPStatus.OK, build_audit_record(payload))
+                self.write_json(HTTPStatus.OK, redact_audit_record(build_audit_record(payload), self.server.privacy_mode))
                 return
 
             prefix = "/v1/audit/chain/"
@@ -571,7 +580,7 @@ class AuditApiHandler(BaseHTTPRequestHandler):
                 except KeyError:
                     self.send_error(HTTPStatus.NOT_FOUND, "Record not found")
                     return
-                self.write_json(HTTPStatus.OK, build_audit_chain(payload))
+                self.write_json(HTTPStatus.OK, self.apply_privacy(build_audit_chain(payload)))
                 return
 
             prefix = "/v1/audit/by-external-ref/"
@@ -586,7 +595,7 @@ class AuditApiHandler(BaseHTTPRequestHandler):
                 )
                 if payload is None:
                     return
-                self.write_json(HTTPStatus.OK, build_audit_chain(payload))
+                self.write_json(HTTPStatus.OK, self.apply_privacy(build_audit_chain(payload)))
                 return
 
             prefix = "/v1/audit/by-tx/"
@@ -598,7 +607,7 @@ class AuditApiHandler(BaseHTTPRequestHandler):
                 )
                 if payload is None:
                     return
-                self.write_json(HTTPStatus.OK, build_audit_chain(payload))
+                self.write_json(HTTPStatus.OK, self.apply_privacy(build_audit_chain(payload)))
                 return
 
             prefix = "/v1/audit/by-commitment/"
@@ -616,7 +625,7 @@ class AuditApiHandler(BaseHTTPRequestHandler):
                 )
                 if payload is None:
                     return
-                self.write_json(HTTPStatus.OK, build_audit_chain(payload))
+                self.write_json(HTTPStatus.OK, self.apply_privacy(build_audit_chain(payload)))
                 return
 
             prefix = "/v1/audit/by-batch/"
@@ -634,7 +643,7 @@ class AuditApiHandler(BaseHTTPRequestHandler):
                 )
                 if payload is None:
                     return
-                self.write_json(HTTPStatus.OK, build_audit_chain(payload))
+                self.write_json(HTTPStatus.OK, self.apply_privacy(build_audit_chain(payload)))
                 return
 
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
@@ -673,6 +682,13 @@ class AuditApiHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         return
 
+    def apply_privacy(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "record": redact_audit_record(payload["record"], self.server.privacy_mode),
+            "receipt": redact_receipt_payload(payload["receipt"], self.server.privacy_mode) if payload["receipt"] else None,
+            "proof_chain": redact_proof_chain(payload["proof_chain"], self.server.privacy_mode),
+        }
+
     def write_json(self, status: HTTPStatus, payload: Dict[str, Any]) -> None:
         encoded = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
         self.send_response(status)
@@ -700,9 +716,16 @@ class AuditApiHandler(BaseHTTPRequestHandler):
 
 
 class AuditApiServer(ThreadingHTTPServer):
-    def __init__(self, server_address: Tuple[str, int], handler: type[BaseHTTPRequestHandler], store: FinalityStoreBase):
+    def __init__(
+        self,
+        server_address: Tuple[str, int],
+        handler: type[BaseHTTPRequestHandler],
+        store: FinalityStoreBase,
+        privacy_mode: str = "full",
+    ):
         super().__init__(server_address, handler)
         self.store = store
+        self.privacy_mode = require_privacy_mode(privacy_mode)
 
 
 def parse_args() -> argparse.Namespace:
@@ -712,6 +735,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--state-backend", default="sqlite")
     parser.add_argument("--state-file", default="runtime/finality-state.json")
     parser.add_argument("--state-db", default="runtime/finality-state.sqlite3")
+    parser.add_argument("--privacy-mode", default="full", choices=["full", "public"])
     return parser.parse_args()
 
 
@@ -722,7 +746,7 @@ def main() -> None:
         state_file=args.state_file,
         state_db=args.state_db,
     )
-    server = AuditApiServer((args.host, args.port), AuditApiHandler, store)
+    server = AuditApiServer((args.host, args.port), AuditApiHandler, store, args.privacy_mode)
     print(f"Audit API listening on http://{args.host}:{args.port}")
     server.serve_forever()
 

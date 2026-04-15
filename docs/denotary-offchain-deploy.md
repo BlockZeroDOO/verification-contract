@@ -26,6 +26,8 @@ Shared runtime state:
 - `FINALITY_STATE_DB=/var/lib/denotary/finality-state.sqlite3`
 - `WATCHER_VERIFICATION_POLICY=single-provider`
 - `WATCHER_VERIFICATION_MIN_SUCCESS=1`
+- `RECEIPT_PRIVACY_MODE=full`
+- `AUDIT_PRIVACY_MODE=full`
 
 Default deNotary chain settings:
 
@@ -76,6 +78,8 @@ FINALITY_STATE_BACKEND=sqlite
 FINALITY_STATE_DB=/var/lib/denotary/finality-state.sqlite3
 WATCHER_VERIFICATION_POLICY=single-provider
 WATCHER_VERIFICATION_MIN_SUCCESS=1
+RECEIPT_PRIVACY_MODE=full
+AUDIT_PRIVACY_MODE=full
 CHAIN_ID=9714ab662f0899c3ac4c5a02220f3d7ab61aacae311974239cc75f22c999cc48
 POLL_INTERVAL_SEC=10
 WATCHER_AUTH_TOKEN=replace-with-shared-secret
@@ -181,12 +185,18 @@ Recommended publication model:
 - public-facing reverse proxy in front of `Audit API`
 - keep `Finality Watcher` private
 
+Reference proxy templates:
+
+- [deploy/nginx/denotary-public.conf](/c:/projects/verification-contract/deploy/nginx/denotary-public.conf:1)
+- [deploy/caddy/Caddyfile.public](/c:/projects/verification-contract/deploy/caddy/Caddyfile.public:1)
+
 Operational policy:
 
 - `WATCHER_AUTH_TOKEN` is mandatory for `Finality Watcher`
 - do not publish `Finality Watcher` directly to the internet
 - prefer binding all services to `127.0.0.1` and exposing only proxied endpoints
-- review whether `Receipt Service` and `Audit API` should be public in your deployment, because they intentionally expose trace and correlation metadata
+- set `RECEIPT_PRIVACY_MODE=public` and `AUDIT_PRIVACY_MODE=public` if the services are internet-facing
+- use `full` privacy mode only for trusted internal deployments
 
 ## 6. Health checks
 

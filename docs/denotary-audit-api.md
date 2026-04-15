@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This baseline adds a read-only audit layer on top of `runtime/finality-state.json` so that we can:
+This baseline adds a read-only audit layer on top of the shared finality state so that we can:
 
 - search records without reading the raw state file
 - return the audit record, receipt, and proof chain from one API
@@ -14,11 +14,18 @@ Implementation:
 
 ## Current data source
 
-The current Audit API reads a file-based read model:
+The current Audit API reads the same watcher state backend used by:
+
+- `Finality Watcher`
+- `Receipt Service`
+
+Recommended production runtime:
+
+- `SQLite`
+
+Compatibility mode still exists for:
 
 - `runtime/finality-state.json`
-
-This is a temporary baseline before a fuller indexer over chain tables and transaction events.
 
 ## Endpoints
 
@@ -107,6 +114,31 @@ The baseline `proof_chain` contains these stages:
 - `receipt_available`
 - `inclusion_verified`
 - `inclusion_verification_error`
+
+## Privacy modes
+
+The Audit API now supports:
+
+- `full`
+- `public`
+
+`full` mode exposes the complete audit surface and is intended for trusted internal deployments.
+
+`public` mode redacts correlation-heavy fields from:
+
+- record payloads
+- proof-chain details
+- embedded receipt payloads
+
+Configure it with:
+
+```bash
+scripts/run-audit-api.sh --privacy-mode public
+```
+
+Or in deployment env:
+
+- `AUDIT_PRIVACY_MODE=public`
 
 If finality is not reached yet, the last stage is returned with `pending` status. If a block is finalized but
 transaction verification is still missing or failed, `block_finalized` stays `completed` while `transaction_verified`

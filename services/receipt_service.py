@@ -10,6 +10,7 @@ from typing import Any, Dict
 from finality_store import build_finality_store
 from finality_store_base import FinalityStoreBase
 from openapi_docs import swagger_ui_html
+from privacy_mode import redact_receipt_payload, redact_receipt_unavailable_payload, require_privacy_mode
 
 
 def iso_now() -> str:
@@ -117,8 +118,9 @@ def build_openapi_spec() -> Dict[str, Any]:
                     "properties": {
                         "status": {"type": "string", "example": "ok"},
                         "service": {"type": "string", "example": "receipt-service"},
+                        "privacy_mode": {"type": "string", "example": "full"},
                     },
-                    "required": ["status", "service"],
+                    "required": ["status", "service", "privacy_mode"],
                 },
                 "ReceiptBase": {
                     "type": "object",
@@ -281,7 +283,14 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path == "/healthz":
-            self.write_json(HTTPStatus.OK, {"status": "ok", "service": "receipt-service"})
+            self.write_json(
+                HTTPStatus.OK,
+                {
+                    "status": "ok",
+                    "service": "receipt-service",
+                    "privacy_mode": self.server.privacy_mode,
+                },
+            )
             return
 
         if self.path == "/openapi.json":
@@ -331,7 +340,10 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
                     response["error"] = "receipt is not available before finality"
                     response["inclusion_verification_error"] = payload.get("inclusion_verification_error")
 
-                self.write_json(HTTPStatus.CONFLICT, response)
+                self.write_json(
+                    HTTPStatus.CONFLICT,
+                    redact_receipt_unavailable_payload(response, self.server.privacy_mode),
+                )
                 return
 
             mode = payload.get("mode")
@@ -343,7 +355,7 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
                 self.write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "unsupported request mode"})
                 return
 
-            self.write_json(HTTPStatus.OK, receipt)
+            self.write_json(HTTPStatus.OK, redact_receipt_payload(receipt, self.server.privacy_mode))
             return
 
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
@@ -369,9 +381,16 @@ class ReceiptServiceHandler(BaseHTTPRequestHandler):
 
 
 class ReceiptServiceServer(ThreadingHTTPServer):
-    def __init__(self, server_address: tuple[str, int], handler: type[BaseHTTPRequestHandler], store: FinalityStoreBase):
+    def __init__(
+        self,
+        server_address: tuple[str, int],
+        handler: type[BaseHTTPRequestHandler],
+        store: FinalityStoreBase,
+        privacy_mode: str = "full",
+    ):
         super().__init__(server_address, handler)
         self.store = store
+        self.privacy_mode = require_privacy_mode(privacy_mode)
 
 
 def parse_args() -> argparse.Namespace:
@@ -381,6 +400,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--state-backend", default="sqlite")
     parser.add_argument("--state-file", default="runtime/finality-state.json")
     parser.add_argument("--state-db", default="runtime/finality-state.sqlite3")
+    parser.add_argument("--privacy-mode", default="full", choices=["full", "public"])
     return parser.parse_args()
 
 
@@ -391,7 +411,7 @@ def main() -> None:
         state_file=args.state_file,
         state_db=args.state_db,
     )
-    server = ReceiptServiceServer((args.host, args.port), ReceiptServiceHandler, store)
+    server = ReceiptServiceServer((args.host, args.port), ReceiptServiceHandler, store, args.privacy_mode)
     print(f"Receipt service listening on http://{args.host}:{args.port}")
     server.serve_forever()
 

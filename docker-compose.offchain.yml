@@ -111,6 +111,12 @@ services:
       - /data/finality-state.json
       - --state-db
       - ${FINALITY_STATE_DB:-/data/finality-state.sqlite3}
+      - --privacy-mode
+      - ${RECEIPT_PRIVACY_MODE:-full}
+    environment:
+      FINALITY_STATE_BACKEND: ${FINALITY_STATE_BACKEND:-sqlite}
+      FINALITY_STATE_DB: ${FINALITY_STATE_DB:-/data/finality-state.sqlite3}
+      RECEIPT_PRIVACY_MODE: ${RECEIPT_PRIVACY_MODE:-full}
     volumes:
       - denotary-offchain-state:/data
     depends_on:
@@ -149,6 +155,12 @@ services:
       - /data/finality-state.json
       - --state-db
       - ${FINALITY_STATE_DB:-/data/finality-state.sqlite3}
+      - --privacy-mode
+      - ${AUDIT_PRIVACY_MODE:-full}
+    environment:
+      FINALITY_STATE_BACKEND: ${FINALITY_STATE_BACKEND:-sqlite}
+      FINALITY_STATE_DB: ${FINALITY_STATE_DB:-/data/finality-state.sqlite3}
+      AUDIT_PRIVACY_MODE: ${AUDIT_PRIVACY_MODE:-full}
     volumes:
       - denotary-offchain-state:/data
     depends_on:

@@ -52,6 +52,8 @@ poll_interval_sec="${POLL_INTERVAL_SEC:-10}"
 auth_token="${WATCHER_AUTH_TOKEN:-}"
 verification_policy="${WATCHER_VERIFICATION_POLICY:-single-provider}"
 verification_min_success="${WATCHER_VERIFICATION_MIN_SUCCESS:-1}"
+receipt_privacy_mode="${RECEIPT_PRIVACY_MODE:-full}"
+audit_privacy_mode="${AUDIT_PRIVACY_MODE:-full}"
 ingress_watcher_url="${INGRESS_WATCHER_URL:-}"
 ingress_watcher_auth_token="${INGRESS_WATCHER_AUTH_TOKEN:-${WATCHER_AUTH_TOKEN:-}}"
 ingress_watcher_rpc_url="${INGRESS_WATCHER_RPC_URL:-${RPC_URL:-https://history.denotary.io}}"
@@ -105,6 +107,7 @@ case "${service_name}" in
             --state-backend "${state_backend}" \
             --state-file "${state_file}" \
             --state-db "${state_db}" \
+            --privacy-mode "${receipt_privacy_mode}" \
             "$@"
         ;;
     audit)
@@ -114,6 +117,7 @@ case "${service_name}" in
             --state-backend "${state_backend}" \
             --state-file "${state_file}" \
             --state-db "${state_db}" \
+            --privacy-mode "${audit_privacy_mode}" \
             "$@"
         ;;
     *)

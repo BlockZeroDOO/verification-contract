@@ -160,6 +160,15 @@ class ServiceIntegrationTest(unittest.TestCase):
         )
         cls._start_server(cls.receipt_server)
 
+        cls.receipt_public_port = find_free_port()
+        cls.receipt_public_server = receipt_service.ReceiptServiceServer(
+            ("127.0.0.1", cls.receipt_public_port),
+            receipt_service.ReceiptServiceHandler,
+            finality_watcher.FinalityStore(cls.state_file),
+            privacy_mode="public",
+        )
+        cls._start_server(cls.receipt_public_server)
+
         cls.audit_port = find_free_port()
         cls.audit_server = audit_api.AuditApiServer(
             ("127.0.0.1", cls.audit_port),
@@ -167,6 +176,15 @@ class ServiceIntegrationTest(unittest.TestCase):
             finality_watcher.FinalityStore(cls.state_file),
         )
         cls._start_server(cls.audit_server)
+
+        cls.audit_public_port = find_free_port()
+        cls.audit_public_server = audit_api.AuditApiServer(
+            ("127.0.0.1", cls.audit_public_port),
+            audit_api.AuditApiHandler,
+            finality_watcher.FinalityStore(cls.state_file),
+            privacy_mode="public",
+        )
+        cls._start_server(cls.audit_public_server)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -298,6 +316,258 @@ class ServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(watcher_health["verification_min_success"], 1)
         self.assertIn("startup_checks", watcher_health)
         self.assertIn("startup_recovery", watcher_health)
+
+    def test_public_privacy_mode_redacts_receipt_and_audit_metadata(self) -> None:
+        tx_id = "4" * 64
+        block_num = 140
+        status, prepared = request_json(
+            f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
+            method="POST",
+            payload=self._single_prepare_payload("privacy-public-mode"),
+        )
+        self.assertEqual(status, 200)
+        request_id = prepared["request_id"]
+        object_hash = prepared["object_hash"]
+        external_ref_hash = prepared["external_ref_hash"]
+
+        self._mock_transaction(
+            tx_id,
+            block_num,
+            [
+                {
+                    "account": "verification",
+                    "name": "submit",
+                    "data": {
+                        "submitter": "alice",
+                        "schema_id": 1,
+                        "policy_id": 10,
+                        "object_hash": object_hash,
+                        "external_ref": external_ref_hash,
+                    },
+                }
+            ],
+        )
+        self.mock_chain_server.chain_state["head_block_num"] = 180
+        self.mock_chain_server.chain_state["last_irreversible_block_num"] = 180
+
+        status, _ = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/register",
+            method="POST",
+            payload={
+                "request_id": request_id,
+                "trace_id": prepared["trace_id"],
+                "mode": "single",
+                "submitter": "alice",
+                "contract": "verification",
+                "anchor": {
+                    "object_hash": object_hash,
+                    "external_ref_hash": external_ref_hash,
+                },
+                "rpc_url": self.mock_chain_url,
+            },
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+
+        status, _ = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/included",
+            method="POST",
+            payload={"tx_id": tx_id, "block_num": block_num},
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+
+        status, _ = request_json(
+            f"http://127.0.0.1:{self.watcher_port}/v1/watch/{request_id}/poll",
+            method="POST",
+            payload={},
+            headers=self._watcher_headers(),
+        )
+        self.assertEqual(status, 200)
+
+        status, receipt_health = request_json(f"http://127.0.0.1:{self.receipt_public_port}/healthz")
+        self.assertEqual(status, 200)
+        self.assertEqual(receipt_health["privacy_mode"], "public")
+
+        status, audit_health = request_json(f"http://127.0.0.1:{self.audit_public_port}/healthz")
+        self.assertEqual(status, 200)
+        self.assertEqual(audit_health["privacy_mode"], "public")
+
+        status, receipt = request_json(f"http://127.0.0.1:{self.receipt_public_port}/v1/receipts/{request_id}")
+        self.assertEqual(status, 200)
+        self.assertEqual(receipt["request_id"], request_id)
+        self.assertEqual(receipt["trust_state"], "finalized_verified")
+        self.assertNotIn("trace_id", receipt)
+        self.assertNotIn("submitter", receipt)
+        self.assertNotIn("tx_id", receipt)
+        self.assertNotIn("block_num", receipt)
+        self.assertNotIn("external_ref_hash", receipt)
+        self.assertNotIn("verification_state", receipt)
+
+        status, audit_chain = request_json(f"http://127.0.0.1:{self.audit_public_port}/v1/audit/chain/{request_id}")
+        self.assertEqual(status, 200)
+        self.assertEqual(audit_chain["record"]["request_id"], request_id)
+        self.assertEqual(audit_chain["record"]["trust_state"], "finalized_verified")
+        self.assertNotIn("trace_id", audit_chain["record"])
+        self.assertNotIn("submitter", audit_chain["record"])
+        self.assertNotIn("tx_id", audit_chain["record"])
+        self.assertNotIn("anchor", audit_chain["record"])
+        self.assertIsNotNone(audit_chain["receipt"])
+        self.assertNotIn("tx_id", audit_chain["receipt"])
+
+        verification_stage = next(
+            item for item in audit_chain["proof_chain"] if item["stage"] == "transaction_verified"
+        )
+        self.assertNotIn("verification_state", verification_stage["details"])
+        self.assertNotIn("verified_action", verification_stage["details"])
+
+    def test_sqlite_watcher_restart_recovers_included_request(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_db = str(Path(temp_dir) / "restart-finality.sqlite3")
+            request_id = "a1" * 32
+            tx_id = "7" * 64
+            block_num = 150
+
+            status, prepared = request_json(
+                f"http://127.0.0.1:{self.ingress_port}/v1/single/prepare",
+                method="POST",
+                payload=self._single_prepare_payload("restart-recovery"),
+            )
+            self.assertEqual(status, 200)
+
+            self._mock_transaction(
+                tx_id,
+                block_num,
+                [
+                    {
+                        "account": "verification",
+                        "name": "submit",
+                        "data": {
+                            "submitter": "alice",
+                            "schema_id": 1,
+                            "policy_id": 10,
+                            "object_hash": prepared["object_hash"],
+                            "external_ref": prepared["external_ref_hash"],
+                        },
+                    }
+                ],
+            )
+            self.mock_chain_server.chain_state["head_block_num"] = 145
+            self.mock_chain_server.chain_state["last_irreversible_block_num"] = 145
+
+            watcher_port = find_free_port()
+            watcher_store = finality_watcher.build_finality_store(
+                state_backend="sqlite",
+                state_file=str(Path(temp_dir) / "unused.json"),
+                state_db=state_db,
+            )
+            watcher = finality_watcher.FinalityWatcherServer(
+                ("127.0.0.1", watcher_port),
+                finality_watcher.FinalityWatcherHandler,
+                watcher_store,
+                self.mock_chain_url,
+                3600,
+                self.WATCHER_AUTH_TOKEN,
+            )
+            watcher_thread = threading.Thread(target=watcher.serve_forever, daemon=True)
+            watcher_thread.start()
+            time.sleep(0.05)
+
+            try:
+                status, _ = request_json(
+                    f"http://127.0.0.1:{watcher_port}/v1/watch/register",
+                    method="POST",
+                    payload={
+                        "request_id": prepared["request_id"],
+                        "trace_id": prepared["trace_id"],
+                        "mode": "single",
+                        "submitter": "alice",
+                        "contract": "verification",
+                        "anchor": {
+                            "object_hash": prepared["object_hash"],
+                            "external_ref_hash": prepared["external_ref_hash"],
+                        },
+                        "rpc_url": self.mock_chain_url,
+                    },
+                    headers=self._watcher_headers(),
+                )
+                self.assertEqual(status, 200)
+
+                status, included = request_json(
+                    f"http://127.0.0.1:{watcher_port}/v1/watch/{prepared['request_id']}/included",
+                    method="POST",
+                    payload={"tx_id": tx_id, "block_num": block_num},
+                    headers=self._watcher_headers(),
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(included["status"], "included")
+            finally:
+                watcher.shutdown()
+                watcher.server_close()
+                watcher_thread.join(timeout=2)
+
+            self.mock_chain_server.chain_state["head_block_num"] = 180
+            self.mock_chain_server.chain_state["last_irreversible_block_num"] = 180
+
+            recovered_port = find_free_port()
+            recovered_store = finality_watcher.build_finality_store(
+                state_backend="sqlite",
+                state_file=str(Path(temp_dir) / "unused.json"),
+                state_db=state_db,
+            )
+            recovered_watcher = finality_watcher.FinalityWatcherServer(
+                ("127.0.0.1", recovered_port),
+                finality_watcher.FinalityWatcherHandler,
+                recovered_store,
+                self.mock_chain_url,
+                3600,
+                self.WATCHER_AUTH_TOKEN,
+            )
+            recovered_thread = threading.Thread(target=recovered_watcher.serve_forever, daemon=True)
+            recovered_thread.start()
+            time.sleep(0.05)
+
+            receipt_port = find_free_port()
+            receipt_store = finality_watcher.build_finality_store(
+                state_backend="sqlite",
+                state_file=str(Path(temp_dir) / "unused.json"),
+                state_db=state_db,
+            )
+            receipt_server = receipt_service.ReceiptServiceServer(
+                ("127.0.0.1", receipt_port),
+                receipt_service.ReceiptServiceHandler,
+                receipt_store,
+            )
+            receipt_thread = threading.Thread(target=receipt_server.serve_forever, daemon=True)
+            receipt_thread.start()
+            time.sleep(0.05)
+
+            try:
+                status, health = request_json(f"http://127.0.0.1:{recovered_port}/healthz")
+                self.assertEqual(status, 200)
+                self.assertEqual(health["store"]["backend"], "sqlite")
+                self.assertEqual(health["startup_recovery"]["attempted"], 1)
+                self.assertEqual(health["startup_recovery"]["finalized"], 1)
+
+                status, recovered = request_json(
+                    f"http://127.0.0.1:{recovered_port}/v1/watch/{prepared['request_id']}"
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(recovered["status"], "finalized")
+                self.assertTrue(recovered["inclusion_verified"])
+
+                status, receipt = request_json(
+                    f"http://127.0.0.1:{receipt_port}/v1/receipts/{prepared['request_id']}"
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(receipt["trust_state"], "finalized_verified")
+            finally:
+                receipt_server.shutdown()
+                receipt_server.server_close()
+                receipt_thread.join(timeout=2)
+                recovered_watcher.shutdown()
+                recovered_watcher.server_close()
+                recovered_thread.join(timeout=2)
 
     def test_ingress_can_auto_register_in_watcher(self) -> None:
         payload = self._single_prepare_payload("single-auto-register")

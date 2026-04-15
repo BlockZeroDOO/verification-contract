@@ -61,6 +61,11 @@ Success criteria:
 
 ## P2. Important
 
+Status:
+
+- reverse proxy templates and public privacy modes are now available for `Receipt Service` and `Audit API`
+- remaining follow-up is operational rollout and field-level policy tuning per deployment
+
 ### 3. Harden public API exposure through reverse proxy patterns
 
 Current state:
@@ -150,6 +155,11 @@ Success criteria:
 
 - live validation covers degraded conditions, not only healthy paths
 - restart and recovery behavior is predictable
+
+Status:
+
+- restart/recovery coverage is now implemented for the local live off-chain suite with `SQLite` watcher state
+- remaining work is mostly compose-level failure injection and provider-flake scenarios against public testnets
 
 ## Suggested Execution Order
 

@@ -1098,6 +1098,195 @@ def run_quorum_policy_surface(
         },
     )
 
+
+def run_restart_recovery_surface(
+    args: argparse.Namespace,
+    stack: LocalServiceStack,
+    services: ServiceEndpoints,
+    schema_id: int,
+    single_policy_id: int,
+    suffix: str,
+    artifacts: ArtifactLogger,
+) -> None:
+    log("Running live restart-recovery flow on local service stack")
+    external_ref = f"svc-restart-single-{suffix}"
+
+    status_code, prepared = request_json(
+        f"{services.ingress_base_url}/v1/single/prepare",
+        method="POST",
+        payload=prepare_single_payload(
+            schema_id,
+            single_policy_id,
+            args.submitter_account,
+            external_ref,
+            args.kyc_expires_at,
+        ),
+    )
+    assert_status(status_code, 200, "restart prepare")
+
+    request_id = prepared["request_id"]
+    trace_id = prepared["trace_id"]
+    external_ref_hash = prepared["external_ref_hash"]
+
+    status_code, registered = request_json(
+        f"{services.watcher_base_url}/v1/watch/register",
+        method="POST",
+        payload={
+            "request_id": request_id,
+            "trace_id": trace_id,
+            "mode": "single",
+            "submitter": args.submitter_account,
+            "contract": args.verification_account,
+            "anchor": {
+                "object_hash": prepared["object_hash"],
+                "external_ref_hash": external_ref_hash,
+            },
+            "rpc_url": args.rpc_url,
+        },
+        headers=watcher_headers(args),
+    )
+    assert_status(status_code, 200, "restart watcher register")
+    artifacts.event(
+        "restart_register",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": registered,
+        },
+    )
+
+    permission = f"{args.submitter_account}@active"
+    submit_result = run_cleos_push_action(
+        args.rpc_url,
+        args.verification_account,
+        "submit",
+        [
+            prepared["prepared_action"]["data"]["submitter"],
+            prepared["prepared_action"]["data"]["schema_id"],
+            prepared["prepared_action"]["data"]["policy_id"],
+            prepared["prepared_action"]["data"]["object_hash"],
+            prepared["prepared_action"]["data"]["external_ref"],
+        ],
+        permission,
+    )
+    tx_id, block_num = extract_tx_metadata(submit_result)
+    artifacts.event(
+        "restart_submit_transaction",
+        {
+            "request_id": request_id,
+            "transaction": submit_result,
+            "tx_id": tx_id,
+            "block_num": block_num,
+        },
+    )
+
+    commitment_row = wait_for_row(
+        args.rpc_url,
+        args.verification_account,
+        args.verification_account,
+        "commitments",
+        "external_ref",
+        external_ref_hash,
+        args.wait_timeout_sec,
+        args.poll_interval_sec,
+    )
+    commitment_id = commitment_row["id"]
+
+    status_code, anchored = request_json(
+        f"{services.watcher_base_url}/v1/watch/{request_id}/anchor",
+        method="POST",
+        payload={"anchor": {"commitment_id": commitment_id}},
+        headers=watcher_headers(args),
+    )
+    assert_status(status_code, 200, "restart watcher anchor")
+    artifacts.event(
+        "restart_anchor",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": anchored,
+        },
+    )
+
+    status_code, included = request_json(
+        f"{services.watcher_base_url}/v1/watch/{request_id}/included",
+        method="POST",
+        payload={"tx_id": tx_id, "block_num": block_num},
+        headers=watcher_headers(args),
+    )
+    assert_status(status_code, 200, "restart watcher included")
+    assert_equal(included["status"], "included", "restart watcher included status")
+    artifacts.event(
+        "restart_included_before_restart",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": included,
+        },
+    )
+
+    stack.restart_watcher()
+    stack.restart_receipt()
+    stack.restart_audit()
+    time.sleep(0.2)
+
+    status_code, watcher_health = request_json(f"{services.watcher_base_url}/healthz")
+    assert_status(status_code, 200, "restart watcher health after restart")
+    assert_equal(watcher_health["store"]["backend"], "sqlite", "restart watcher store backend")
+    assert_true(
+        watcher_health["startup_recovery"]["attempted"] >= 1,
+        "restart watcher should attempt startup recovery",
+    )
+    artifacts.event(
+        "restart_watcher_health_after_restart",
+        {
+            "status_code": status_code,
+            "response": watcher_health,
+        },
+    )
+
+    finalized = wait_for_finalized(
+        services.watcher_base_url,
+        request_id,
+        args.wait_timeout_sec,
+        args.poll_interval_sec,
+        watcher_headers(args),
+    )
+    assert_equal(finalized["status"], "finalized", "restart final status")
+    assert_equal(finalized["trust_state"], "finalized_verified", "restart watcher trust state")
+    artifacts.event(
+        "restart_finalized_after_recovery",
+        {
+            "request_id": request_id,
+            "response": finalized,
+        },
+    )
+
+    status_code, receipt = request_json(f"{services.receipt_base_url}/v1/receipts/{request_id}")
+    assert_status(status_code, 200, "restart receipt finalized")
+    assert_equal(receipt["receipt_available"], True, "restart receipt availability")
+    assert_equal(receipt["trust_state"], "finalized_verified", "restart receipt trust state")
+    artifacts.event(
+        "restart_receipt_after_recovery",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": receipt,
+        },
+    )
+
+    status_code, audit_chain = request_json(f"{services.audit_base_url}/v1/audit/chain/{request_id}")
+    assert_status(status_code, 200, "restart audit chain")
+    assert_equal(audit_chain["record"]["trust_state"], "finalized_verified", "restart audit chain trust state")
+    artifacts.event(
+        "restart_audit_chain_after_recovery",
+        {
+            "request_id": request_id,
+            "status_code": status_code,
+            "response": audit_chain,
+        },
+    )
+
     search_query = urllib.parse.urlencode(
         {
             "mode": "single",
@@ -1499,6 +1688,15 @@ def main() -> int:
             exercise_failed_request_surface(args, services, schema_id, single_policy_id, suffix, artifacts)
             run_single_offchain_surface(args, services, schema_id, single_policy_id, suffix, artifacts)
             run_quorum_policy_surface(args, services, schema_id, single_policy_id, suffix, artifacts)
+            if isinstance(services, LocalServiceStack):
+                run_restart_recovery_surface(args, services, services, schema_id, single_policy_id, suffix, artifacts)
+            else:
+                artifacts.event(
+                    "restart_recovery_skipped",
+                    {
+                        "reason": "external services mode does not manage service lifecycle directly",
+                    },
+                )
             run_batch_offchain_surface(args, services, schema_id, batch_policy_id, suffix, artifacts)
     except Exception as exc:
         artifacts.event("run_exception", {"type": type(exc).__name__, "message": str(exc)})

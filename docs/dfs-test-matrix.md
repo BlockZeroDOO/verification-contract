@@ -105,6 +105,13 @@ These tests validate that metadata-side consumers can rely on the on-chain model
 - accept settlement with exact accounting
 - require configured settlement authority
 - reject settlement from unauthorized actor
+- reject duplicate payout owner in one settlement
+- reject settlement payout to non-node accounts
+- reject settlement payout to metadata-only nodes
+- reject settlement payout to suspended or retired nodes
+- reject settlement payout to nodes without sufficient active stake
+- reject settlement payout to nodes without a fresh matching storage price offer
+- reject settlement when payout set is below `min_eligible_price_nodes`
 
 ### Balances and claims
 

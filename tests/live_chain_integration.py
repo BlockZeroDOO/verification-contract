@@ -241,8 +241,9 @@ class LocalServiceStack:
         self.watcher_auth_token = watcher_auth_token
         self.temp_dir = tempfile.TemporaryDirectory()
         self.state_file = str(Path(self.temp_dir.name) / "finality-state.json")
-        self.threads: List[threading.Thread] = []
-        self.servers: List[Any] = []
+        self.state_db = str(Path(self.temp_dir.name) / "finality-state.sqlite3")
+        self.threads: Dict[str, threading.Thread] = {}
+        self.servers: Dict[str, Any] = {}
 
         self.ingress_port = find_free_port()
         self.watcher_port = find_free_port()
@@ -266,55 +267,95 @@ class LocalServiceStack:
         return f"http://127.0.0.1:{self.audit_port}"
 
     def __enter__(self) -> "LocalServiceStack":
-        store = finality_watcher.FinalityStore(self.state_file)
+        self._start_ingress()
+        self._start_watcher()
+        self._start_receipt()
+        self._start_audit()
+        return self
 
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+        for name in list(self.servers.keys())[::-1]:
+            self._stop_server(name)
+        self.temp_dir.cleanup()
+
+    def _start_server(self, name: str, server: Any) -> None:
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.servers[name] = server
+        self.threads[name] = thread
+        time.sleep(0.05)
+
+    def _stop_server(self, name: str) -> None:
+        server = self.servers.pop(name, None)
+        thread = self.threads.pop(name, None)
+        if server is not None:
+            server.shutdown()
+            server.server_close()
+        if thread is not None:
+            thread.join(timeout=2)
+        time.sleep(0.05)
+
+    def _build_store(self):
+        return finality_watcher.build_finality_store(
+            state_backend="sqlite",
+            state_file=self.state_file,
+            state_db=self.state_db,
+        )
+
+    def _start_ingress(self) -> None:
         self._start_server(
+            "ingress",
             ingress_api.IngressHttpServer(
                 ("127.0.0.1", self.ingress_port),
                 ingress_api.IngressApiHandler,
                 self.contract_account,
-            )
+            ),
         )
+
+    def _start_watcher(self) -> None:
         self._start_server(
+            "watcher",
             finality_watcher.FinalityWatcherServer(
                 ("127.0.0.1", self.watcher_port),
                 finality_watcher.FinalityWatcherHandler,
-                store,
+                self._build_store(),
                 self.rpc_url,
                 3600,
                 self.watcher_auth_token,
-            )
+            ),
         )
+
+    def _start_receipt(self) -> None:
         self._start_server(
+            "receipt",
             receipt_service.ReceiptServiceServer(
                 ("127.0.0.1", self.receipt_port),
                 receipt_service.ReceiptServiceHandler,
-                finality_watcher.FinalityStore(self.state_file),
-            )
+                self._build_store(),
+            ),
         )
+
+    def _start_audit(self) -> None:
         self._start_server(
+            "audit",
             audit_api.AuditApiServer(
                 ("127.0.0.1", self.audit_port),
                 audit_api.AuditApiHandler,
-                finality_watcher.FinalityStore(self.state_file),
-            )
+                self._build_store(),
+            ),
         )
-        return self
 
-    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
-        for server in reversed(self.servers):
-            server.shutdown()
-            server.server_close()
-        for thread in reversed(self.threads):
-            thread.join(timeout=2)
-        self.temp_dir.cleanup()
+    def restart_watcher(self) -> None:
+        self._stop_server("watcher")
+        self._start_watcher()
 
-    def _start_server(self, server: Any) -> None:
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        self.servers.append(server)
-        self.threads.append(thread)
-        time.sleep(0.05)
+    def restart_receipt(self) -> None:
+        self._stop_server("receipt")
+        self._start_receipt()
+
+    def restart_audit(self) -> None:
+        self._stop_server("audit")
+        self._start_audit()
 
 
 def parse_args() -> argparse.Namespace:

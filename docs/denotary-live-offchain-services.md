@@ -49,6 +49,7 @@ The suite verifies:
 - watcher global poll endpoint
 - real-chain finality for both single and batch requests
 - live degraded-provider behavior where `quorum` intentionally remains `included_unverified`
+- local restart/recovery behavior across watcher, receipt, and audit with shared `SQLite` state
 
 ## Prerequisites
 
@@ -155,3 +156,4 @@ If `--print-json-events` is also enabled, the same structured events are printed
 - use `run-live-offchain-services` when you want service-surface confidence before rollout or environment changes
 - when `--use-external-services` is set, the suite targets an already running Docker Compose stack
 - this external-services path now validates both normal finalized flow and a live degraded-provider `quorum` scenario
+- restart/recovery validation runs only in the local in-process stack because it needs direct lifecycle control over services

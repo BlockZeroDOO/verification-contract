@@ -35,7 +35,13 @@ This matches the current ADR:
 
 ## Storage
 
-State is stored in:
+State is stored through the shared finality store backend.
+
+Recommended production backend:
+
+- `SQLite`
+
+Compatibility backend:
 
 - `runtime/finality-state.json`
 
@@ -218,6 +224,34 @@ When a receipt is not yet available, the service returns `409` with:
 - `inclusion_verified`
 - failure metadata for `failed` requests
 - verification policy metadata for provider-based trust decisions
+
+## Receipt privacy modes
+
+The Receipt Service supports:
+
+- `full`
+- `public`
+
+`full` mode is intended for trusted internal deployments and returns the complete receipt payload.
+
+`public` mode redacts correlation-heavy fields such as:
+
+- `trace_id`
+- `submitter`
+- `tx_id`
+- `block_num`
+- `external_ref_hash`
+- verification internals
+
+Configure it with:
+
+```bash
+scripts/run-receipt-service.sh --privacy-mode public
+```
+
+Or in deployment env:
+
+- `RECEIPT_PRIVACY_MODE=public`
 
 ## Expected flow
 

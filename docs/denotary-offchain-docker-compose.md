@@ -19,6 +19,8 @@ Recommended runtime:
 - `FINALITY_STATE_DB=/data/finality-state.sqlite3`
 - `WATCHER_VERIFICATION_POLICY=single-provider`
 - `WATCHER_VERIFICATION_MIN_SUCCESS=1`
+- `RECEIPT_PRIVACY_MODE=full`
+- `AUDIT_PRIVACY_MODE=full`
 
 ## 1. Prepare the env file
 
@@ -35,6 +37,8 @@ FINALITY_STATE_BACKEND=sqlite
 FINALITY_STATE_DB=/data/finality-state.sqlite3
 WATCHER_VERIFICATION_POLICY=single-provider
 WATCHER_VERIFICATION_MIN_SUCCESS=1
+RECEIPT_PRIVACY_MODE=full
+AUDIT_PRIVACY_MODE=full
 INGRESS_WATCHER_URL=http://finality:8081
 INGRESS_WATCHER_AUTH_TOKEN=replace-with-shared-secret
 INGRESS_WATCHER_RPC_URL=https://history.denotary.io
@@ -132,4 +136,5 @@ Security notes:
 
 - keep `Finality Watcher` private; it is not intended for direct public exposure
 - prefer keeping all binds on `127.0.0.1` and publishing only through a reverse proxy
-- expose `Receipt Service` and `Audit API` publicly only if you explicitly accept their metadata surface
+- for public deployments, prefer `RECEIPT_PRIVACY_MODE=public` and `AUDIT_PRIVACY_MODE=public`
+- use the example proxy templates in [deploy/nginx/denotary-public.conf](/c:/projects/verification-contract/deploy/nginx/denotary-public.conf:1) or [deploy/caddy/Caddyfile.public](/c:/projects/verification-contract/deploy/caddy/Caddyfile.public:1)

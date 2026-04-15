@@ -106,6 +106,7 @@ The `dfs` contract currently covers:
 - price offers
 - quote-based storage payment intake
 - settlement and claimable balances
+- settlement payout eligibility guards for active storage nodes
 
 Key DFS actions:
 
@@ -164,6 +165,7 @@ Capabilities:
 - reject receipt reads before finality or before inclusion verification
 - expose `trust_state` and `receipt_available` for non-receiptable requests
 - surface failure metadata for explicitly failed requests
+- support `full` and `public` privacy modes for deployment-specific metadata exposure
 - built-in OpenAPI JSON and Swagger UI at `/openapi.json` and `/docs`
 
 ### Audit API
@@ -181,6 +183,7 @@ Capabilities:
 - expose `trust_state` and `receipt_available` on audit records
 - paginated search and `jsonl` export
 - read path returning `record + receipt + proof_chain`
+- support `full` and `public` privacy modes for public or internal deployments
 - built-in OpenAPI JSON and Swagger UI at `/openapi.json` and `/docs`
 
 ## Build
@@ -204,7 +207,9 @@ Off-chain deployment defaults now assume:
 - `WATCHER_AUTH_TOKEN` is mandatory
 - `SQLite` is the recommended watcher state backend
 - `Finality Watcher` stays private behind localhost or a trusted internal network
-- public exposure of `Receipt Service` and `Audit API` should be a deliberate choice
+- public exposure of `Receipt Service` and `Audit API` should be a deliberate choice with `RECEIPT_PRIVACY_MODE=public` and `AUDIT_PRIVACY_MODE=public`
+- example reverse proxy templates are provided in [deploy/nginx/denotary-public.conf](/c:/projects/verification-contract/deploy/nginx/denotary-public.conf:1) and [deploy/caddy/Caddyfile.public](/c:/projects/verification-contract/deploy/caddy/Caddyfile.public:1)
+- deployment guidance for public exposure is summarized in [docs/denotary-public-exposure.md](/c:/projects/verification-contract/docs/denotary-public-exposure.md:1)
 
 Expected artifacts:
 

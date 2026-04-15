@@ -3,7 +3,8 @@ param(
     [int]$Port = 8082,
     [string]$StateBackend = "sqlite",
     [string]$StateFile = "runtime/finality-state.json",
-    [string]$StateDb = "runtime/finality-state.sqlite3"
+    [string]$StateDb = "runtime/finality-state.sqlite3",
+    [string]$PrivacyMode = "full"
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,4 +34,5 @@ if (-not $python) {
     --port $Port `
     --state-backend $StateBackend `
     --state-file $StateFile `
-    --state-db $StateDb
+    --state-db $StateDb `
+    --privacy-mode $PrivacyMode

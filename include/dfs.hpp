@@ -371,6 +371,12 @@ private:
     ) const;
     void validate_nonnegative_asset(const asset& quantity, const char* field_name) const;
     void validate_future_time(const time_point_sec& value, const char* field_name) const;
+    bool has_eligible_settlement_node(
+        const name& owner_account,
+        const name& payout_token_contract,
+        const symbol& payout_symbol,
+        const pricing_policy& policy
+    ) const;
     void upsert_stake_after_deposit(
         const string& node_id,
         const name& owner_account,

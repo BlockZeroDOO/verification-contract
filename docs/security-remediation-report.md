@@ -90,11 +90,29 @@ Remediation:
   - expiry
 - duplicate and mismatched quote use is rejected
 
+### 7. DFS settlement authority over-broad payout surface
+
+Status:
+
+- reduced
+
+Remediation:
+
+- settlement payouts are now constrained to unique payout owners
+- each payout owner must map to an eligible active storage-capable node
+- eligible payout owners must satisfy:
+  - active node status
+  - storage-capable role
+  - sufficient active stake
+  - fresh matching price offer
+- the payout set must satisfy `min_eligible_price_nodes`
+
 ## Additional Hardening Added
 
 - `Receipt Service` now exposes `trust_state` and `receipt_available`
 - `Audit API` exposes the same trust model and includes a separate `transaction_verified` proof-chain stage
 - smoke and live-chain suites now cover more negative security paths
+- local live off-chain validation now covers restart/recovery of watcher-backed state over `SQLite`
 
 ## Remaining Trust Assumptions
 

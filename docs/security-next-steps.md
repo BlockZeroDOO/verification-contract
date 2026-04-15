@@ -9,6 +9,10 @@ This document captures the remaining security-oriented follow-up work after the 
 
 These items are not treated as currently open critical vulnerabilities. They are the next maturity steps for hardening durability, trust boundaries, privacy, and operational resilience.
 
+For a deployment-time operational checklist, see:
+
+- `docs/security-production-checklist.md`
+
 ## P1. Highest Priority
 
 Status:

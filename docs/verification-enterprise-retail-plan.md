@@ -28,7 +28,7 @@ Target audience:
 Commercial model:
 
 - no on-chain payment flow inside the verification contract
-- billing handled outside this contract by enterprise arrangements or a future dedicated billing contract
+- billing handled by a dedicated future on-chain billing contract
 
 ### `verification_retail`
 
@@ -156,6 +156,38 @@ Recommended retail wrapper files:
 - `src/verification_retail.cpp`
 
 This avoids copy-paste divergence between two large contract implementations.
+
+## Enterprise Billing Direction
+
+The recommended next enterprise step is:
+
+- add a separate enterprise billing contract
+
+Recommended billing target:
+
+- `verifbill`
+
+The billing contract should own:
+
+- accepted payment tokens
+- subscription plans
+- usage packs
+- delegated usage rights
+- one-time usage authorizations
+
+Recommended enterprise runtime flow:
+
+1. `verifbill::use(...)`
+2. `verifent::submit(...)`
+
+or:
+
+1. `verifbill::use(...)`
+2. `verifent::submitroot(...)`
+
+See:
+
+- [docs/enterprise-billing-architecture.md](/c:/projects/verification-contract/docs/enterprise-billing-architecture.md:1)
 
 ## Implementation Phases
 

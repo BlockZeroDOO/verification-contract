@@ -37,6 +37,10 @@ It is intended for:
 
 It does not accept the retail token-payment flow as an active product path.
 
+The recommended future enterprise payment model is a separate billing contract:
+
+- see [docs/enterprise-billing-architecture.md](/c:/projects/verification-contract/docs/enterprise-billing-architecture.md:1)
+
 ### `verifretail`
 
 `verifretail` is the retail contract.

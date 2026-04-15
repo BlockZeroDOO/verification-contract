@@ -9,6 +9,10 @@ Final deployment targets:
 - enterprise contract/account: `verifent`
 - retail contract/account: `verifretail`
 
+Recommended future enterprise billing target:
+
+- billing contract/account: `verifbill`
+
 It focuses on:
 
 - target file layout
@@ -42,25 +46,32 @@ include/
   verification_core.hpp
   verification_enterprise.hpp
   verification_retail.hpp
+  verification_billing.hpp
 
 src/
   verification_core.cpp
   verification_enterprise.cpp
   verification_retail.cpp
+  verification_billing.cpp
 
 ricardian/
   verification_enterprise.contracts.md
   verification_enterprise.clauses.md
   verification_retail.contracts.md
   verification_retail.clauses.md
+  verification_billing.contracts.md
+  verification_billing.clauses.md
 
 scripts/
   build-enterprise.sh
   build-retail.sh
+  build-billing.sh
   deploy-enterprise-*.sh
   deploy-retail-*.sh
+  deploy-billing-*.sh
   smoke-test-enterprise-*.sh
   smoke-test-retail-*.sh
+  smoke-test-billing-*.sh
 ```
 
 ## File Ownership Plan
@@ -198,6 +209,31 @@ Retail-only helpers may include:
 - transfer memo parsing
 - exact payment matching
 - payment receipt consume logic
+
+## Enterprise Billing Additions
+
+Recommended billing-specific files:
+
+- `include/verification_billing.hpp`
+- `include/verification_billing_tables.hpp`
+- `src/verification_billing.cpp`
+
+Recommended billing-only tables:
+
+- accepted tokens
+- plan definitions
+- pack definitions
+- entitlements
+- delegates
+- usage authorizations
+
+Recommended billing-only helpers:
+
+- purchase memo parsing
+- entitlement matching
+- delegate checks
+- one-time usage authorization creation
+- usage consumption
 
 ## Ricardian Split
 
@@ -426,6 +462,24 @@ Will extend the shared verification surface with:
 
 Need to keep the payment surface clearly isolated from enterprise ABI.
 
+### Billing ABI
+
+Should own:
+
+- token acceptance
+- plan and pack governance
+- enterprise purchase flow
+- delegate mapping
+- usage authorization flow
+
+Should not own:
+
+- anchoring state
+- schema tables
+- policy tables
+- commitments
+- batches
+
 ## Recommended First Real Coding Slice
 
 The best first coding slice is:
@@ -445,7 +499,7 @@ Until implementation starts, assume:
 - current `verification` behavior maps to enterprise
 - retail pricing starts with exact fixed pricing
 - retail batch pricing is fixed per batch in the first version
-- enterprise remains payment-free
+- enterprise billing will be added as separate `verifbill`, not inside `verifent`
 
 ## Deliverables Checklist
 
@@ -459,3 +513,4 @@ The split should be considered structurally complete when the repository contain
 - split deploy scripts
 - split smoke suites
 - updated contract-only documentation
+- documented enterprise billing architecture

@@ -130,6 +130,7 @@ Jungle4:
 
 ## Contract docs
 
+- [docs/enterprise-billing-architecture.md](/c:/projects/verification-contract/docs/enterprise-billing-architecture.md:1)
 - [docs/contract-reference.md](/c:/projects/verification-contract/docs/contract-reference.md:1)
 - [docs/denotary-l1-contract-core.md](/c:/projects/verification-contract/docs/denotary-l1-contract-core.md:1)
 - [docs/adr/0002-batch-proof-storage.md](/c:/projects/verification-contract/docs/adr/0002-batch-proof-storage.md:1)

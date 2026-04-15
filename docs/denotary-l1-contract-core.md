@@ -1,446 +1,231 @@
-# DeNotary L1 Contract Core Draft
+# Verification Contract Core
+
+This document describes the canonical on-chain scope of the `verification` contract.
+
+## Repository Boundary
+
+- `C:\projects\verification-contract` owns the `verification` smart contract
+- `C:\projects\deNotary` owns the off-chain backend
+- `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
 ## Purpose
 
-Этот документ закрывает этап 1 для on-chain core и фиксирует:
+The `verification` contract anchors hashes and batch roots on-chain under explicit governance rules.
 
-- целевую структуру контракта `verification`
-- table/action matrix для MVP
-- primary/secondary index strategy
-- стратегию генерации ID
-- clean deployment assumption без миграции старых таблиц
+It is responsible for:
 
-## Stage 1 Outcome
-
-На данном этапе принимается следующая рамка:
-
-- DeNotary L1 MVP реализуется в одном Antelope-контракте `verification`
-- контракт деплоится на чистый аккаунт
-- миграция существующей таблицы `proofs` не требуется
-- текущая платежная модель может быть сохранена как отдельный слой, но не должна определять shape core registry model
-
-## Contract Boundaries
-
-Контракт `verification` в MVP состоит из трех logical zones.
-
-### 1. Governance registries
-
-Сюда входят:
-
-- `KYCRegistry`
-- `SchemaRegistry`
-- `PolicyRegistry`
-
-Эта зона отвечает за:
-
-- кто допускается к записи
-- какая схема данных используется
-- какие режимы записи разрешены
-
-### 2. Anchoring core
-
-Сюда входят:
-
-- `CommitmentRegistry`
-- `BatchRegistry`
-- business status transitions
-
-Эта зона отвечает за:
-
-- single anchoring
+- KYC-gated submit access
+- schema registry
+- policy registry
+- single commitment anchoring
 - batch anchoring
-- lifecycle anchored record
+- lifecycle transitions for commitments and batches
 
-### 3. Payment layer
+It is not responsible for:
 
-Сюда входят:
+- finality observation
+- receipt generation
+- audit indexing
+- ingress request preparation
+- DFS storage payments
 
-- accepted payment tokens
-- payment memo parsing
-- treasury/withdraw path
-
-Эта зона отвечает за:
-
-- экономику submit path
-- но не за finality semantics и не за business lifecycle записи
-
-## Target On-Chain Tables
+## On-Chain Tables
 
 ### `kyc`
 
-Назначение:
-
-- хранение KYC допуска по account
+Stores submitter access state.
 
 Fields:
 
-- `account: name`
-- `level: uint8_t`
-- `provider: string`
-- `jurisdiction: string`
-- `active: bool`
-- `issued_at: time_point_sec`
-- `expires_at: time_point_sec`
-
-Indexes:
-
-- primary: `account`
-- optional secondary: `active` не нужен, если основной lookup всегда по account
+- `account`
+- `level`
+- `provider`
+- `jurisdiction`
+- `active`
+- `issued_at`
+- `expires_at`
 
 ### `schemas`
 
-Назначение:
-
-- хранение canonicalization/hash rules
+Stores canonicalization and hashing rules.
 
 Fields:
 
-- `id: uint64_t`
-- `version: string`
-- `canonicalization_hash: checksum256`
-- `hash_policy: checksum256`
-- `active: bool`
-- `created_at: time_point_sec`
-- `updated_at: time_point_sec`
-
-Indexes:
-
-- primary: `id`
-- secondary: `active + id` не обязателен для MVP
-
-ID strategy:
-
-- `id` задается governance явно
-- это позволяет держать стабильные schema identifiers без обязательного on-chain counter для registry слоя
+- `id`
+- `version`
+- `canonicalization_hash`
+- `hash_policy`
+- `active`
+- `created_at`
+- `updated_at`
 
 ### `policies`
 
-Назначение:
-
-- хранение правил допуска single/batch/ZK/KYC
+Stores single/batch/KYC/ZK rules.
 
 Fields:
 
-- `id: uint64_t`
-- `allow_single: bool`
-- `allow_batch: bool`
-- `require_kyc: bool`
-- `min_kyc_level: uint8_t`
-- `allow_zk: bool`
-- `active: bool`
-- `created_at: time_point_sec`
-- `updated_at: time_point_sec`
-
-Indexes:
-
-- primary: `id`
-- secondary: `active + id` не обязателен для MVP
-
-ID strategy:
-
-- `id` задается governance явно
-- policy identifiers остаются стабильными и предсказуемыми для off-chain конфигурации
+- `id`
+- `allow_single`
+- `allow_batch`
+- `require_kyc`
+- `min_kyc_level`
+- `allow_zk`
+- `active`
+- `created_at`
+- `updated_at`
 
 ### `commitments`
 
-Назначение:
-
-- single record anchoring
+Stores single-record anchors.
 
 Fields:
 
-- `id: uint64_t`
-- `submitter: name`
-- `schema_id: uint64_t`
-- `policy_id: uint64_t`
-- `hash: checksum256`
-- `external_ref: checksum256`
-- `request_key: checksum256`
-- `submitted_tx: checksum256`
-- `block_num: uint32_t`
-- `created_at: time_point_sec`
-- `status: uint8_t`
-
-Indexes:
-
-- primary: `id`
-- secondary: `submitter`
-- secondary: `schema_id`
-- secondary: `policy_id`
-- secondary: `status`
-- secondary: `request_key`
-- optional secondary: `external_ref`
-
-Обоснование:
-
-- `request_key` нужен для идемпотентности
-- `external_ref` нужен как внешний ключ поиска, но лучше хранить его в виде hash
-- `submitted_tx` можно сделать optional, если решим не записывать tx metadata on-chain в MVP
+- `id`
+- `submitter`
+- `schema_id`
+- `policy_id`
+- `object_hash`
+- `external_ref`
+- `request_key`
+- `block_num`
+- `created_at`
+- `status_changed_at`
+- `status`
+- `superseded_by`
 
 ### `batches`
 
-Назначение:
-
-- batch anchoring
+Stores batch anchors.
 
 Fields:
 
-- `id: uint64_t`
-- `submitter: name`
-- `root_hash: checksum256`
-- `leaf_count: uint32_t`
-- `schema_id: uint64_t`
-- `policy_id: uint64_t`
-- `manifest_hash: checksum256`
-- `request_key: checksum256`
-- `submitted_tx: checksum256`
-- `block_num: uint32_t`
-- `created_at: time_point_sec`
-- `status: uint8_t`
-
-Indexes:
-
-- primary: `id`
-- secondary: `submitter`
-- secondary: `schema_id`
-- secondary: `policy_id`
-- secondary: `status`
-- secondary: `request_key`
-
-### `paytokens`
-
-Назначение:
-
-- платежный конфиг
-
-Статус:
-
-- таблица может быть сохранена почти без изменений
-- она orthogonal к registry core
+- `id`
+- `submitter`
+- `root_hash`
+- `leaf_count`
+- `schema_id`
+- `policy_id`
+- `manifest_hash`
+- `external_ref`
+- `request_key`
+- `block_num`
+- `created_at`
+- `manifest_linked_at`
+- `status_changed_at`
+- `status`
 
 ### `counters`
 
-Назначение:
-
-- централизованная генерация monotonic IDs
+Stores monotonic IDs for anchored entities.
 
 Fields:
 
-- `next_commitment_id: uint64_t`
-- `next_batch_id: uint64_t`
-- `next_proof_id: uint64_t`
+- `next_commitment_id`
+- `next_batch_id`
+- `next_proof_id`
 
-Причина:
+## Core Actions
 
-- governance registries используют явно задаваемые IDs
-- timestamp-based id generation в текущем `proofs` не подходит для будущих anchored entities
-- singleton counter дает детерминированную и тестируемую генерацию для `commitments`, `batches` и optional proof layer
+### Governance
+
+- `issuekyc`
+- `renewkyc`
+- `revokekyc`
+- `suspendkyc`
+- `addschema`
+- `updateschema`
+- `deprecate`
+- `setpolicy`
+- `enablezk`
+- `disablezk`
+
+### Anchoring
+
+- `submit`
+- `supersede`
+- `revokecmmt`
+- `expirecmmt`
+- `submitroot`
+- `linkmanifest`
+- `closebatch`
+
+### Treasury
+
+- `withdraw`
+
+### Disabled Legacy Stubs
+
+The following actions remain only as disabled compatibility stubs and are not part of the active product model:
+
+- `record`
+- `setpaytoken`
+- `rmpaytoken`
 
 ## Business Status Model
 
-Для `commitments`:
+### Commitments
 
 - `0 = active`
 - `1 = superseded`
 - `2 = revoked`
 - `3 = expired`
 
-Для `batches`:
+### Batches
 
 - `0 = open`
 - `1 = closed`
 
-Важно:
+Finality is intentionally not stored as a business status in the contract.
 
-- finality state не входит в эти статусы
-
-## Target Actions
-
-### Governance registries
-
-| Action | Назначение | Auth |
-|---|---|---|
-| `issuekyc` | выдать KYC | `get_self()` или выделенный admin |
-| `renewkyc` | продлить KYC | `get_self()` или выделенный admin |
-| `revokekyc` | отозвать KYC | `get_self()` или governance |
-| `suspendkyc` | приостановить KYC | `get_self()` или governance |
-| `addschema` | создать schema | `get_self()` или schema admin |
-| `updateschema` | обновить schema | `get_self()` или schema admin |
-| `deprecate` | вывести schema из активного использования | `get_self()` или governance |
-| `setpolicy` | создать или обновить policy | `get_self()` или policy admin |
-| `enablezk` | включить optional capability | `get_self()` или policy admin |
-| `disablezk` | выключить optional capability | `get_self()` или policy admin |
-
-### Anchoring core
-
-| Action | Назначение | Auth |
-|---|---|---|
-| `submit` | single anchoring | `submitter` |
-| `supersede` | перевести запись в superseded | `submitter` или governance |
-| `revokecmmt` | перевести запись в revoked | governance |
-| `expirecmmt` | перевести запись в expired | governance/maintenance |
-| `submitroot` | batch anchoring | `submitter` |
-| `linkmanifest` | связать batch с immutable manifest | `submitter` или service model позже |
-| `closebatch` | закрыть batch | `submitter` или governance |
-
-### Optional layer
-
-| Action | Назначение | Auth |
-|---|---|---|
-| `submitproof` | optional proof submit | future |
-| `verifyproof` | optional proof verification | future |
-
-### Payment layer
-
-| Action | Назначение | Auth |
-|---|---|---|
-| `setpaytoken` | конфиг платежного токена | `get_self()` |
-| `rmpaytoken` | удаление платежного токена | `get_self()` |
-| `withdraw` | вывод treasury | `get_self()` |
-| `ontransfer` | paid ingress path | token notify |
-
-## Action Rules
+## Validation Rules
 
 ### `submit`
 
-Обязательные проверки:
+Must satisfy:
 
-- `submitter` существует
-- `schema_id` существует и `active = true`
-- `policy_id` существует и `active = true`
-- policy разрешает `allow_single`
-- если policy требует KYC, то:
-- KYC запись существует
-- `active = true`
-- `expires_at` не истек
-- `level >= min_kyc_level`
-- `request_key` еще не использован
-
-Результат:
-
-- создается row в `commitments`
-- `status = active`
-- выделяется новый monotonic `id`
+- existing active schema
+- existing active policy with `allow_single = true`
+- non-zero `object_hash`
+- non-zero `external_ref`
+- unique `request_key`
+- valid KYC when required by policy
 
 ### `submitroot`
 
-Обязательные проверки:
+Must satisfy:
 
-- policy разрешает `allow_batch`
-- schema активна
-- policy активна
-- KYC policy enforced при необходимости
+- existing active schema
+- existing active policy with `allow_batch = true`
+- non-zero `root_hash`
+- non-zero `external_ref`
 - `leaf_count > 0`
-- `request_key` уникален
-
-Результат:
-
-- создается row в `batches`
-- `status = open`
+- unique `request_key`
+- valid KYC when required by policy
 
 ### `supersede`
 
-Правила:
+Must satisfy:
 
-- исходная запись должна быть `active`
-- terminal status менять нельзя
-- для MVP действие меняет только статус исходной записи
-- связь со следующей записью можно добавить на этапе 3, если понадобится явный successor reference
+- source commitment exists
+- source commitment is active
+- successor commitment exists
+- successor is different from source
 
 ### `closebatch`
 
-Правила:
+Must satisfy:
 
-- batch должен быть `open`
-- закрытый batch менять нельзя
+- batch exists
+- batch is open
+- manifest is already linked
 
-## ID Generation Strategy
+## Deployment Assumption
 
-Для MVP выбирается monotonic singleton-based strategy.
+The contract is deployed to a clean account and does not perform in-place migration from the legacy proof-payment design.
 
-Правила:
+That means:
 
-- `schemas` и `policies` используют явно задаваемые governance IDs
-- `commitments`, `batches` и optional proof entities используют свои `next_*_id`
-- ID выделяется только в успешной action
-- стартовое значение для каждого счетчика равно `1`
-- `0` зарезервирован как invalid/unset sentinel
-
-Плюсы:
-
-- детерминированность
-- простые тесты
-- отсутствие зависимости от времени блока
-- отсутствие коллизий при нескольких insert в один и тот же second
-
-## Secondary Index Strategy
-
-Минимально нужные secondary indexes:
-
-### `commitments`
-
-- `bysubmitter`
-- `byschemaid`
-- `bypolicyid`
-- `bystatus`
-- `byrequest`
-
-Опционально:
-
-- `byexternal`
-
-### `batches`
-
-- `bysubmitter`
-- `byschemaid`
-- `bypolicyid`
-- `bystatus`
-- `byrequest`
-
-### `paytokens`
-
-- сохранить `bytokensym`
-
-## Clean Deployment Assumption
-
-Так как контракт будет деплоиться на чистые аккаунты:
-
-- миграция `proofs -> commitments` не проектируется
-- backward compatibility с текущим action `record(...)` не требуется
-- можно безопасно переименовать действия и таблицы под целевую модель
-- deploy docs должны прямо отражать fresh deployment flow
-
-Практическое следствие:
-
-- текущий `record(...)` рассматривается как legacy path и не является частью целевого MVP
-- текущая структура `proofs` не ограничивает новую domain model
-
-## Code Structure Draft
-
-Рекомендуемая раскладка файлов на этапе реализации:
-
-- `include/verification.hpp`
-- `include/verification/constants.hpp`
-- `include/verification/tables.hpp`
-- `include/verification/validation.hpp`
-- `include/verification/ids.hpp`
-- `src/verification.cpp`
-
-Если хотим минимизировать churn, можно оставить один публичный `verification.hpp`, но внутри кода группировать секции так:
-
-- constants
-- table structs
-- action declarations
-- validation helpers
-- id helpers
-- payment helpers
-
-## Release Criteria For Stage 1
-
-Этап 1 считается завершенным, когда:
-
-- table/action matrix зафиксирован
-- index strategy зафиксирована
-- ID generation strategy выбрана
-- clean deploy assumption зафиксирован
-- команда может переходить к реализации `KYC`, `Schema`, `Policy` без архитектурных разворотов
+- the current on-chain model is `kyc + schemas + policies + commitments + batches`
+- legacy proof-payment writes are disabled
+- off-chain read services are external to this repository

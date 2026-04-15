@@ -1,9 +1,0 @@
-{
-  "sequence": 64,
-  "event": "compose_restart_audit_command",
-  "timestamp": "2026-04-15T15:11:17Z",
-  "payload": {
-    "stdout": "",
-    "stderr": " Container denotary-audit Restarting \n Container denotary-audit Started \n"
-  }
-}

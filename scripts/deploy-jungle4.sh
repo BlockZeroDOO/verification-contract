@@ -8,8 +8,6 @@ project_root="$(cd "${script_dir}/.." && pwd)"
 RPC_URL="${RPC_URL:-https://jungle4.api.eosnation.io}"
 JUNGLE4_CHAIN_ID="${JUNGLE4_CHAIN_ID:-73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d}"
 VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
-DFS_ACCOUNT="${DFS_ACCOUNT:-dfs}"
-DEPLOY_DFS="${DEPLOY_DFS:-true}"
 BUILD_BEFORE_DEPLOY="${BUILD_BEFORE_DEPLOY:-true}"
 
 require_command() {
@@ -81,31 +79,15 @@ check_chain
 
 if [[ "${BUILD_BEFORE_DEPLOY}" == "true" ]]; then
     echo "[deploy-jungle4] Building contract artifacts"
-    if [[ "${DEPLOY_DFS}" == "true" ]]; then
-        bash "${project_root}/scripts/build-testnet.sh" verification dfs
-    else
-        bash "${project_root}/scripts/build-testnet.sh" verification
-    fi
+    bash "${project_root}/scripts/build-testnet.sh" verification
 fi
 
 require_artifact verification
 
-if [[ "${DEPLOY_DFS}" == "true" ]]; then
-    require_artifact dfs
-fi
-
 echo "[deploy-jungle4] Verifying chain accounts"
 require_chain_account "${VERIFICATION_ACCOUNT}"
-if [[ "${DEPLOY_DFS}" == "true" ]]; then
-    require_chain_account "${DFS_ACCOUNT}"
-fi
 
 deploy_contract "${VERIFICATION_ACCOUNT}" verification
-
-if [[ "${DEPLOY_DFS}" == "true" ]]; then
-    deploy_contract "${DFS_ACCOUNT}" dfs
-    add_code_permission "${DFS_ACCOUNT}"
-fi
 
 cat <<EOF
 
@@ -114,11 +96,9 @@ Jungle4 deploy completed.
 RPC URL: ${RPC_URL}
 chain id: ${JUNGLE4_CHAIN_ID}
 verification account: ${VERIFICATION_ACCOUNT}
-dfs account: ${DFS_ACCOUNT}
-dfs deployed: ${DEPLOY_DFS}
 
 Next steps:
   - Run the on-chain smoke test against Jungle4.
-  - Optionally bootstrap dfs token and policy settings.
+  - If you need the DFS contract, deploy it from C:\projects\decentralized_storage\contracts\dfs
 
 EOF

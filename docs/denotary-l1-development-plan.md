@@ -41,7 +41,8 @@ Included in the current MVP track:
 - `CommitmentRegistry`
 - `BatchRegistry`
 - lifecycle tracking for commitments and batches
-- `Ingress API`
+- `Ingress API` as an optional helper service
+- direct client-side canonicalization and submission path
 - canonicalization baseline
 - `Finality Watcher`
 - `Receipt Service`
@@ -142,7 +143,7 @@ Delivered:
 - `superseded_by` linkage
 - clearer separation between business lifecycle and finality lifecycle
 
-### Stage 6. Ingress API
+### Stage 6. Canonicalization baseline and optional Ingress API
 
 Delivered:
 
@@ -150,10 +151,12 @@ Delivered:
 - `POST /v1/single/prepare`
 - `POST /v1/batch/prepare`
 - generated `trace_id`, `request_id`, hashes, root, and manifest
+- architectural support for direct client-side preparation as an equivalent mode
 
 Artifact:
 
 - [docs/denotary-ingress-api.md](/c:/projects/verification-contract/docs/denotary-ingress-api.md:1)
+- [docs/adr/0004-direct-client-canonicalization.md](/c:/projects/verification-contract/docs/adr/0004-direct-client-canonicalization.md:1)
 
 ### Stage 7. Finality watcher and receipts
 
@@ -244,7 +247,7 @@ Artifact:
 ## Recommended implementation order
 
 1. Stabilize the on-chain model.
-2. Maintain deterministic ingestion.
+2. Maintain deterministic canonicalization regardless of whether preparation happens in ingress or in the client.
 3. Keep finality off-chain and explicit.
 4. Build receipts and audit reads on top of that.
 5. Only then move into security hardening and rollout.

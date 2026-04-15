@@ -15,6 +15,15 @@ Implementation:
 
 ## Current scope
 
+The service is not the only supported preparation path.
+
+DeNotary also supports a direct-client mode where a trusted client:
+
+- canonicalizes locally
+- computes hashes locally
+- assembles `submit` or `submitroot` directly
+- broadcasts without calling `Ingress API`
+
 The service does not yet:
 
 - sign transactions
@@ -220,6 +229,25 @@ The current intended flow after `prepare` is:
 4. after inclusion, attach `tx_id` and `block_num`
 5. if available, attach `commitment_id` or `batch_id` into watcher anchor metadata
 
+## Supported preparation modes
+
+### Mode A. Ingress-assisted preparation
+
+1. send the business payload to `Ingress API`
+2. receive hashes, `request_id`, `trace_id`, and `prepared_action`
+3. sign and broadcast outside the service
+4. hand the same request metadata to the watcher
+
+### Mode B. Direct client preparation
+
+1. canonicalize locally using the same published canonicalization profile
+2. compute `object_hash`, `root_hash`, `manifest_hash`, and `external_ref_hash` locally
+3. derive `request_id` and `trace_id` locally
+4. assemble and broadcast `submit` or `submitroot`
+5. register the same request metadata in the watcher
+
+This means `Ingress API` is a convenience and standardization service, not a mandatory gateway for all DeNotary submissions.
+
 Related docs:
 
 - [docs/denotary-finality-services.md](/c:/projects/verification-contract/docs/denotary-finality-services.md:1)
@@ -258,4 +286,5 @@ Logical next improvements after this baseline:
 
 - pull schema, policy, and KYC context from on-chain or indexed read models
 - add transaction assembly, signing, and broadcasting
+- publish a reusable direct-client canonicalization implementation
 - automate the handoff into finality tracking

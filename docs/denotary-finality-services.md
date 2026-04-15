@@ -195,8 +195,8 @@ Batch receipt fields:
 
 ## Expected flow
 
-1. The Ingress API prepares `request_id`, hashes, and action payload.
-2. An external broadcaster signs and submits the transaction.
+1. Either `Ingress API` or the client prepares `request_id`, hashes, and action payload.
+2. A broadcaster signs and submits the transaction.
 3. The watcher registers the request.
 4. After inclusion, the watcher receives `tx_id` and `block_num`.
 5. If needed, the watcher is updated with `commitment_id` or `batch_id`.
@@ -251,5 +251,6 @@ scripts/run-receipt-service.ps1
 The natural follow-up after this baseline is:
 
 - broadcaster integration
+- direct-client handoff into watcher registration
 - automatic handoff from ingress into watcher registration
 - richer indexed read model beyond the file-based state store

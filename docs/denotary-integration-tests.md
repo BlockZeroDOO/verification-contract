@@ -23,6 +23,8 @@ The integration suite starts local in-process servers for:
 - `Audit API`
 - a mock chain RPC for `/v1/chain/get_info`
 
+The current automated baseline is still ingress-assisted first.
+
 ## Covered scenarios
 
 ### Ingress behavior
@@ -64,6 +66,12 @@ The integration suite starts local in-process servers for:
 Those items are now partially addressed by the separate live-chain suite documented in:
 
 - [docs/denotary-live-chain-integration.md](/c:/projects/verification-contract/docs/denotary-live-chain-integration.md:1)
+
+Additional follow-up coverage is still needed for:
+
+- direct client-side canonicalization
+- direct client-side request-id derivation
+- direct `submit` / `submitroot` broadcasting without `Ingress API`
 
 ## Run
 

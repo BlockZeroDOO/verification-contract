@@ -276,6 +276,9 @@ Live off-chain service coverage:
 - [scripts/run-live-offchain-services.sh](/c:/projects/verification-contract/scripts/run-live-offchain-services.sh:1)
 - [scripts/run-live-offchain-services.ps1](/c:/projects/verification-contract/scripts/run-live-offchain-services.ps1:1)
 - [docs/denotary-live-offchain-services.md](/c:/projects/verification-contract/docs/denotary-live-offchain-services.md:1)
+- [scripts/run-offchain-resilience-drill.sh](/c:/projects/verification-contract/scripts/run-offchain-resilience-drill.sh:1)
+- [scripts/run-offchain-resilience-drill.ps1](/c:/projects/verification-contract/scripts/run-offchain-resilience-drill.ps1:1)
+- [docs/denotary-offchain-resilience-drill.md](/c:/projects/verification-contract/docs/denotary-offchain-resilience-drill.md:1)
 
 Example with full artifact dump:
 
@@ -344,6 +347,7 @@ Service docs:
 - [docs/denotary-rollout-dry-run.md](/c:/projects/verification-contract/docs/denotary-rollout-dry-run.md:1)
 - [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1)
 - [docs/denotary-security-hardening.md](/c:/projects/verification-contract/docs/denotary-security-hardening.md:1)
+- [docs/dfs-settlement-operations.md](/c:/projects/verification-contract/docs/dfs-settlement-operations.md:1)
 
 Operational helpers:
 
@@ -351,6 +355,7 @@ Operational helpers:
 - [config/offchain.production.env.example](/c:/projects/verification-contract/config/offchain.production.env.example:1)
 - [config/offchain.compose.env.example](/c:/projects/verification-contract/config/offchain.compose.env.example:1)
 - [config/offchain.compose.production.env.example](/c:/projects/verification-contract/config/offchain.compose.production.env.example:1)
+- [config/offchain.compose.resilience.env.example](/c:/projects/verification-contract/config/offchain.compose.resilience.env.example:1)
 - [Dockerfile.offchain](/c:/projects/verification-contract/Dockerfile.offchain:1)
 - [docker-compose.offchain.yml](/c:/projects/verification-contract/docker-compose.offchain.yml:1)
 - [scripts/run-offchain-service.sh](/c:/projects/verification-contract/scripts/run-offchain-service.sh:1)

@@ -1586,6 +1586,54 @@ def run_compose_restart_recovery_surface(
         },
     )
 
+    restart_ingress = run_compose_command(args, ["restart", "ingress"])
+    artifacts.event(
+        "compose_restart_ingress_command",
+        {
+            "stdout": restart_ingress.stdout,
+            "stderr": restart_ingress.stderr,
+        },
+    )
+    ingress_health = wait_for_service_health(
+        services.ingress_base_url,
+        "ingress-api",
+        args.wait_timeout_sec,
+        args.poll_interval_sec,
+    )
+    artifacts.event(
+        "compose_restart_ingress_health",
+        {
+            "response": ingress_health,
+        },
+    )
+
+    ingress_restart_payload = prepare_single_payload(
+        schema_id,
+        single_policy_id,
+        args.submitter_account,
+        f"svc-compose-post-restart-{suffix}",
+        args.kyc_expires_at,
+    )
+    ingress_restart_payload["watcher"] = {"register": True}
+    status_code, ingress_prepare = request_json(
+        f"{services.ingress_base_url}/v1/single/prepare",
+        method="POST",
+        payload=ingress_restart_payload,
+    )
+    assert_status(status_code, 200, "compose restart ingress prepare")
+    assert_true(
+        ingress_prepare.get("watcher_handoff", {}).get("ok", False),
+        "compose restart ingress watcher handoff success",
+    )
+    artifacts.event(
+        "compose_restart_ingress_prepare_after_restart",
+        {
+            "status_code": status_code,
+            "request": ingress_restart_payload,
+            "response": ingress_prepare,
+        },
+    )
+
 
 def run_batch_offchain_surface(
     args: argparse.Namespace,
@@ -1672,13 +1720,14 @@ def run_batch_offchain_surface(
         ],
         permission,
     )
-    submitroot_tx_id, _ = extract_tx_metadata(submitroot_result)
+    submitroot_tx_id, submitroot_block_num = extract_tx_metadata(submitroot_result)
     artifacts.event(
         "batch_submitroot_transaction",
         {
             "request_id": request_id,
             "transaction": submitroot_result,
             "tx_id": submitroot_tx_id,
+            "block_num": submitroot_block_num,
         },
     )
 
@@ -1756,7 +1805,7 @@ def run_batch_offchain_surface(
     status_code, included = request_json(
         f"{services.watcher_base_url}/v1/watch/{request_id}/included",
         method="POST",
-        payload={"tx_id": closebatch_tx_id, "block_num": closebatch_block_num},
+        payload={"tx_id": submitroot_tx_id, "block_num": submitroot_block_num},
         headers=watcher_headers(args),
     )
     assert_status(status_code, 200, "batch watcher included")
@@ -1791,7 +1840,7 @@ def run_batch_offchain_surface(
     assert_status(status_code, 200, "batch receipt finalized")
     assert_equal(receipt["receipt_available"], True, "batch receipt availability")
     assert_equal(receipt["trust_state"], "finalized_verified", "batch receipt trust state")
-    assert_equal(receipt["tx_id"], closebatch_tx_id, "batch receipt tx_id")
+    assert_equal(receipt["tx_id"], submitroot_tx_id, "batch receipt tx_id")
     assert_equal(receipt["block_num"], canonical_block_num, "batch receipt block_num")
     assert_equal(receipt["manifest_hash"], prepared["manifest_hash"], "batch receipt manifest_hash")
     assert_equal(receipt["root_hash"], prepared["root_hash"], "batch receipt root_hash")
@@ -1834,7 +1883,7 @@ def run_batch_offchain_surface(
 
     status_code, audit_by_batch = request_json(f"{services.audit_base_url}/v1/audit/by-batch/{batch_id}")
     assert_status(status_code, 200, "batch audit by batch")
-    assert_equal(audit_by_batch["record"]["tx_id"], closebatch_tx_id, "batch audit by batch tx_id")
+    assert_equal(audit_by_batch["record"]["tx_id"], submitroot_tx_id, "batch audit by batch tx_id")
     artifacts.event(
         "batch_audit_by_batch",
         {

@@ -150,6 +150,10 @@ Recommended direction:
 - either keep this model and document it clearly
 - or evolve toward stronger on-chain validation of payout eligibility
 
+Operational runbook:
+
+- `docs/dfs-settlement-operations.md`
+
 Success criteria:
 
 - trust boundary is explicit
@@ -182,6 +186,7 @@ Status:
 
 - restart/recovery coverage is implemented for the local live off-chain suite with `SQLite` watcher state
 - compose-level restart/recovery validation is now available in the external live off-chain suite
+- an operational resilience drill wrapper is now available for compose-backed environments
 - remaining work is mostly provider-flake scenarios and broader partial-failure matrices against public testnets
 
 ## Suggested Execution Order

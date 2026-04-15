@@ -51,6 +51,10 @@ The suite verifies:
 - live degraded-provider behavior where `quorum` intentionally remains `included_unverified`
 - local restart/recovery behavior across watcher, receipt, and audit with shared `SQLite` state
 
+Operator-facing wrapper:
+
+- [docs/denotary-offchain-resilience-drill.md](/c:/projects/verification-contract/docs/denotary-offchain-resilience-drill.md:1)
+
 ## Prerequisites
 
 - `cleos` is installed and available in `PATH`

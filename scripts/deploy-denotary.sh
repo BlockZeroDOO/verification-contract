@@ -7,7 +7,7 @@ project_root="$(cd "${script_dir}/.." && pwd)"
 
 RPC_URL="${RPC_URL:-https://history.denotary.io}"
 DENOTARY_CHAIN_ID="${DENOTARY_CHAIN_ID:-9714ab662f0899c3ac4c5a02220f3d7ab61aacae311974239cc75f22c999cc48}"
-VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verifent}"
+VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verif}"
 BUILD_BEFORE_DEPLOY="${BUILD_BEFORE_DEPLOY:-true}"
 
 require_command() {
@@ -79,15 +79,15 @@ check_chain
 
 if [[ "${BUILD_BEFORE_DEPLOY}" == "true" ]]; then
     echo "[deploy-denotary] Building contract artifacts"
-    bash "${project_root}/scripts/build-testnet.sh" verifent
+    bash "${project_root}/scripts/build-testnet.sh" verif
 fi
 
-require_artifact verifent
+require_artifact verif
 
 echo "[deploy-denotary] Verifying chain accounts"
 require_chain_account "${VERIFICATION_ACCOUNT}"
 
-deploy_contract "${VERIFICATION_ACCOUNT}" verifent
+deploy_contract "${VERIFICATION_ACCOUNT}" verif
 add_code_permission "${VERIFICATION_ACCOUNT}"
 
 cat <<EOF
@@ -96,7 +96,7 @@ deNotary deploy completed.
 
 RPC URL: ${RPC_URL}
 chain id: ${DENOTARY_CHAIN_ID}
-enterprise account: ${VERIFICATION_ACCOUNT}
+verification account: ${VERIFICATION_ACCOUNT}
 
 Next steps:
   - Configure enterprise KYC, schemas, and policies for your target flows.

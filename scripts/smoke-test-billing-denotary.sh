@@ -3,4 +3,4 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-"${script_dir}/build-testnet.sh" verif
+"${script_dir}/smoke-test-billing.sh"

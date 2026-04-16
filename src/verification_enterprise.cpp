@@ -269,7 +269,7 @@ void verification_enterprise::submit(
         row.superseded_by = 0;
     });
 
-    consume_usage_authorization(usage_auth.auth_id);
+    consume_usage_authorization(usage_auth);
 }
 
 void verification_enterprise::supersede(uint64_t id, uint64_t successor_id) {
@@ -379,7 +379,7 @@ void verification_enterprise::submitroot(
         row.status = verification_core::batch_status_open;
     });
 
-    consume_usage_authorization(usage_auth.auth_id);
+    consume_usage_authorization(usage_auth);
 }
 
 void verification_enterprise::linkmanifest(uint64_t id, const checksum256& manifest_hash) {
@@ -454,29 +454,67 @@ verification_enterprise::policy_row verification_enterprise::require_policy(uint
     return verification_core::require_policy(get_self(), id);
 }
 
-verification_enterprise::usage_auth_row verification_enterprise::require_usage_authorization(
+verification_enterprise::usage_authorization_ref verification_enterprise::require_usage_authorization(
     uint8_t mode,
     const name& submitter,
     const checksum256& external_ref
 ) const {
-    usage_auth_table usage_auths(billing_account, billing_account.value);
-    auto by_request = usage_auths.get_index<"byrequest"_n>();
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
-    auto existing = by_request.find(request_key);
-    check(existing != by_request.end(), "enterprise usage authorization is missing");
-    check(!existing->consumed, "enterprise usage authorization is already consumed");
-    check(existing->submitter == submitter, "enterprise usage authorization submitter does not match request");
-    check(existing->mode == mode, "enterprise usage authorization mode does not match request");
-    check(existing->expires_at > time_point_sec(current_time_point()), "enterprise usage authorization is expired");
-    return *existing;
+    const auto now = time_point_sec(current_time_point());
+
+    bool has_enterprise_auth = false;
+    bool has_retail_auth = false;
+    uint64_t auth_id = 0;
+    name source_contract = name{};
+
+    {
+        enterprise_usage_auth_table usage_auths(billing_account, billing_account.value);
+        auto by_request = usage_auths.get_index<"byrequest"_n>();
+        auto existing = by_request.find(request_key);
+        if (existing != by_request.end() &&
+            !existing->consumed &&
+            existing->submitter == submitter &&
+            existing->mode == mode &&
+            existing->expires_at > now) {
+            has_enterprise_auth = true;
+            auth_id = existing->auth_id;
+            source_contract = billing_account;
+        }
+    }
+
+    {
+        retail_usage_auth_table usage_auths(retail_payment_account, retail_payment_account.value);
+        auto by_request = usage_auths.get_index<"byrequest"_n>();
+        auto existing = by_request.find(request_key);
+        if (existing != by_request.end() &&
+            !existing->consumed &&
+            existing->submitter == submitter &&
+            existing->mode == mode &&
+            existing->external_ref == external_ref) {
+            has_retail_auth = true;
+            auth_id = existing->auth_id;
+            source_contract = retail_payment_account;
+        }
+    }
+
+    check(
+        has_enterprise_auth || has_retail_auth,
+        "usage authorization is missing for request"
+    );
+    check(
+        !(has_enterprise_auth && has_retail_auth),
+        "multiple usage authorizations exist for request"
+    );
+
+    return usage_authorization_ref{source_contract, auth_id};
 }
 
-void verification_enterprise::consume_usage_authorization(uint64_t auth_id) const {
+void verification_enterprise::consume_usage_authorization(const usage_authorization_ref& authorization) const {
     action(
         permission_level{get_self(), "active"_n},
-        billing_account,
+        authorization.source_contract,
         "consume"_n,
-        std::make_tuple(auth_id)
+        std::make_tuple(authorization.auth_id)
     ).send();
 }
 

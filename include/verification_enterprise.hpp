@@ -12,6 +12,7 @@
 #include <request_key.hpp>
 #include <verification_billing_tables.hpp>
 #include <verification_core.hpp>
+#include <verification_retail_payment_tables.hpp>
 #include <verification_tables.hpp>
 #include <verification_validators.hpp>
 
@@ -21,7 +22,7 @@
 using namespace eosio;
 using std::string;
 
-class [[eosio::contract("verifent")]] verification_enterprise : public contract {
+class [[eosio::contract("verif")]] verification_enterprise : public contract {
 public:
     using contract::contract;
 
@@ -133,18 +134,30 @@ private:
     using batch_table = verification_tables::batch_table;
     using counter_state = verification_tables::counter_state;
     using counter_singleton = verification_tables::counter_singleton;
-    using usage_auth_row = verification_billing_tables::usage_auth_row;
-    using usage_auth_table = verification_billing_tables::usage_auth_table;
+    using enterprise_usage_auth_row = verification_billing_tables::usage_auth_row;
+    using enterprise_usage_auth_table = verification_billing_tables::usage_auth_table;
+    using retail_usage_auth_row = verification_retail_payment_tables::usage_auth_row;
+    using retail_usage_auth_table = verification_retail_payment_tables::usage_auth_table;
+
+    struct usage_authorization_ref {
+        name source_contract;
+        uint64_t auth_id;
+    };
 
     static constexpr name billing_account = "verifbill"_n;
+    static constexpr name retail_payment_account = "verifretpay"_n;
     static constexpr uint8_t enterprise_mode_single = 0;
     static constexpr uint8_t enterprise_mode_batch = 1;
 
     kyc_row require_kyc_record(const name& account) const;
     schema_row require_schema(uint64_t id) const;
     policy_row require_policy(uint64_t id) const;
-    usage_auth_row require_usage_authorization(uint8_t mode, const name& submitter, const checksum256& external_ref) const;
-    void consume_usage_authorization(uint64_t auth_id) const;
+    usage_authorization_ref require_usage_authorization(
+        uint8_t mode,
+        const name& submitter,
+        const checksum256& external_ref
+    ) const;
+    void consume_usage_authorization(const usage_authorization_ref& authorization) const;
     uint64_t next_batch_id();
     uint64_t next_commitment_id();
     void validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const;

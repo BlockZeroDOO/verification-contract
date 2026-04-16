@@ -1,16 +1,16 @@
 # Verification Contract Core
 
-This document describes the canonical on-chain scope of the `verifent` contract.
+This document describes the canonical on-chain scope of the `verif` contract.
 
 ## Repository Boundary
 
-- `C:\projects\verification-contract` owns the `verifent` and `verifretail` smart contracts
+- `C:\projects\verification-contract` owns the `verif`, `verifretail`, and `verifbill` smart contracts
 - `C:\projects\deNotary` owns the off-chain backend
 - `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
 ## Purpose
 
-The `verifent` contract anchors hashes and batch roots on-chain under explicit governance rules.
+The `verif` contract anchors hashes and batch roots on-chain under explicit governance rules.
 
 It is responsible for:
 

@@ -295,8 +295,8 @@ void verification_billing::use(const name& payer, const name& submitter, uint8_t
 
 void verification_billing::consume(uint64_t auth_id) {
     check(
-        has_auth(get_self()) || has_auth("verifent"_n),
-        "missing required authority of billing contract or verifent"
+        has_auth(get_self()) || has_auth("verif"_n),
+        "missing required authority of billing contract or verif"
     );
     verification_validators::validate_registry_id(auth_id, "auth_id");
 

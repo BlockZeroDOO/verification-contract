@@ -6,7 +6,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 export RPC_URL="${RPC_URL:-https://history.denotary.io}"
 export OWNER_ACCOUNT="${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the enterprise governance account.}"
-export VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verifent}"
+export VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verif}"
 export SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-${PAYER_ACCOUNT:-}}"
 
 if [[ -z "${SUBMITTER_ACCOUNT}" ]]; then

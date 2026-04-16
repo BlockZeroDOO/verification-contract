@@ -1,22 +1,23 @@
-# deNotary Enterprise Verification Deploy
+# deNotary Unified Verification Deploy
 
-This runbook covers deployment of the enterprise verification contract surface.
+This runbook covers deployment of the unified verification contract surface.
 
 Current contract mapping:
 
-- enterprise contract account: `verifent`
-- enterprise WASM target: `verifent`
+- unified anchoring contract account: `verif`
+- enterprise billing account: `verifbill`
+- unified WASM target: `verif`
 - implementation wrapper: `verification_enterprise`
 
 Repository boundary:
 
-- `C:\projects\verification-contract` owns `verifent` and `verifretail`
+- `C:\projects\verification-contract` owns `verif`, `verifretail`, and `verifbill`
 - `C:\projects\deNotary` owns the off-chain backend
 - `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
 ## Purpose
 
-The enterprise contract is the billing-agnostic verification surface for:
+The unified `verif` contract is the billing-agnostic anchoring surface for:
 
 - KYC-gated access control
 - schema and policy governance
@@ -26,6 +27,8 @@ The enterprise contract is the billing-agnostic verification surface for:
 
 It does not support retail token payment flow.
 
+For live enterprise usage it now expects enterprise usage authorization from `verifbill`.
+
 ## Build
 
 ```bash
@@ -34,8 +37,8 @@ It does not support retail token payment flow.
 
 Expected artifacts:
 
-- `dist/verifent/verifent.wasm`
-- `dist/verifent/verifent.abi`
+- `dist/verif/verif.wasm`
+- `dist/verif/verif.abi`
 
 ## deNotary Deploy
 
@@ -46,7 +49,7 @@ Expected artifacts:
 Defaults:
 
 - `RPC_URL=https://history.denotary.io`
-- `VERIFICATION_ACCOUNT=verifent`
+- `VERIFICATION_ACCOUNT=verif`
 - `BUILD_BEFORE_DEPLOY=true`
 
 ## Jungle4 Deploy
@@ -58,17 +61,18 @@ Defaults:
 Defaults:
 
 - `RPC_URL=https://jungle4.api.eosnation.io`
-- `VERIFICATION_ACCOUNT=verifent`
+- `VERIFICATION_ACCOUNT=verif`
 - `BUILD_BEFORE_DEPLOY=true`
 
 ## Verify
 
 ```bash
-cleos -u <rpc> get table verifent verifent kyc
-cleos -u <rpc> get table verifent verifent schemas
-cleos -u <rpc> get table verifent verifent policies
-cleos -u <rpc> get table verifent verifent commitments
-cleos -u <rpc> get table verifent verifent batches
+cleos -u <rpc> get table verif verif kyc
+cleos -u <rpc> get table verif verif schemas
+cleos -u <rpc> get table verif verif policies
+cleos -u <rpc> get table verif verif commitments
+cleos -u <rpc> get table verif verif batches
+cleos -u <rpc> get table verifbill verifbill usageauths
 ```
 
 ## Smoke
@@ -76,8 +80,10 @@ cleos -u <rpc> get table verifent verifent batches
 deNotary:
 
 ```bash
-export OWNER_ACCOUNT=verifent
-export VERIFICATION_ACCOUNT=verifent
+export OWNER_ACCOUNT=verif
+export BILLING_OWNER_ACCOUNT=verifbill
+export VERIFICATION_ACCOUNT=verif
+export VERIFICATION_BILLING_ACCOUNT=verifbill
 export SUBMITTER_ACCOUNT=youruser
 ./scripts/smoke-test-enterprise-denotary.sh
 ```
@@ -85,8 +91,10 @@ export SUBMITTER_ACCOUNT=youruser
 Jungle4:
 
 ```bash
-export OWNER_ACCOUNT=verifent
-export VERIFICATION_ACCOUNT=verifent
+export OWNER_ACCOUNT=verif
+export BILLING_OWNER_ACCOUNT=verifbill
+export VERIFICATION_ACCOUNT=verif
+export VERIFICATION_BILLING_ACCOUNT=verifbill
 export SUBMITTER_ACCOUNT=youruser
 ./scripts/smoke-test-enterprise-jungle4.sh
 ```

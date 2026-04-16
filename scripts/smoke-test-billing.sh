@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+RPC_URL="${RPC_URL:-https://jungle4.api.eosnation.io}"
+READ_RPC_URL="${READ_RPC_URL:-${RPC_URL}}"
+BILLING_ACCOUNT="${BILLING_ACCOUNT:-verifbill}"
+OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
+PAYER_ACCOUNT="${PAYER_ACCOUNT:-}"
+SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
+PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
+PAYMENT_SYMBOL="${PAYMENT_SYMBOL:-EOS}"
+PAYMENT_PRECISION="${PAYMENT_PRECISION:-4}"
+PLAN_CODE="${PLAN_CODE:-smokeplan}"
+PACK_CODE="${PACK_CODE:-smokepack}"
+PLAN_PRICE="${PLAN_PRICE:-0.0300 EOS}"
+PACK_PRICE="${PACK_PRICE:-0.0200 EOS}"
+PLAN_DURATION_SEC="${PLAN_DURATION_SEC:-2592000}"
+PLAN_SINGLE_QUOTA="${PLAN_SINGLE_QUOTA:-1}"
+PLAN_BATCH_QUOTA="${PLAN_BATCH_QUOTA:-1}"
+PACK_SINGLE_UNITS="${PACK_SINGLE_UNITS:-2}"
+PACK_BATCH_UNITS="${PACK_BATCH_UNITS:-1}"
+WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
+WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
+
+: "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the billing contract authority account.}"
+: "${PAYER_ACCOUNT:?Set PAYER_ACCOUNT to a funded account that can purchase billing products.}"
+: "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to an account used for delegated enterprise usage.}"
+
+if [[ ${#BILLING_ACCOUNT} -gt 12 ]]; then
+    echo "BILLING_ACCOUNT must be 12 characters or fewer for Antelope account names: ${BILLING_ACCOUNT}" >&2
+    exit 1
+fi
+
+if ! command -v cleos >/dev/null 2>&1; then
+    echo "cleos is required for smoke-test-billing.sh" >&2
+    exit 1
+fi
+
+if command -v jq >/dev/null 2>&1; then
+    JQ_BIN="jq"
+else
+    echo "jq is required for smoke-test-billing.sh" >&2
+    exit 1
+fi
+
+hash_text() {
+    local input="$1"
+    if command -v sha256sum >/dev/null 2>&1; then
+        printf '%s' "${input}" | sha256sum | awk '{print $1}'
+    elif command -v shasum >/dev/null 2>&1; then
+        printf '%s' "${input}" | shasum -a 256 | awk '{print $1}'
+    elif command -v openssl >/dev/null 2>&1; then
+        printf '%s' "${input}" | openssl dgst -sha256 -binary | xxd -p -c 256
+    else
+        echo "A SHA-256 tool is required (sha256sum, shasum, or openssl)." >&2
+        exit 1
+    fi
+}
+
+log() {
+    printf '[smoke-test-billing] %s\n' "$1"
+}
+
+get_table_json() {
+    local code="$1"
+    local scope="$2"
+    local table="$3"
+    cleos -u "${READ_RPC_URL}" get table "${code}" "${scope}" "${table}" --limit 1000
+}
+
+wait_for_table_match() {
+    local code="$1"
+    local scope="$2"
+    local table="$3"
+    local jq_filter="$4"
+    local description="$5"
+
+    local deadline=$(( $(date -u +%s) + WAIT_TIMEOUT_SEC ))
+    while true; do
+        if get_table_json "${code}" "${scope}" "${table}" | "${JQ_BIN}" -e "${jq_filter}" >/dev/null 2>&1; then
+            return 0
+        fi
+
+        if (( $(date -u +%s) >= deadline )); then
+            echo "Timed out waiting for ${description}." >&2
+            exit 1
+        fi
+
+        sleep "${WAIT_INTERVAL_SEC}"
+    done
+}
+
+TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
+PLAN_REF="$(hash_text "bill-plan-${TIMESTAMP}")"
+USE_REF_SINGLE="$(hash_text "bill-use-single-${TIMESTAMP}")"
+USE_REF_BATCH="$(hash_text "bill-use-batch-${TIMESTAMP}")"
+
+log "Configuring accepted billing token"
+cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" settoken \
+    "[\"${PAYMENT_TOKEN_CONTRACT}\",\"${PAYMENT_PRECISION},${PAYMENT_SYMBOL}\"]" \
+    -p "${OWNER_ACCOUNT}@active"
+
+log "Configuring enterprise plan"
+cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" setplan \
+    "[\"${PLAN_CODE}\",\"${PAYMENT_TOKEN_CONTRACT}\",\"${PLAN_PRICE}\",${PLAN_DURATION_SEC},${PLAN_SINGLE_QUOTA},${PLAN_BATCH_QUOTA},true]" \
+    -p "${OWNER_ACCOUNT}@active"
+
+log "Configuring enterprise pack"
+cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" setpack \
+    "[\"${PACK_CODE}\",\"${PAYMENT_TOKEN_CONTRACT}\",\"${PACK_PRICE}\",${PACK_SINGLE_UNITS},${PACK_BATCH_UNITS},true]" \
+    -p "${OWNER_ACCOUNT}@active"
+
+if [[ "${PAYER_ACCOUNT}" != "${SUBMITTER_ACCOUNT}" ]]; then
+    log "Granting delegated submitter"
+    cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" grantdelegate \
+        "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\"]" \
+        -p "${PAYER_ACCOUNT}@active"
+fi
+
+log "Purchasing enterprise plan"
+cleos -u "${RPC_URL}" transfer "${PAYER_ACCOUNT}" "${BILLING_ACCOUNT}" "${PLAN_PRICE}" \
+    "plan|${PAYER_ACCOUNT}|${PLAN_CODE}"
+
+wait_for_table_match \
+    "${BILLING_ACCOUNT}" \
+    "${BILLING_ACCOUNT}" \
+    "entitlements" \
+    ".rows[] | select(.payer == \"${PAYER_ACCOUNT}\" and .kind == 0)" \
+    "plan entitlement for ${PAYER_ACCOUNT}"
+
+log "Purchasing enterprise pack"
+cleos -u "${RPC_URL}" transfer "${PAYER_ACCOUNT}" "${BILLING_ACCOUNT}" "${PACK_PRICE}" \
+    "pack|${PAYER_ACCOUNT}|${PACK_CODE}"
+
+wait_for_table_match \
+    "${BILLING_ACCOUNT}" \
+    "${BILLING_ACCOUNT}" \
+    "entitlements" \
+    ".rows[] | select(.payer == \"${PAYER_ACCOUNT}\" and .kind == 1)" \
+    "pack entitlement for ${PAYER_ACCOUNT}"
+
+log "Creating enterprise single usage authorization"
+cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_SINGLE}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active"
+
+wait_for_table_match \
+    "${BILLING_ACCOUNT}" \
+    "${BILLING_ACCOUNT}" \
+    "usageauths" \
+    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 0 and .consumed == false)" \
+    "single usage authorization"
+
+log "Rejecting duplicate enterprise single authorization for the same request"
+if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_SINGLE}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: duplicate enterprise single authorization was accepted." >&2
+    exit 1
+fi
+
+SINGLE_AUTH_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
+    --arg submitter "${SUBMITTER_ACCOUNT}" \
+    '.rows[] | select(.submitter == $submitter and .mode == 0 and .consumed == false) | .auth_id' | tail -n 1)"
+
+log "Consuming enterprise single usage authorization"
+cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" consume "[${SINGLE_AUTH_ID}]" -p "${OWNER_ACCOUNT}@active"
+
+wait_for_table_match \
+    "${BILLING_ACCOUNT}" \
+    "${BILLING_ACCOUNT}" \
+    "usageauths" \
+    ".rows[] | select(.auth_id == ${SINGLE_AUTH_ID} and .consumed == true)" \
+    "consumed single usage authorization"
+
+log "Creating enterprise batch usage authorization"
+cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",1,\"${USE_REF_BATCH}\"]" \
+    -p "${SUBMITTER_ACCOUNT}@active"
+
+wait_for_table_match \
+    "${BILLING_ACCOUNT}" \
+    "${BILLING_ACCOUNT}" \
+    "usageauths" \
+    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 1 and .consumed == false)" \
+    "batch usage authorization"
+
+if [[ "${PAYER_ACCOUNT}" != "${SUBMITTER_ACCOUNT}" ]]; then
+    log "Revoking delegated submitter"
+    cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" revokedeleg \
+        "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\"]" \
+        -p "${PAYER_ACCOUNT}@active"
+fi
+
+log "Enterprise billing smoke test passed"

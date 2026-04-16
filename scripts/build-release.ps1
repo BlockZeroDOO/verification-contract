@@ -1,5 +1,5 @@
 param(
-    [string[]]$ContractName = @("verifent")
+    [string[]]$ContractName = @("verif")
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,7 +27,7 @@ catch {
 foreach ($name in $ContractName) {
     $sourceArgs = @("src/$name.cpp")
     $compilerArgs = @()
-    if ($name -eq "verifent") {
+    if ($name -eq "verif" -or $name -eq "verifent") {
         $sourceFile = Join-Path $projectRoot "src\verification.cpp"
         $sourceArgs = @("src/verification.cpp")
         $compilerArgs += "-DVERIFICATION_ENTERPRISE_BUILD"
@@ -42,6 +42,10 @@ foreach ($name in $ContractName) {
     elseif ($name -eq "verifbill") {
         $sourceFile = Join-Path $projectRoot "src\verification_billing_entry.cpp"
         $sourceArgs = @("src/verification_billing_entry.cpp", "src/verification_billing.cpp")
+    }
+    elseif ($name -eq "verifretpay") {
+        $sourceFile = Join-Path $projectRoot "src\verification_retail_payment_entry.cpp"
+        $sourceArgs = @("src/verification_retail_payment_entry.cpp", "src/verification_retail_payment.cpp")
     }
     else {
         $sourceFile = Join-Path $projectRoot "src\$name.cpp"

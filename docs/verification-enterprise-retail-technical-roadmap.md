@@ -6,7 +6,7 @@ This document translates the enterprise/retail split plan into a concrete reposi
 
 Final deployment targets:
 
-- enterprise contract/account: `verifent`
+- unified anchoring contract/account: `verif`
 - retail contract/account: `verifretail`
 
 Enterprise billing target:
@@ -497,7 +497,7 @@ Current working assumptions:
 - current `verification` behavior maps to enterprise
 - retail pricing starts with exact fixed pricing
 - retail batch pricing is fixed per batch in the first version
-- enterprise billing is implemented as separate `verifbill`, not inside `verifent`
+- enterprise billing is implemented as separate `verifbill`, not inside `verif`
 
 ## Deliverables Checklist
 

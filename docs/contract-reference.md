@@ -4,9 +4,10 @@
 
 This document is the full on-chain reference for the contracts in this repository:
 
-- `verifent`
-- `verifretail`
+- `verif`
 - `verifbill`
+- `verifretpay`
+- `verifretail`
 
 The two anchoring contracts share the same anchoring core:
 
@@ -19,15 +20,16 @@ The two anchoring contracts share the same anchoring core:
 
 They differ in the access and payment model:
 
-- `verifent` is the enterprise and integrator contract
-- `verifretail` is the wallet-first retail contract with atomic on-chain payment
+- `verif` is the unified anchoring contract
 - `verifbill` is the enterprise billing and entitlement contract
+- `verifretpay` is the wallet-first retail payment and authorization contract
+- `verifretail` is a compatibility retail anchoring contract retained during migration
 
 ## Contract Roles
 
-### `verifent`
+### `verif`
 
-`verifent` is the billing-agnostic enterprise contract.
+`verif` is the unified anchoring contract.
 
 It is intended for:
 
@@ -43,22 +45,28 @@ The enterprise payment model is a separate billing contract:
 
 - see [docs/enterprise-billing-architecture.md](/c:/projects/verification-contract/docs/enterprise-billing-architecture.md:1)
 
-### `verifretail`
+### `verifretpay`
 
-`verifretail` is the retail contract.
+`verifretpay` is the retail payment contract.
 
 It is intended for:
 
 - wallet-first end users
-- direct on-chain payment for each request
-- exact-fee submit flows without deposits
+- exact on-chain payment for each request
+- one-time retail authorization for downstream `verif`
 
 It supports:
 
-- exact single-payment receipts
-- exact batch-payment receipts
-- atomic `transfer + submit`
-- atomic `transfer + submitroot`
+- exact single-payment authorizations
+- exact batch-payment authorizations
+- atomic `transfer + submit` when paired with `verif`
+- atomic `transfer + submitroot` when paired with `verif`
+
+### `verifretail`
+
+`verifretail` is the compatibility retail contract.
+
+It keeps the old wallet-first retail anchoring flow available during migration, but it is no longer the target end-state architecture.
 
 ## Shared Data Model
 
@@ -191,7 +199,7 @@ Meaning:
 
 ## Shared Actions
 
-The following actions exist in both `verifent` and `verifretail`.
+The following actions exist in both `verif` and `verifretail`.
 
 ### KYC and Access Governance
 
@@ -339,11 +347,11 @@ Important:
 - these are business statuses
 - finality is not modeled as an on-chain business status inside the contract
 
-## `verifent` Specific Behavior
+## `verif` Specific Behavior
 
 ### Product model
 
-`verifent` is the clean enterprise anchoring contract.
+`verif` is the clean unified anchoring contract.
 
 Its main properties:
 
@@ -355,7 +363,7 @@ Its main properties:
 
 ### Legacy cleanup
 
-`verifent` no longer carries the former proof-payment surface.
+`verif` no longer carries the former proof-payment surface.
 
 Removed from the enterprise contract:
 
@@ -363,18 +371,18 @@ Removed from the enterprise contract:
 - all legacy proof-payment tables
 - the former enterprise-side transfer payment path
 
-## `verifretail` Specific Behavior
+## `verifretpay` Specific Behavior
 
 ### Product model
 
-`verifretail` is the retail contract with exact on-chain payment for each request.
+`verifretpay` is the retail payment and authorization contract.
 
 Its main properties:
 
 - no deposit model
 - no prepaid internal balance
 - exact tariff matching
-- payment receipt is one-time and per request
+- usage authorization is one-time and per request
 - payer must currently match submitter
 
 ### Retail Tables
@@ -413,13 +421,13 @@ Meaning:
 - `mode = 0` means single submit
 - `mode = 1` means batch submit
 
-#### `rtlreceipts`
+#### `rtlauths`
 
-Stores one-time retail payment receipts.
+Stores one-time retail usage authorizations.
 
 Fields:
 
-- `receipt_id`
+- `auth_id`
 - `mode`
 - `payer`
 - `submitter`
@@ -434,7 +442,7 @@ Fields:
 Purpose:
 
 - links one incoming transfer to one exact request
-- consumed after successful use
+- consumed after successful use by downstream `verif`
 
 #### `rtlcounters`
 
@@ -444,13 +452,14 @@ Fields:
 
 - `next_token_id`
 - `next_tariff_id`
-- `next_receipt_id`
+- `next_auth_id`
 
 ### Retail-only Actions
 
 - `settoken(token_contract, token_symbol)`
 - `rmtoken(token_contract, token_symbol)`
 - `setprice(mode, token_contract, price)`
+- `consume(auth_id)`
 
 Purpose:
 
@@ -464,9 +473,9 @@ Expected authority:
 
 Retail payment happens through:
 
-- `eosio.token::transfer -> verifretail`
+- `eosio.token::transfer -> verifretpay`
 
-The contract parses the transfer memo and creates a one-time pending payment receipt.
+The contract parses the transfer memo and creates a one-time pending usage authorization.
 
 Current memo format:
 
@@ -490,17 +499,34 @@ Current rules:
 - underpayment is rejected
 - wrong token is rejected
 - mode mismatch is rejected
-- receipt must be pending and unconsumed
+- authorization must be pending and unconsumed
 - submitter and payer are currently expected to be the same account
 
-### Retail Submit Path
+### Retail Authorization Consumption
 
-Retail `submit` and `submitroot` do all shared validation plus:
+`verifretpay` does not anchor by itself. Instead:
 
-- require matching pending receipt
-- consume receipt after success
+- it creates a retail authorization bound to the request key
+- `verif` may use that authorization for `submit` or `submitroot`
+- `verif` consumes the authorization after successful anchor creation
 
-This gives a practical `atomic pay + submit` model without a deposit balance.
+This is the target retail path for the unified architecture.
+
+## `verifretail` Specific Behavior
+
+### Product model
+
+`verifretail` is the compatibility retail anchoring contract.
+
+It keeps the older wallet-first `atomic pay + submit` flow available while migration proceeds toward the unified `verif + verifretpay` architecture.
+
+### Compatibility role
+
+Current role:
+
+- preserve the already validated legacy retail path
+- provide backward compatibility for deployments not yet migrated to `verifretpay`
+- avoid forcing a hard cutover in one step
 
 ## `verifbill` Specific Behavior
 
@@ -510,7 +536,7 @@ This gives a practical `atomic pay + submit` model without a deposit balance.
 
 Its main properties:
 
-- no deposit balance inside `verifent`
+- no deposit balance inside `verif`
 - plans and packs instead of floating internal balance
 - delegated submitter support
 - one-time usage authorization tied to request key
@@ -576,7 +602,7 @@ pack|payer|pack_code
 
 `verifbill` already owns enterprise purchase, delegation, quota allocation, and usage-authorization state.
 
-`verifent` now validates enterprise usage authorization from `verifbill` and consumes it after successful anchor creation.
+`verif` now validates enterprise usage authorization from `verifbill` and consumes it after successful anchor creation.
 
 ## Authorization Model
 
@@ -652,14 +678,17 @@ Those concerns are either:
 
 Current final names:
 
-- enterprise contract/account: `verifent`
+- unified anchoring contract/account: `verif`
+- retail payment contract/account: `verifretpay`
 - retail contract/account: `verifretail`
 - enterprise billing contract/account: `verifbill`
 
 Build outputs:
 
-- `dist/verifent/verifent.wasm`
-- `dist/verifent/verifent.abi`
+- `dist/verif/verif.wasm`
+- `dist/verif/verif.abi`
+- `dist/verifretpay/verifretpay.wasm`
+- `dist/verifretpay/verifretpay.abi`
 - `dist/verifretail/verifretail.wasm`
 - `dist/verifretail/verifretail.abi`
 - `dist/verifbill/verifbill.wasm`
@@ -668,20 +697,25 @@ Build outputs:
 Primary runbooks:
 
 - [docs/enterprise-deploy.md](/c:/projects/verification-contract/docs/enterprise-deploy.md:1)
+- [docs/retail-payment-deploy.md](/c:/projects/verification-contract/docs/retail-payment-deploy.md:1)
 - [docs/retail-deploy.md](/c:/projects/verification-contract/docs/retail-deploy.md:1)
 - [docs/enterprise-onchain-smoke.md](/c:/projects/verification-contract/docs/enterprise-onchain-smoke.md:1)
+- [docs/retail-payment-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-payment-onchain-smoke.md:1)
 - [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)
 
 ## Summary
 
-`verifent` is the clean enterprise anchoring contract.
+`verif` is the clean unified anchoring contract.
 
-`verifretail` is the retail anchoring contract with exact atomic on-chain payment.
+`verifretpay` is the target retail payment and authorization contract for the unified architecture.
+
+`verifretail` is the compatibility retail anchoring contract.
 
 `verifbill` is the enterprise billing and entitlement contract.
 
 Together they provide:
 
-- one shared anchoring core
-- two anchoring surfaces and one enterprise billing surface
-- clean separation between enterprise and retail behavior
+- one canonical anchoring surface
+- one enterprise billing surface
+- one target retail payment surface
+- one compatibility retail anchoring surface during migration

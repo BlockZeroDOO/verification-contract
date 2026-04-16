@@ -23,7 +23,7 @@ The enterprise wrappers delegate to the canonical on-chain smoke:
 
 ## Prerequisites
 
-- deployed `verifent` contract
+- deployed `verif` contract
 - deployed `verifbill` contract
 - `cleos`
 - `jq`
@@ -37,9 +37,9 @@ The enterprise wrappers delegate to the canonical on-chain smoke:
 ```bash
 export RPC_URL=https://your-rpc
 export READ_RPC_URL=${RPC_URL}
-export VERIFICATION_ACCOUNT=verifent
+export VERIFICATION_ACCOUNT=verif
 export VERIFICATION_BILLING_ACCOUNT=verifbill
-export OWNER_ACCOUNT=verifent
+export OWNER_ACCOUNT=verif
 export BILLING_OWNER_ACCOUNT=verifbill
 export SUBMITTER_ACCOUNT=someuser
 ```
@@ -88,7 +88,7 @@ deNotary:
 
 ## Notes
 
-- enterprise smoke now validates the combined `verifent + verifbill` path
+- enterprise smoke now validates the combined `verif + verifbill` path
 - for Jungle4, using a separate `READ_RPC_URL` for table polling is recommended
 - the smoke uses `get table --limit 1000` to avoid false negatives from paginated registry tables
 - retail smoke is documented separately in [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)

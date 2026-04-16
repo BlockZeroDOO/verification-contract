@@ -3,11 +3,11 @@ project(verification_contracts VERSION 1.0.0)
 
 find_package(eosio.cdt)
 
-add_contract(verifent verifent src/verification.cpp)
-target_include_directories(verifent PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_compile_definitions(verifent PRIVATE VERIFICATION_ENTERPRISE_BUILD)
+add_contract(verif verif src/verification.cpp)
+target_include_directories(verif PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_compile_definitions(verif PRIVATE VERIFICATION_ENTERPRISE_BUILD)
 target_sources(
-    verifent
+    verif
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src/verification_enterprise.cpp
         ${CMAKE_SOURCE_DIR}/src/verification_core.cpp
@@ -29,4 +29,12 @@ target_sources(
     verifbill
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src/verification_billing.cpp
+)
+
+add_contract(verifretpay verifretpay src/verification_retail_payment_entry.cpp)
+target_include_directories(verifretpay PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_sources(
+    verifretpay
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/verification_retail_payment.cpp
 )

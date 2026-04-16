@@ -9,7 +9,7 @@ Split the current verification product surface into two separate smart contracts
 
 Chosen final deployment names:
 
-- enterprise contract/account: `verifent`
+- unified anchoring contract/account: `verif`
 - retail contract/account: `verifretail`
 
 The objective is to support two different commercial and trust models without polluting one contract with the other model's requirements.
@@ -178,12 +178,12 @@ The billing contract should own:
 Recommended enterprise runtime flow:
 
 1. `verifbill::use(...)`
-2. `verifent::submit(...)`
+2. `verif::submit(...)`
 
 or:
 
 1. `verifbill::use(...)`
-2. `verifent::submitroot(...)`
+2. `verif::submitroot(...)`
 
 See:
 
@@ -289,7 +289,7 @@ Tasks:
 Suggested examples:
 
 - `verifyent` and `verifyrtl`
-- or `verifent` and `verifrtl`
+- or `verif` and `verifrtl`
 
 ### 2. Retail pricing granularity
 

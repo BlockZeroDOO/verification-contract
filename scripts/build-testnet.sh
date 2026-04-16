@@ -19,7 +19,7 @@ fi
 if [[ $# -gt 0 ]]; then
     contracts=("$@")
 else
-    contracts=("verifent")
+    contracts=("verif")
 fi
 
 echo "Using compiler: ${compiler}"
@@ -34,7 +34,7 @@ build_contract() {
     local wasm_file="${dist_dir}/${contract_name}.wasm"
     local abi_file="${dist_dir}/${contract_name}.abi"
 
-    if [[ "${contract_name}" == "verifent" ]]; then
+    if [[ "${contract_name}" == "verif" || "${contract_name}" == "verifent" ]]; then
         source_file="src/verification.cpp"
         source_args=("src/verification.cpp")
         compiler_args+=("-DVERIFICATION_ENTERPRISE_BUILD")
@@ -47,6 +47,9 @@ build_contract() {
     elif [[ "${contract_name}" == "verifbill" ]]; then
         source_file="src/verification_billing_entry.cpp"
         source_args=("src/verification_billing_entry.cpp" "src/verification_billing.cpp")
+    elif [[ "${contract_name}" == "verifretpay" ]]; then
+        source_file="src/verification_retail_payment_entry.cpp"
+        source_args=("src/verification_retail_payment_entry.cpp" "src/verification_retail_payment.cpp")
     fi
 
     if [[ ! -f "${project_root}/${source_file}" ]]; then

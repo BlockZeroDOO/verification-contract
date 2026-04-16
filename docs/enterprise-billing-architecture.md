@@ -6,9 +6,9 @@ This document defines the recommended on-chain billing model for the enterprise 
 
 It is intended to solve one problem:
 
-- `verifent` needs a real payment and entitlement model for enterprise and integrator customers
+- `verif` needs a real payment and entitlement model for enterprise and integrator customers
 
-without reintroducing any of the removed legacy payment behavior into `verifent` itself.
+without reintroducing any of the removed legacy payment behavior into `verif` itself.
 
 ## Current Status
 
@@ -22,16 +22,18 @@ Implemented in the current shell:
 - entitlement rows created by purchases
 - delegated submitter mapping
 - `use(...)` with one-time `usageauths`
+- deploy tooling
+- standalone billing smoke tooling
 
 Still pending:
 
-- deploy and smoke tooling for `verifbill`
+- live deploy and smoke validation on network
 
 ## Design Goal
 
 The target architecture must satisfy all of the following:
 
-- no deposit balance inside `verifent`
+- no deposit balance inside `verif`
 - no retail-style exact `transfer + submit` flow
 - no trusted backend required by protocol
 - direct client-side transaction signing must remain possible
@@ -57,14 +59,14 @@ This contract should own:
 
 The verification contract should remain focused on anchoring only:
 
-- `verifent` anchors
+- `verif` anchors
 - `verifbill` controls whether a submitter has the right to anchor
 
 ## Contract Roles
 
-### `verifent`
+### `verif`
 
-`verifent` remains:
+`verif` remains:
 
 - billing-agnostic
 - anchoring-only
@@ -184,12 +186,12 @@ Output:
 Recommended atomic request structure:
 
 1. `verifbill::use(...)`
-2. `verifent::submit(...)`
+2. `verif::submit(...)`
 
 or for batch:
 
 1. `verifbill::use(...)`
-2. `verifent::submitroot(...)`
+2. `verif::submitroot(...)`
 
 The `use(...)` action creates a one-time usage authorization tied to:
 
@@ -198,7 +200,7 @@ The `use(...)` action creates a one-time usage authorization tied to:
 - request key
 - mode
 
-Then `verifent` validates that authorization before accepting the anchor.
+Then `verif` validates that authorization before accepting the anchor.
 
 ## Recommended Verification Binding
 
@@ -210,7 +212,7 @@ The enterprise billing authorization should bind to:
 - `mode`
 - `external_ref`
 
-and ideally to the same request-key semantics used by `verifent`.
+and ideally to the same request-key semantics used by `verif`.
 
 Recommended request binding key:
 
@@ -219,13 +221,13 @@ Recommended request binding key:
 Then:
 
 - `verifbill::use(...)` creates authorization for that exact request key
-- `verifent::submit(...)` recomputes the same request key and verifies authorization
+- `verif::submit(...)` recomputes the same request key and verifies authorization
 
 ## Why This Is Better Than Deposit
 
 This architecture avoids the main deposit problems:
 
-- no internal user balance table in `verifent`
+- no internal user balance table in `verif`
 - no need for the client to track a second wallet-like state
 - enterprise customer buys plan or pack, not floating balance
 - entitlement is easier to audit and delegate
@@ -392,7 +394,7 @@ Recommended memo families:
 ### Usage
 
 - `use(payer, submitter, mode, external_ref)`
-- `consume(auth_id)` or internal consumption by `verifent`-verified flow
+- `consume(auth_id)` or internal consumption by `verif`-verified flow
 
 ## Authorization Policy
 
@@ -415,15 +417,15 @@ Recommended memo families:
 Recommended model:
 
 - `verifbill::use(...)` creates the usage authorization
-- `verifent` verifies it and signals consumption through a controlled contract-to-contract path
+- `verif` verifies it and signals consumption through a controlled contract-to-contract path
 
 ## Contract-to-Contract Integration Options
 
 There are two viable models.
 
-### Option 1. `verifent` reads `usageauths`
+### Option 1. `verif` reads `usageauths`
 
-`verifent` directly reads the `verifbill` table.
+`verif` directly reads the `verifbill` table.
 
 Pros:
 
@@ -436,7 +438,7 @@ Cons:
 
 ### Option 2. `verifbill` issues signed or structured usage action
 
-`verifbill::use(...)` writes a specific on-chain authorization record and `verifent` validates it.
+`verifbill::use(...)` writes a specific on-chain authorization record and `verif` validates it.
 
 Pros:
 
@@ -480,7 +482,7 @@ This avoids accidental quota loss.
 
 Should not happen because:
 
-- `verifent` request uniqueness prevents duplicate anchor
+- `verif` request uniqueness prevents duplicate anchor
 - `usageauths` is one-time only
 
 ## Recommended Mode Values
@@ -539,9 +541,10 @@ The clean structural step has now been completed:
 
 Current contract set:
 
-- `verifent`
-- `verifretail`
+- `verif`
 - `verifbill`
+- `verifretpay`
+- `verifretail`
 
 ## Working Recommendation
 
@@ -550,12 +553,12 @@ The recommended enterprise payment model is:
 - separate billing contract
 - plans and packs instead of deposit
 - delegated usage
-- atomic `verifbill::use + verifent::submit`
+- atomic `verifbill::use + verif::submit`
 - one-time usage authorization tied to request key
 
 This gives enterprise customers:
 
 - on-chain payment
-- no deposit tracking inside `verifent`
+- no deposit tracking inside `verif`
 - no trusted backend requirement
 - better organization-level delegation and accounting

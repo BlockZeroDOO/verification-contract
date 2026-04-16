@@ -9,11 +9,10 @@ extern "C" {
             switch (action) {
                 EOSIO_DISPATCH_HELPER(
                     verification_retail,
-                    (issuekyc)(renewkyc)(revokekyc)(suspendkyc)
                     (addschema)(updateschema)(deprecate)
-                    (setpolicy)(enablezk)(disablezk)
-                    (submit)(supersede)(revokecmmt)(expirecmmt)
-                    (submitroot)(linkmanifest)(closebatch)
+                    (setpolicy)
+                    (submit)
+                    (submitroot)
                     (settoken)(rmtoken)(setprice)(withdraw)
                 )
             }

@@ -7,7 +7,7 @@ These smoke tests validate the full unified retail path:
 - `verifretpay` creates one-time retail usage authorization
 - `verif` consumes that authorization during `submit`
 - `verif` consumes that authorization during `submitroot`
-- batch manifest linking and closing still work in the unified retail path
+- batch manifest is embedded directly in `submitroot`
 
 Scripts:
 
@@ -66,8 +66,7 @@ Jungle4:
 - duplicate single request rejection
 - exact retail batch authorization through `transfer -> verifretpay`
 - `verif::submitroot` using that authorization
-- `linkmanifest`
-- `closebatch`
+- embedded `manifest_hash` in the batch row
 
 ## Notes
 

@@ -125,15 +125,12 @@ Fields:
 - `request_key`
 - `block_num`
 - `created_at`
-- `status_changed_at`
-- `status`
-- `superseded_by`
 
 Meaning:
 
 - one on-chain single-record anchor
 - `request_key` enforces uniqueness for the request
-- `status` and `superseded_by` are retained as compatibility fields, but the primary `verif` path no longer exposes separate commitment lifecycle mutation actions
+- append-only commitment record in the primary unified path
 
 ### `batches`
 
@@ -152,15 +149,12 @@ Fields:
 - `request_key`
 - `block_num`
 - `created_at`
-- `manifest_linked_at`
-- `status_changed_at`
-- `status`
 
 Meaning:
 
 - one batch root anchoring record
 - manifest is embedded at creation time in the primary `verif` path
-- legacy compatibility paths may still use a multi-step batch lifecycle
+- append-only batch record in the primary unified path
 
 ### `counters`
 
@@ -274,12 +268,8 @@ Compatibility note:
 
 ### Batch status
 
-- `1 = closed`
-
 Important:
 
-- these are business statuses
-- the primary `verif` path now creates finalized batch rows directly as `closed`
 - finality is not modeled as an on-chain business status inside the contract
 
 ## `verif` Specific Behavior

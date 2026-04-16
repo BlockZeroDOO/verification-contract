@@ -183,12 +183,12 @@ cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" addschema \
 
 log "Creating unified retail single policy"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
-    "[${POLICY_SINGLE_ID},true,false,false,0,true]" \
+    "[${POLICY_SINGLE_ID},true,false,true]" \
     -p "${OWNER_ACCOUNT}@active"
 
 log "Creating unified retail batch policy"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
-    "[${POLICY_BATCH_ID},false,true,false,0,true]" \
+    "[${POLICY_BATCH_ID},false,true,true]" \
     -p "${OWNER_ACCOUNT}@active"
 
 log "Funding unified retail single authorization"
@@ -215,10 +215,7 @@ cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
 COMMITMENT_ID="$(get_commitment_id_by_external_ref "${SINGLE_EXTREF}")"
 COMMITMENT_SUBMITTER="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
     --argjson id "${COMMITMENT_ID}" '.rows[] | select(.id == $id) | .submitter')"
-COMMITMENT_STATUS="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
-    --argjson id "${COMMITMENT_ID}" '.rows[] | select(.id == $id) | .status')"
 assert_eq "${SUBMITTER_ACCOUNT}" "${COMMITMENT_SUBMITTER}" "unified retail commitment submitter"
-assert_eq "0" "${COMMITMENT_STATUS}" "unified retail commitment status"
 assert_rtlauth_consumed "${SINGLE_AUTH_ID}"
 
 log "Rejecting duplicate unified retail single submit"
@@ -247,37 +244,16 @@ BATCH_AUTH_ID="$(get_rtlauth_id_by_external_ref "${BATCH_EXTREF}")"
 
 log "Submitting unified retail batch root"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submitroot \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${BATCH_ROOT_HASH}\",2,\"${BATCH_EXTREF}\"]" \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${BATCH_ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active"
 
 BATCH_ID="$(get_batch_id_by_external_ref "${BATCH_EXTREF}")"
 BATCH_SUBMITTER="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
     --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .submitter')"
-BATCH_STATUS="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
-    --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .status')"
+BATCH_MANIFEST="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
+    --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .manifest_hash')"
 assert_eq "${SUBMITTER_ACCOUNT}" "${BATCH_SUBMITTER}" "unified retail batch submitter"
-assert_eq "0" "${BATCH_STATUS}" "unified retail batch status"
+assert_eq "${MANIFEST_HASH}" "${BATCH_MANIFEST}" "unified retail batch manifest hash"
 assert_rtlauth_consumed "${BATCH_AUTH_ID}"
-
-log "Linking manifest for unified retail batch"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" linkmanifest \
-    "[${BATCH_ID},\"${MANIFEST_HASH}\"]" \
-    -p "${SUBMITTER_ACCOUNT}@active"
-
-wait_for_table_match \
-    "${VERIFICATION_ACCOUNT}" \
-    "${VERIFICATION_ACCOUNT}" \
-    "batches" \
-    ".rows[] | select(.id == ${BATCH_ID} and .manifest_hash == \"${MANIFEST_HASH}\")" \
-    "linked manifest for unified retail batch ${BATCH_ID}"
-
-log "Closing unified retail batch"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" closebatch \
-    "[${BATCH_ID}]" \
-    -p "${SUBMITTER_ACCOUNT}@active"
-
-FINAL_BATCH_STATUS="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
-    --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .status')"
-assert_eq "1" "${FINAL_BATCH_STATUS}" "unified retail batch closed status"
 
 log "Unified retail smoke test passed"

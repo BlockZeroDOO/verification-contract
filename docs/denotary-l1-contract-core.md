@@ -73,9 +73,6 @@ Fields:
 - `request_key`
 - `block_num`
 - `created_at`
-- `status_changed_at`
-- `status`
-- `superseded_by`
 
 ### `batches`
 
@@ -94,9 +91,6 @@ Fields:
 - `request_key`
 - `block_num`
 - `created_at`
-- `manifest_linked_at`
-- `status_changed_at`
-- `status`
 
 ### `counters`
 
@@ -124,16 +118,6 @@ Fields:
 ### Treasury
 
 - `withdraw`
-
-## Business Status Model
-
-### Commitments
-
-- `0 = active`
-
-### Batches
-
-- `1 = closed`
 
 Finality is intentionally not stored as a business status in the contract.
 

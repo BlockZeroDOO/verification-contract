@@ -187,12 +187,12 @@ cleos -u "${RPC_URL}" push action "${RETAIL_ACCOUNT}" addschema \
 
 log "Creating retail single policy"
 cleos -u "${RPC_URL}" push action "${RETAIL_ACCOUNT}" setpolicy \
-    "[${POLICY_SINGLE_ID},true,false,false,0,true]" \
+    "[${POLICY_SINGLE_ID},true,false,true]" \
     -p "${OWNER_ACCOUNT}@active"
 
 log "Creating retail batch policy"
 cleos -u "${RPC_URL}" push action "${RETAIL_ACCOUNT}" setpolicy \
-    "[${POLICY_BATCH_ID},false,true,false,0,true]" \
+    "[${POLICY_BATCH_ID},false,true,true]" \
     -p "${OWNER_ACCOUNT}@active"
 
 log "Rejecting underpayment for single flow"
@@ -239,7 +239,7 @@ wait_for_receipt_state "${SUBMITTER_ACCOUNT}" "${EXTREF_BATCH}" "retail batch re
 
 log "Submitting retail batch root"
 cleos -u "${RPC_URL}" push action "${RETAIL_ACCOUNT}" submitroot \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${EXTREF_BATCH}\"]" \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"$(hash_text "rtl-manifest-${TIMESTAMP}")\",\"${EXTREF_BATCH}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active"
 
 wait_for_batch_request "${SUBMITTER_ACCOUNT}" "${EXTREF_BATCH}" "retail batch record"

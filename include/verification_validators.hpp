@@ -80,18 +80,11 @@ inline void validate_registry_id(uint64_t id, const char* field_name) {
 inline void validate_policy_settings(
     bool allow_single,
     bool allow_batch,
-    bool require_kyc,
-    uint8_t min_kyc_level,
-    bool allow_zk,
     bool active
 ) {
-    if (!require_kyc) {
-        check(min_kyc_level == 0, "min_kyc_level must be zero when require_kyc is false");
-    }
-
     if (active) {
         check(
-            allow_single || allow_batch || allow_zk,
+            allow_single || allow_batch,
             "active policy must enable at least one supported mode"
         );
     }

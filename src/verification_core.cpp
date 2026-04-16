@@ -17,19 +17,10 @@ using verification_tables::commitment_row;
 using verification_tables::commitment_table;
 using verification_tables::counter_singleton;
 using verification_tables::counter_state;
-using verification_tables::kyc_row;
-using verification_tables::kyc_table;
 using verification_tables::policy_row;
 using verification_tables::policy_table;
 using verification_tables::schema_row;
 using verification_tables::schema_table;
-
-kyc_row require_kyc_record(const name& self, const name& account) {
-    kyc_table kyc_records(self, self.value);
-    auto existing = kyc_records.find(account.value);
-    check(existing != kyc_records.end(), "kyc record does not exist");
-    return *existing;
-}
 
 schema_row require_schema(const name& self, uint64_t id) {
     verification_validators::validate_registry_id(id, "id");
@@ -84,27 +75,11 @@ void validate_batch_request_unique(const name& self, const name& submitter, cons
     check(by_request.find(request_key) == by_request.end(), "duplicate batch request for submitter");
 }
 
-void validate_batch_is_open(const batch_row& batch) {
-    check(batch.status == batch_status_open, "batch is not open");
-}
-
 void validate_commitment_request_unique(const name& self, const name& submitter, const checksum256& external_ref) {
     commitment_table commitments(self, self.value);
     auto by_request = commitments.get_index<"byrequest"_n>();
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     check(by_request.find(request_key) == by_request.end(), "duplicate request for submitter");
-}
-
-void validate_commitment_can_be_successor(const commitment_row& current, const commitment_row& successor) {
-    validate_commitment_is_active(successor);
-    check(successor.submitter == current.submitter, "successor must have the same submitter");
-    check(successor.schema_id == current.schema_id, "successor must have the same schema_id");
-    check(successor.policy_id == current.policy_id, "successor must have the same policy_id");
-    check(successor.created_at >= current.created_at, "successor must not predate current commitment");
-}
-
-void validate_commitment_is_active(const commitment_row& commitment) {
-    check(commitment.status == commitment_status_active, "commitment is not active");
 }
 
 }  // namespace verification_core

@@ -77,7 +77,7 @@ void verification_enterprise::setpolicy(
 ) {
     require_auth(get_self());
     verification_validators::validate_registry_id(id, "id");
-    verification_validators::validate_policy_settings(allow_single, allow_batch, false, 0, false, active);
+    verification_validators::validate_policy_settings(allow_single, allow_batch, active);
 
     policy_table policies(get_self(), get_self().value);
     auto existing = policies.find(id);
@@ -87,9 +87,6 @@ void verification_enterprise::setpolicy(
             row.id = id;
             row.allow_single = allow_single;
             row.allow_batch = allow_batch;
-            row.require_kyc = false;
-            row.min_kyc_level = 0;
-            row.allow_zk = false;
             row.active = active;
             row.created_at = now;
             row.updated_at = now;
@@ -100,9 +97,6 @@ void verification_enterprise::setpolicy(
     policies.modify(existing, get_self(), [&](auto& row) {
         row.allow_single = allow_single;
         row.allow_batch = allow_batch;
-        row.require_kyc = false;
-        row.min_kyc_level = 0;
-        row.allow_zk = false;
         row.active = active;
         row.updated_at = now;
     });
@@ -154,9 +148,6 @@ void verification_enterprise::submit(
         row.request_key = request_key;
         row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());
         row.created_at = now;
-        row.status_changed_at = now;
-        row.status = verification_core::commitment_status_active;
-        row.superseded_by = 0;
     });
 
     consume_usage_authorization(usage_auth);
@@ -204,9 +195,6 @@ void verification_enterprise::submitroot(
         row.request_key = request_key;
         row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());
         row.created_at = now;
-        row.manifest_linked_at = now;
-        row.status_changed_at = now;
-        row.status = verification_core::batch_status_closed;
     });
 
     consume_usage_authorization(usage_auth);

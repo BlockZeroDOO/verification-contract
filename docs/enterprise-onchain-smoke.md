@@ -79,9 +79,7 @@ deNotary:
 - zero `object_hash` rejection
 - `submitroot`
 - duplicate batch request rejection
-- guard on `closebatch` before `linkmanifest`
-- `linkmanifest`
-- `closebatch`
+- embedded `manifest_hash` on batch submit
 
 ## Notes
 

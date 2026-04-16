@@ -307,32 +307,19 @@ assert_commitment_field "${COMMITMENT_ID_2}" "status" "0"
 log "Submitting batch #1"
 enterprise_use 1 "${BATCH_EXTREF}"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submitroot \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${BATCH_EXTREF}\"]" \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active"
 BATCH_ID_1="$(get_batch_id_by_external_ref "${BATCH_EXTREF}")"
 assert_batch_field "${BATCH_ID_1}" "submitter" "${SUBMITTER_ACCOUNT}"
-assert_batch_field "${BATCH_ID_1}" "status" "0"
+assert_batch_field "${BATCH_ID_1}" "manifest_hash" "${MANIFEST_HASH}"
+assert_batch_field "${BATCH_ID_1}" "status" "1"
 
 log "Rejecting duplicate batch request"
 if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submitroot \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${BATCH_EXTREF}\"]" \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: duplicate batch request was accepted." >&2
     exit 1
 fi
-
-log "Rejecting closebatch before manifest is linked"
-if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" closebatch "[${BATCH_ID_1}]" -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
-    echo "Assertion failed: closebatch succeeded before manifest linking." >&2
-    exit 1
-fi
-
-log "Linking manifest to batch #1"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" linkmanifest "[${BATCH_ID_1},\"${MANIFEST_HASH}\"]" -p "${SUBMITTER_ACCOUNT}@active"
-assert_batch_field "${BATCH_ID_1}" "manifest_hash" "${MANIFEST_HASH}"
-
-log "Closing batch #1"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" closebatch "[${BATCH_ID_1}]" -p "${SUBMITTER_ACCOUNT}@active"
-assert_batch_field "${BATCH_ID_1}" "status" "1"
 
 log "On-chain smoke test passed"

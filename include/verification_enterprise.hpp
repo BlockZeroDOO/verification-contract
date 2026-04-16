@@ -72,14 +72,9 @@ public:
         uint64_t policy_id,
         const checksum256& root_hash,
         uint32_t leaf_count,
+        const checksum256& manifest_hash,
         const checksum256& external_ref
     );
-
-    [[eosio::action]]
-    void linkmanifest(uint64_t id, const checksum256& manifest_hash);
-
-    [[eosio::action]]
-    void closebatch(uint64_t id);
 
     [[eosio::action]]
     void withdraw(
@@ -132,6 +127,5 @@ private:
     uint64_t next_batch_id();
     uint64_t next_commitment_id();
     void validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const;
-    void validate_batch_is_open(const batch_row& batch) const;
     void validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const;
 };

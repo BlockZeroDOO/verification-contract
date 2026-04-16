@@ -8,13 +8,14 @@ This document is the full on-chain reference for the contracts in this repositor
 - `verifbill`
 - `verifretpay`
 
-The two anchoring contracts share the same anchoring core:
+The repository contains one primary unified anchoring contract and one deprecated compatibility anchoring contract:
 
 - schema registry
 - policy registry
 - single commitment anchoring
 - batch anchoring
-- commitment and batch lifecycle transitions
+- append-only commitment anchoring
+- embedded-manifest batch anchoring in the primary path
 
 They differ in the access and payment model:
 
@@ -158,8 +159,8 @@ Fields:
 Meaning:
 
 - one batch root anchoring record
-- manifest is linked separately
-- a batch starts open and can later be closed
+- manifest is embedded at creation time in the primary `verif` path
+- legacy compatibility paths may still use a multi-step batch lifecycle
 
 ### `counters`
 
@@ -227,15 +228,12 @@ Expected authority:
 
 ### Batch Anchoring
 
-- `submitroot(submitter, schema_id, policy_id, root_hash, leaf_count, external_ref)`
-- `linkmanifest(id, manifest_hash)`
-- `closebatch(id)`
+- `submitroot(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref)`
 
 Purpose:
 
 - anchor a batch root
-- attach immutable manifest reference
-- close the batch lifecycle
+- attach immutable manifest reference in the same action
 
 Validation:
 
@@ -243,10 +241,10 @@ Validation:
 - active policy must exist
 - policy must allow batch mode
 - `root_hash` must be non-zero
+- `manifest_hash` must be non-zero
 - `external_ref` must be non-zero
 - `leaf_count > 0`
 - request must be unique
-- `closebatch` is allowed only after `linkmanifest`
 
 Expected authority:
 
@@ -276,12 +274,12 @@ Compatibility note:
 
 ### Batch status
 
-- `0 = open`
 - `1 = closed`
 
 Important:
 
 - these are business statuses
+- the primary `verif` path now creates finalized batch rows directly as `closed`
 - finality is not modeled as an on-chain business status inside the contract
 
 ## `verif` Specific Behavior
@@ -575,8 +573,6 @@ The submitter is responsible for:
 
 - `submit`
 - `submitroot`
-- `linkmanifest`
-- `closebatch`
 
 ### Retail payer
 

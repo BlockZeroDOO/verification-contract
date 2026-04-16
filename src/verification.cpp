@@ -12,7 +12,7 @@ extern "C" {
                     (addschema)(updateschema)(deprecate)
                     (setpolicy)(setauthsrcs)
                     (submit)
-                    (submitroot)(linkmanifest)(closebatch)
+                    (submitroot)
                     (withdraw)
                 )
             }

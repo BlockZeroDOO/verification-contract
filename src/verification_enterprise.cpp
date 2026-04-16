@@ -168,12 +168,14 @@ void verification_enterprise::submitroot(
     uint64_t policy_id,
     const checksum256& root_hash,
     uint32_t leaf_count,
+    const checksum256& manifest_hash,
     const checksum256& external_ref
 ) {
     require_auth(submitter);
     check(is_account(submitter), "submitter account does not exist");
     check(leaf_count > 0, "leaf_count must be greater than zero");
     verification_validators::validate_nonzero_checksum(root_hash, "root_hash");
+    verification_validators::validate_nonzero_checksum(manifest_hash, "manifest_hash");
     verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
 
     const auto schema = require_schema(schema_id);
@@ -197,56 +199,17 @@ void verification_enterprise::submitroot(
         row.leaf_count = leaf_count;
         row.schema_id = schema_id;
         row.policy_id = policy_id;
-        row.manifest_hash = checksum256{};
+        row.manifest_hash = manifest_hash;
         row.external_ref = external_ref;
         row.request_key = request_key;
         row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());
         row.created_at = now;
-        row.manifest_linked_at = time_point_sec{};
+        row.manifest_linked_at = now;
         row.status_changed_at = now;
-        row.status = verification_core::batch_status_open;
+        row.status = verification_core::batch_status_closed;
     });
 
     consume_usage_authorization(usage_auth);
-}
-
-void verification_enterprise::linkmanifest(uint64_t id, const checksum256& manifest_hash) {
-    verification_validators::validate_registry_id(id, "id");
-    verification_validators::validate_nonzero_checksum(manifest_hash, "manifest_hash");
-
-    batch_table batches(get_self(), get_self().value);
-    auto existing = batches.find(id);
-    check(existing != batches.end(), "batch does not exist");
-    check(
-        has_auth(existing->submitter) || has_auth(get_self()),
-        "missing required authority of submitter or contract"
-    );
-    validate_batch_is_open(*existing);
-    check(is_zero_checksum(existing->manifest_hash), "manifest is already linked");
-
-    batches.modify(existing, get_self(), [&](auto& row) {
-        row.manifest_hash = manifest_hash;
-        row.manifest_linked_at = time_point_sec(current_time_point());
-    });
-}
-
-void verification_enterprise::closebatch(uint64_t id) {
-    verification_validators::validate_registry_id(id, "id");
-
-    batch_table batches(get_self(), get_self().value);
-    auto existing = batches.find(id);
-    check(existing != batches.end(), "batch does not exist");
-    check(
-        has_auth(existing->submitter) || has_auth(get_self()),
-        "missing required authority of submitter or contract"
-    );
-    validate_batch_is_open(*existing);
-    check(!is_zero_checksum(existing->manifest_hash), "manifest is not linked");
-
-    batches.modify(existing, get_self(), [&](auto& row) {
-        row.status = verification_core::batch_status_closed;
-        row.status_changed_at = time_point_sec(current_time_point());
-    });
 }
 
 void verification_enterprise::withdraw(
@@ -358,10 +321,6 @@ uint64_t verification_enterprise::next_commitment_id() {
 
 void verification_enterprise::validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const {
     verification_core::validate_batch_request_unique(get_self(), submitter, external_ref);
-}
-
-void verification_enterprise::validate_batch_is_open(const batch_row& batch) const {
-    verification_core::validate_batch_is_open(batch);
 }
 
 void verification_enterprise::validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const {

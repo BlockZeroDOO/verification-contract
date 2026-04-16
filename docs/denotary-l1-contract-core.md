@@ -120,8 +120,6 @@ Fields:
 
 - `submit`
 - `submitroot`
-- `linkmanifest`
-- `closebatch`
 
 ### Treasury
 
@@ -135,7 +133,6 @@ Fields:
 
 ### Batches
 
-- `0 = open`
 - `1 = closed`
 
 Finality is intentionally not stored as a business status in the contract.
@@ -159,17 +156,10 @@ Must satisfy:
 - existing active schema
 - existing active policy with `allow_batch = true`
 - non-zero `root_hash`
+- non-zero `manifest_hash`
 - non-zero `external_ref`
 - `leaf_count > 0`
 - unique `request_key`
-
-### `closebatch`
-
-Must satisfy:
-
-- batch exists
-- batch is open
-- manifest is already linked
 
 ## Deployment Assumption
 

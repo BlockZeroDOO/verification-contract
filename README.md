@@ -61,8 +61,6 @@ Anchoring core:
 
 - `submit(...)`
 - `submitroot(...)`
-- `linkmanifest(...)`
-- `closebatch(...)`
 
 Operational action:
 

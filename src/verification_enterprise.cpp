@@ -117,12 +117,15 @@ void verification_enterprise::submit(
     uint64_t schema_id,
     uint64_t policy_id,
     const checksum256& object_hash,
-    const checksum256& external_ref
+    const checksum256& external_ref,
+    uint64_t billable_bytes
 ) {
     require_auth(submitter);
     check(is_account(submitter), "submitter account does not exist");
     verification_validators::validate_nonzero_checksum(object_hash, "object_hash");
     verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
+    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
+    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
 
     const auto schema = require_schema(schema_id);
     check(schema.active, "schema is inactive");
@@ -144,6 +147,8 @@ void verification_enterprise::submit(
         row.schema_id = schema_id;
         row.policy_id = policy_id;
         row.object_hash = object_hash;
+        row.billable_bytes = billable_bytes;
+        row.billable_kib = billable_kib;
         row.external_ref = external_ref;
         row.request_key = request_key;
         row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());
@@ -160,7 +165,8 @@ void verification_enterprise::submitroot(
     const checksum256& root_hash,
     uint32_t leaf_count,
     const checksum256& manifest_hash,
-    const checksum256& external_ref
+    const checksum256& external_ref,
+    uint64_t billable_bytes
 ) {
     require_auth(submitter);
     check(is_account(submitter), "submitter account does not exist");
@@ -168,6 +174,8 @@ void verification_enterprise::submitroot(
     verification_validators::validate_nonzero_checksum(root_hash, "root_hash");
     verification_validators::validate_nonzero_checksum(manifest_hash, "manifest_hash");
     verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
+    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
+    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
 
     const auto schema = require_schema(schema_id);
     check(schema.active, "schema is inactive");
@@ -191,6 +199,8 @@ void verification_enterprise::submitroot(
         row.schema_id = schema_id;
         row.policy_id = policy_id;
         row.manifest_hash = manifest_hash;
+        row.billable_bytes = billable_bytes;
+        row.billable_kib = billable_kib;
         row.external_ref = external_ref;
         row.request_key = request_key;
         row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());

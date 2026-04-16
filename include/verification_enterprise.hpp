@@ -62,7 +62,8 @@ public:
         uint64_t schema_id,
         uint64_t policy_id,
         const checksum256& object_hash,
-        const checksum256& external_ref
+        const checksum256& external_ref,
+        uint64_t billable_bytes
     );
 
     [[eosio::action]]
@@ -73,7 +74,8 @@ public:
         const checksum256& root_hash,
         uint32_t leaf_count,
         const checksum256& manifest_hash,
-        const checksum256& external_ref
+        const checksum256& external_ref,
+        uint64_t billable_bytes
     );
 
     [[eosio::action]]

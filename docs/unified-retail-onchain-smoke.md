@@ -21,5 +21,7 @@ These smoke tests validate the supported retail model:
 - `transfer -> verifretpay`
 - `verif::submit`
 - `verif::submitroot`
+- persisted `billable_bytes`
+- persisted `billable_kib`
 - downstream `consume`
 - embedded `manifest_hash`

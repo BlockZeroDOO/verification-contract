@@ -17,6 +17,8 @@ PRICE_SINGLE="${PRICE_SINGLE:-0.0100 EOS}"
 PRICE_BATCH="${PRICE_BATCH:-0.0200 EOS}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
+BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
+BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-4096}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the verification contract authority account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded account that can sign submits.}"
@@ -209,18 +211,24 @@ SINGLE_AUTH_ID="$(get_rtlauth_id_by_external_ref "${SINGLE_EXTREF}")"
 
 log "Submitting unified retail single commitment"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${SINGLE_OBJECT_HASH}\",\"${SINGLE_EXTREF}\"]" \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${SINGLE_OBJECT_HASH}\",\"${SINGLE_EXTREF}\",${BILLABLE_BYTES_SINGLE}]" \
     -p "${SUBMITTER_ACCOUNT}@active"
 
 COMMITMENT_ID="$(get_commitment_id_by_external_ref "${SINGLE_EXTREF}")"
 COMMITMENT_SUBMITTER="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
     --argjson id "${COMMITMENT_ID}" '.rows[] | select(.id == $id) | .submitter')"
+COMMITMENT_BYTES="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
+    --argjson id "${COMMITMENT_ID}" '.rows[] | select(.id == $id) | .billable_bytes')"
+COMMITMENT_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
+    --argjson id "${COMMITMENT_ID}" '.rows[] | select(.id == $id) | .billable_kib')"
 assert_eq "${SUBMITTER_ACCOUNT}" "${COMMITMENT_SUBMITTER}" "unified retail commitment submitter"
+assert_eq "${BILLABLE_BYTES_SINGLE}" "${COMMITMENT_BYTES}" "unified retail commitment billable bytes"
+assert_eq "2" "${COMMITMENT_KIB}" "unified retail commitment billable kib"
 assert_rtlauth_consumed "${SINGLE_AUTH_ID}"
 
 log "Rejecting duplicate unified retail single submit"
 if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${SINGLE_OBJECT_HASH}\",\"${SINGLE_EXTREF}\"]" \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${SINGLE_OBJECT_HASH}\",\"${SINGLE_EXTREF}\",${BILLABLE_BYTES_SINGLE}]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: duplicate unified retail single submit was accepted." >&2
     exit 1
@@ -244,7 +252,7 @@ BATCH_AUTH_ID="$(get_rtlauth_id_by_external_ref "${BATCH_EXTREF}")"
 
 log "Submitting unified retail batch root"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submitroot \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${BATCH_ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\"]" \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${BATCH_ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\",${BILLABLE_BYTES_BATCH}]" \
     -p "${SUBMITTER_ACCOUNT}@active"
 
 BATCH_ID="$(get_batch_id_by_external_ref "${BATCH_EXTREF}")"
@@ -252,8 +260,14 @@ BATCH_SUBMITTER="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCO
     --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .submitter')"
 BATCH_MANIFEST="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
     --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .manifest_hash')"
+BATCH_BYTES="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
+    --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .billable_bytes')"
+BATCH_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
+    --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .billable_kib')"
 assert_eq "${SUBMITTER_ACCOUNT}" "${BATCH_SUBMITTER}" "unified retail batch submitter"
 assert_eq "${MANIFEST_HASH}" "${BATCH_MANIFEST}" "unified retail batch manifest hash"
+assert_eq "${BILLABLE_BYTES_BATCH}" "${BATCH_BYTES}" "unified retail batch billable bytes"
+assert_eq "4" "${BATCH_KIB}" "unified retail batch billable kib"
 assert_rtlauth_consumed "${BATCH_AUTH_ID}"
 
 log "Unified retail smoke test passed"

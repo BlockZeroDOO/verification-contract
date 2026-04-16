@@ -55,6 +55,8 @@ struct [[eosio::table("commitments")]] commitment_row {
     uint64_t schema_id;
     uint64_t policy_id;
     checksum256 object_hash;
+    uint64_t billable_bytes;
+    uint64_t billable_kib;
     checksum256 external_ref;
     checksum256 request_key;
     uint32_t block_num;
@@ -86,6 +88,8 @@ struct [[eosio::table("batches")]] batch_row {
     uint64_t schema_id;
     uint64_t policy_id;
     checksum256 manifest_hash;
+    uint64_t billable_bytes;
+    uint64_t billable_kib;
     checksum256 external_ref;
     checksum256 request_key;
     uint32_t block_num;

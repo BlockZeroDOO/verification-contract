@@ -19,6 +19,7 @@ using eosio::checksum256;
 using eosio::current_time_point;
 using eosio::symbol;
 using eosio::time_point_sec;
+using std::uint64_t;
 using std::array;
 using std::string;
 using std::tuple;
@@ -120,6 +121,15 @@ inline checksum256 parse_hash(const string& hex) {
 
 inline void validate_nonzero_checksum(const checksum256& value, const char* field_name) {
     check(!is_zero_checksum(value), string(field_name) + " cannot be zero");
+}
+
+inline void validate_billable_bytes(uint64_t billable_bytes, const char* field_name) {
+    check(billable_bytes > 0, string(field_name) + " must be greater than zero");
+}
+
+inline uint64_t derive_billable_kib(uint64_t billable_bytes) {
+    validate_billable_bytes(billable_bytes, "billable_bytes");
+    return 1 + ((billable_bytes - 1) / 1024);
 }
 
 inline tuple<string, string, string, string> parse_payment_memo(const string& memo) {

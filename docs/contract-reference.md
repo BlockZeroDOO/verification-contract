@@ -63,6 +63,8 @@ Fields:
 - `schema_id`
 - `policy_id`
 - `object_hash`
+- `billable_bytes`
+- `billable_kib`
 - `external_ref`
 - `request_key`
 - `block_num`
@@ -79,6 +81,8 @@ Fields:
 - `schema_id`
 - `policy_id`
 - `manifest_hash`
+- `billable_bytes`
+- `billable_kib`
 - `external_ref`
 - `request_key`
 - `block_num`
@@ -103,8 +107,8 @@ Fields:
 
 #### Anchoring
 
-- `submit(submitter, schema_id, policy_id, object_hash, external_ref)`
-- `submitroot(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref)`
+- `submit(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
+- `submitroot(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
 
 #### Treasury
 
@@ -119,6 +123,8 @@ Fields:
 - policy allows single mode
 - non-zero `object_hash`
 - non-zero `external_ref`
+- `billable_bytes > 0`
+- derived `billable_kib >= 1`
 - unique request
 - valid external authorization
 
@@ -130,6 +136,8 @@ Fields:
 - non-zero `root_hash`
 - non-zero `manifest_hash`
 - non-zero `external_ref`
+- `billable_bytes > 0`
+- derived `billable_kib >= 1`
 - `leaf_count > 0`
 - unique request
 - valid external authorization

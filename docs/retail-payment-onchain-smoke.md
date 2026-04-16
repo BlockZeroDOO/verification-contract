@@ -1,12 +1,27 @@
 # Retail Payment On-Chain Smoke Tests
 
-These smoke tests validate the standalone `verifretpay` surface.
+These smoke tests validate the current `verifretpay` runtime together with the required `verif` wiring.
 
 ## Scripts
 
 - [scripts/smoke-test-retpay.sh](/c:/projects/verification-contract/scripts/smoke-test-retpay.sh:1)
 - [scripts/smoke-test-retpay-denotary.sh](/c:/projects/verification-contract/scripts/smoke-test-retpay-denotary.sh:1)
 - [scripts/smoke-test-retpay-jungle4.sh](/c:/projects/verification-contract/scripts/smoke-test-retpay-jungle4.sh:1)
+
+## Required env vars
+
+```bash
+export RPC_URL=https://your-rpc
+export READ_RPC_URL=${RPC_URL}
+export RETPAY_ACCOUNT=verifretpay
+export OWNER_ACCOUNT=verifretpay
+export VERIFICATION_OWNER_ACCOUNT=verif
+export VERIFICATION_ACCOUNT=verif
+export VERIFICATION_BILLING_ACCOUNT=verifbill
+export SUBMITTER_ACCOUNT=someuser
+export BILLABLE_BYTES_SINGLE=1536
+export BILLABLE_BYTES_BATCH=4096
+```
 
 ## Coverage
 

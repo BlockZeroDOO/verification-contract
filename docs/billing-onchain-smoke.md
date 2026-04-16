@@ -2,7 +2,7 @@
 
 ## Purpose
 
-These smoke tests validate the standalone `verifbill` surface for:
+These smoke tests validate the current `verifbill` runtime together with the required `verif` wiring for:
 
 - accepted token configuration
 - plan configuration
@@ -37,12 +37,14 @@ export READ_RPC_URL=${RPC_URL}
 export BILLING_ACCOUNT=verifbill
 export OWNER_ACCOUNT=verifbill
 export VERIFICATION_OWNER_ACCOUNT=verif
+export VERIFICATION_ACCOUNT=verif
+export RETAIL_PAYMENT_ACCOUNT=verifretpay
 export PAYER_ACCOUNT=somepayer
 export SUBMITTER_ACCOUNT=somesubmitter
 export PLAN_INCLUDED_KIB=8
 export PACK_INCLUDED_KIB=6
-export USE_SINGLE_BYTES=1536
-export USE_BATCH_BYTES=3072
+export BILLABLE_BYTES_SINGLE=1536
+export BILLABLE_BYTES_BATCH=3072
 ```
 
 ## Run

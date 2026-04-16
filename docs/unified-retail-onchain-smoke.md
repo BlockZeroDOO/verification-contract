@@ -2,8 +2,8 @@
 
 These smoke tests validate the supported retail model:
 
-- `verifretpay` creates retail authorization
-- `verif` consumes that authorization during anchoring
+- `verifretpay` performs atomic retail payment
+- `verif` anchors through internal retail entrypoints
 
 ## Scripts
 
@@ -19,11 +19,9 @@ These smoke tests validate the supported retail model:
 - `verif::addschema`
 - `verif::setpolicy`
 - `transfer -> verifretpay`
-- size-bound retail auth creation from `billable_bytes`
-- `verif::submit`
-- `verif::submitroot`
+- `verif::retailsub`
+- `verif::retailbatch`
 - persisted `billable_bytes`
 - persisted `billable_kib`
-- size-mismatch rejection between retail auth and `verif::submit`
-- downstream `consume`
+- size-mismatch rejection between retail payment size and registry payload
 - embedded `manifest_hash`

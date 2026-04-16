@@ -8,7 +8,6 @@ Supported smoke coverage:
 ## Scripts
 
 - [scripts/smoke-test-onchain.sh](/c:/projects/verification-contract/scripts/smoke-test-onchain.sh:1)
-- [scripts/smoke-test-enterprise.sh](/c:/projects/verification-contract/scripts/smoke-test-enterprise.sh:1)
 - [scripts/smoke-test-billing.sh](/c:/projects/verification-contract/scripts/smoke-test-billing.sh:1)
 - [scripts/smoke-test-retpay.sh](/c:/projects/verification-contract/scripts/smoke-test-retpay.sh:1)
 - [scripts/smoke-test-unified-retail.sh](/c:/projects/verification-contract/scripts/smoke-test-unified-retail.sh:1)
@@ -18,18 +17,23 @@ Supported smoke coverage:
 ### Enterprise
 
 - schema and policy setup
-- enterprise auth wiring
+- registry caller wiring
 - billing pack purchase
-- `use -> submit -> consume`
-- `use -> submitroot -> consume`
+- `verifbill::submit -> verif::billsubmit`
+- `verifbill::submitroot -> verif::billbatch`
+- persisted `billable_bytes`
+- persisted `billable_kib`
+- duplicate and zero-hash rejection
 
 ### Retail
 
 - retail token and tariff setup
-- retail auth creation through `transfer -> verifretpay`
-- `verif::submit`
-- `verif::submitroot`
-- downstream `consume`
+- atomic `transfer -> verifretpay`
+- `verif::retailsub`
+- `verif::retailbatch`
+- persisted `billable_bytes`
+- persisted `billable_kib`
+- duplicate and tariff-validation rejection
 
 ## DFS Boundary
 

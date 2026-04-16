@@ -27,7 +27,7 @@ catch {
 foreach ($name in $ContractName) {
     $sourceArgs = @("src/$name.cpp")
     $compilerArgs = @()
-    if ($name -eq "verif" -or $name -eq "verifent") {
+    if ($name -eq "verif") {
         $sourceFile = Join-Path $projectRoot "src\verification.cpp"
         $sourceArgs = @("src/verification.cpp")
         $compilerArgs += "-DVERIFICATION_ENTERPRISE_BUILD"

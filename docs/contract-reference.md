@@ -27,7 +27,7 @@ It is responsible for:
 - single-record anchoring
 - batch anchoring
 - request uniqueness
-- transitional internal anchoring entrypoints for payment contracts
+- internal anchoring entrypoints for payment contracts
 
 ### Tables
 
@@ -116,7 +116,7 @@ Fields:
 
 ### Validation Rules
 
-Contract-only transition:
+Contract-only runtime:
 
 - `billsubmit(...)` and `billbatch(...)` require `verifbill` authority
 - `retailsub(...)` and `retailbatch(...)` require `verifretpay` authority
@@ -134,13 +134,13 @@ The deployed accounts are configured through:
 
 - `setauthsrcs(billing_account, retail_payment_account)`
 
-This transitional config now controls allowed internal callers, not external auth-table lookup.
+This config controls allowed internal callers.
 
 ## `verifbill`
 
 ### Purpose
 
-`verifbill` is the enterprise payment and authorization contract.
+`verifbill` is the enterprise payment contract.
 
 It is responsible for:
 
@@ -211,7 +211,7 @@ Entitlement selection:
 
 ### Purpose
 
-`verifretpay` is the supported retail payment and authorization contract.
+`verifretpay` is the supported retail payment contract.
 
 It is responsible for:
 
@@ -282,10 +282,11 @@ Build outputs:
 
 ## Primary Docs
 
-- [docs/enterprise-deploy.md](/c:/projects/verification-contract/docs/enterprise-deploy.md:1)
+- [docs/denotary-deploy.md](/c:/projects/verification-contract/docs/denotary-deploy.md:1)
+- [docs/jungle4-deploy.md](/c:/projects/verification-contract/docs/jungle4-deploy.md:1)
 - [docs/billing-deploy.md](/c:/projects/verification-contract/docs/billing-deploy.md:1)
 - [docs/retail-payment-deploy.md](/c:/projects/verification-contract/docs/retail-payment-deploy.md:1)
-- [docs/enterprise-onchain-smoke.md](/c:/projects/verification-contract/docs/enterprise-onchain-smoke.md:1)
+- [docs/denotary-onchain-smoke.md](/c:/projects/verification-contract/docs/denotary-onchain-smoke.md:1)
 - [docs/billing-onchain-smoke.md](/c:/projects/verification-contract/docs/billing-onchain-smoke.md:1)
 - [docs/retail-payment-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-payment-onchain-smoke.md:1)
 - [docs/unified-retail-onchain-smoke.md](/c:/projects/verification-contract/docs/unified-retail-onchain-smoke.md:1)

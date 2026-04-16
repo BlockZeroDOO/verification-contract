@@ -34,7 +34,7 @@ build_contract() {
     local wasm_file="${dist_dir}/${contract_name}.wasm"
     local abi_file="${dist_dir}/${contract_name}.abi"
 
-    if [[ "${contract_name}" == "verif" || "${contract_name}" == "verifent" ]]; then
+    if [[ "${contract_name}" == "verif" ]]; then
         source_file="src/verification.cpp"
         source_args=("src/verification.cpp")
         compiler_args+=("-DVERIFICATION_ENTERPRISE_BUILD")

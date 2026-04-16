@@ -14,7 +14,7 @@ Supported deploy model on deNotary:
 ## Build
 
 ```bash
-./scripts/build-enterprise.sh
+./scripts/build-testnet.sh verif
 ./scripts/build-billing.sh
 ./scripts/build-retpay.sh
 ```

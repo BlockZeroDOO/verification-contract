@@ -29,14 +29,14 @@ Enterprise billing contract for:
 
 - accepted billing tokens
 - plans and packs
-- enterprise request-bound authorizations for `verif`
+- atomic enterprise billing into `verif`
 
 ### `verifretpay`
 
 Retail payment contract for:
 
 - exact on-chain retail payment
-- request-bound retail authorizations for `verif`
+- atomic retail billing into `verif`
 - wallet-first client-side transaction flow without deposits
 
 ## Build
@@ -44,7 +44,7 @@ Retail payment contract for:
 Linux / WSL:
 
 ```bash
-./scripts/build-enterprise.sh
+./scripts/build-testnet.sh verif
 ./scripts/build-billing.sh
 ./scripts/build-retpay.sh
 ```
@@ -52,7 +52,7 @@ Linux / WSL:
 PowerShell:
 
 ```powershell
-./scripts/build-enterprise.ps1
+./scripts/build-testnet.ps1 verif
 ./scripts/build-billing.ps1
 ./scripts/build-retpay.ps1
 ```
@@ -68,7 +68,6 @@ Expected artifacts:
 
 ## Deploy
 
-- [docs/enterprise-deploy.md](/c:/projects/verification-contract/docs/enterprise-deploy.md:1)
 - [docs/billing-deploy.md](/c:/projects/verification-contract/docs/billing-deploy.md:1)
 - [docs/retail-payment-deploy.md](/c:/projects/verification-contract/docs/retail-payment-deploy.md:1)
 - [docs/denotary-deploy.md](/c:/projects/verification-contract/docs/denotary-deploy.md:1)
@@ -76,7 +75,6 @@ Expected artifacts:
 
 ## Smoke
 
-- [docs/enterprise-onchain-smoke.md](/c:/projects/verification-contract/docs/enterprise-onchain-smoke.md:1)
 - [docs/billing-onchain-smoke.md](/c:/projects/verification-contract/docs/billing-onchain-smoke.md:1)
 - [docs/retail-payment-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-payment-onchain-smoke.md:1)
 - [docs/unified-retail-onchain-smoke.md](/c:/projects/verification-contract/docs/unified-retail-onchain-smoke.md:1)
@@ -85,18 +83,12 @@ Expected artifacts:
 ## Reference
 
 - [docs/contract-reference.md](/c:/projects/verification-contract/docs/contract-reference.md:1)
-- [docs/enterprise-billing-architecture.md](/c:/projects/verification-contract/docs/enterprise-billing-architecture.md:1)
-- [docs/revised-contract-simplification-plan.md](/c:/projects/verification-contract/docs/revised-contract-simplification-plan.md:1)
-- [docs/size-based-billing-roadmap.md](/c:/projects/verification-contract/docs/size-based-billing-roadmap.md:1)
-- [docs/contract-only-verif-migration-plan.md](/c:/projects/verification-contract/docs/contract-only-verif-migration-plan.md:1)
-- [docs/denotary-l1-contract-core.md](/c:/projects/verification-contract/docs/denotary-l1-contract-core.md:1)
 
 ## Notes
 
 - `verif` is the only supported registry
 - `verifbill` is the supported enterprise payment model
 - `verifretpay` is the supported retail payment model
-- legacy or experimental contract artifacts may remain in the repository during cleanup, but they are not part of the supported architecture
 
 ## License
 

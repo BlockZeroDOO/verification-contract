@@ -129,13 +129,15 @@ struct [[eosio::table("usageauths")]] usage_auth_row {
     uint64_t primary_key() const { return auth_id; }
     checksum256 byrequest() const { return request_key; }
     uint64_t bysubmitter() const { return submitter.value; }
+    uint64_t byentitle() const { return entitlement_id; }
 };
 
 using usage_auth_table = multi_index<
     "usageauths"_n,
     usage_auth_row,
     indexed_by<"byrequest"_n, const_mem_fun<usage_auth_row, checksum256, &usage_auth_row::byrequest>>,
-    indexed_by<"bysubmitter"_n, const_mem_fun<usage_auth_row, uint64_t, &usage_auth_row::bysubmitter>>
+    indexed_by<"bysubmitter"_n, const_mem_fun<usage_auth_row, uint64_t, &usage_auth_row::bysubmitter>>,
+    indexed_by<"byentitle"_n, const_mem_fun<usage_auth_row, uint64_t, &usage_auth_row::byentitle>>
 >;
 
 struct [[eosio::table("billcounters")]] counter_state {

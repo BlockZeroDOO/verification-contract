@@ -187,6 +187,8 @@ It is responsible for:
 - `deactpack(pack_id)`
 - `use(payer, submitter, mode, external_ref, billable_bytes)`
 - `consume(auth_id)`
+- `cleanauths(limit)`
+- `cleanentls(limit)`
 - `setverifacct(verification_account)`
 - `withdraw(token_contract, to, quantity, memo)`
 
@@ -209,6 +211,11 @@ pack|payer|pack_code
 2. `use(...)` issues one-time auth for a concrete request and billable size
 3. `verif` anchors the request
 4. `verif` calls `verifbill::consume(...)`
+
+Maintenance:
+
+- `cleanauths(limit)` removes consumed or expired `usageauths`
+- `cleanentls(limit)` removes expired or exhausted `entitlements` that are no longer referenced by live auth
 
 ### Authority Model
 
@@ -242,6 +249,7 @@ It is responsible for:
 - `rmtoken(token_contract, token_symbol)`
 - `setprice(mode, token_contract, price_per_kib)`
 - `consume(auth_id)`
+- `cleanauths(limit)`
 - `setverifacct(verification_account)`
 - `withdraw(token_contract, to, quantity, memo)`
 
@@ -275,6 +283,10 @@ Rules:
 2. `verifretpay` creates one-time auth for the request
 3. `verif` anchors the request
 4. `verif` calls `verifretpay::consume(...)`
+
+Maintenance:
+
+- `cleanauths(limit)` removes consumed or expired `rtlauths`
 
 ## Deployment Names
 

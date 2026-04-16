@@ -303,6 +303,72 @@ void verification_billing::consume(uint64_t auth_id) {
     });
 }
 
+void verification_billing::cleanauths(uint32_t limit) {
+    require_auth(get_self());
+    check(limit > 0, "limit must be greater than zero");
+    check(limit <= cleanup_limit_max, "limit exceeds cleanup maximum");
+
+    usage_auth_table usage_auths(get_self(), get_self().value);
+    const auto now = time_point_sec(current_time_point());
+    uint32_t removed = 0;
+
+    auto itr = usage_auths.begin();
+    while (itr != usage_auths.end() && removed < limit) {
+        const bool expired = itr->expires_at <= now;
+        if (itr->consumed || expired) {
+            itr = usage_auths.erase(itr);
+            ++removed;
+            continue;
+        }
+        ++itr;
+    }
+}
+
+void verification_billing::cleanentls(uint32_t limit) {
+    require_auth(get_self());
+    check(limit > 0, "limit must be greater than zero");
+    check(limit <= cleanup_limit_max, "limit exceeds cleanup maximum");
+
+    entitlement_table entitlements(get_self(), get_self().value);
+    const auto now = time_point_sec(current_time_point());
+    uint32_t removed = 0;
+
+    auto itr = entitlements.begin();
+    while (itr != entitlements.end() && removed < limit) {
+        auto current = itr;
+        ++itr;
+
+        uint8_t desired_status = current->status;
+        const bool has_expiry = current->expires_at.sec_since_epoch() > 0;
+        if (has_expiry && current->expires_at <= now) {
+            desired_status = entitlement_status_expired;
+        } else if (current->kib_remaining == 0) {
+            desired_status = entitlement_status_exhausted;
+        } else {
+            desired_status = entitlement_status_active;
+        }
+
+        if (desired_status != current->status) {
+            entitlements.modify(current, get_self(), [&](auto& row) {
+                row.status = desired_status;
+                row.updated_at = now;
+            });
+            current = entitlements.find(current->entitlement_id);
+            check(current != entitlements.end(), "entitlement disappeared during cleanup");
+        }
+
+        if (current->status == entitlement_status_active) {
+            continue;
+        }
+        if (has_live_usage_auth(current->entitlement_id, now)) {
+            continue;
+        }
+
+        entitlements.erase(current);
+        ++removed;
+    }
+}
+
 void verification_billing::withdraw(
     const name& token_contract,
     const name& to,
@@ -538,4 +604,17 @@ verification_billing::entitlement_row verification_billing::select_entitlement(
 
     check(false, "payer does not have active enterprise entitlement with enough remaining KiB");
     return entitlement_row{};
+}
+
+bool verification_billing::has_live_usage_auth(uint64_t entitlement_id, const time_point_sec& now) const {
+    usage_auth_table usage_auths(get_self(), get_self().value);
+    auto by_entitlement = usage_auths.get_index<"byentitle"_n>();
+    auto itr = by_entitlement.find(entitlement_id);
+    while (itr != by_entitlement.end() && itr->entitlement_id == entitlement_id) {
+        if (!itr->consumed && itr->expires_at > now) {
+            return true;
+        }
+        ++itr;
+    }
+    return false;
 }

@@ -18,6 +18,10 @@ Configures which deployed `verif` account may consume retail usage authorization
 
 Marks a retail usage authorization as consumed after a successful downstream anchoring flow.
 
+<h1 class="contract">cleanauths</h1>
+
+Removes consumed or expired retail usage authorizations in bounded batches.
+
 <h1 class="contract">withdraw</h1>
 
 Transfers tokens already held by `verifretpay` to another account.

@@ -73,5 +73,6 @@ deNotary:
 - `use` for single mode with payer authority
 - duplicate request authorization rejection
 - `consume`
+- `cleanauths`
 - `use` for batch mode
 - stored `billable_kib` matching the declared request size

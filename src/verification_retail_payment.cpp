@@ -141,6 +141,27 @@ void verification_retail_payment::consume(uint64_t auth_id) {
     });
 }
 
+void verification_retail_payment::cleanauths(uint32_t limit) {
+    require_auth(get_self());
+    check(limit > 0, "limit must be greater than zero");
+    check(limit <= cleanup_limit_max, "limit exceeds cleanup maximum");
+
+    usage_auth_table usage_auths(get_self(), get_self().value);
+    const auto now = time_point_sec(current_time_point());
+    uint32_t removed = 0;
+
+    auto itr = usage_auths.begin();
+    while (itr != usage_auths.end() && removed < limit) {
+        const bool expired = itr->expires_at.sec_since_epoch() > 0 && itr->expires_at <= now;
+        if (itr->consumed || expired) {
+            itr = usage_auths.erase(itr);
+            ++removed;
+            continue;
+        }
+        ++itr;
+    }
+}
+
 void verification_retail_payment::withdraw(
     const name& token_contract,
     const name& to,

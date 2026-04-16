@@ -19,4 +19,5 @@ These smoke tests validate the standalone `verifretpay` surface.
 - duplicate auth rejection for the same request
 - persisted `billable_kib`
 - explicit `consume`
+- `cleanauths`
 - configured downstream `verif` consumer

@@ -208,6 +208,16 @@ cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" consume "[${SINGLE_AUTH_ID
 
 wait_for_consumed_auth "${SINGLE_AUTH_ID}" "consumed retail single authorization"
 
+log "Cleaning consumed retail authorization"
+cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" cleanauths "[10]" -p "${OWNER_ACCOUNT}@active"
+
+if get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -e \
+    --argjson id "${SINGLE_AUTH_ID}" \
+    '.rows[] | select(.auth_id == $id)' >/dev/null 2>&1; then
+    echo "Assertion failed: consumed retail authorization was not cleaned up." >&2
+    exit 1
+fi
+
 log "Funding exact retail batch authorization"
 cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_BATCH}" \
     "batch|${SUBMITTER_ACCOUNT}|${EXTREF_BATCH}|${BILLABLE_BYTES_BATCH}"

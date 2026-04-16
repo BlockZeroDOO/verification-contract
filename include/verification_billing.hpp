@@ -69,6 +69,12 @@ public:
     void consume(uint64_t auth_id);
 
     [[eosio::action]]
+    void cleanauths(uint32_t limit);
+
+    [[eosio::action]]
+    void cleanentls(uint32_t limit);
+
+    [[eosio::action]]
     void withdraw(
         const name& token_contract,
         const name& to,
@@ -107,6 +113,7 @@ private:
     static constexpr uint8_t enterprise_mode_single = 0;
     static constexpr uint8_t enterprise_mode_batch = 1;
     static constexpr uint32_t usage_auth_ttl_sec = 600;
+    static constexpr uint32_t cleanup_limit_max = 500;
 
     uint128_t make_payment_key(const name& token_contract, const symbol_code& token_symbol) const;
     accepted_token_row require_accepted_token(const name& token_contract, const symbol_code& token_symbol) const;
@@ -120,4 +127,5 @@ private:
     billing_config get_billing_config() const;
     std::tuple<string, name, name> parse_purchase_memo(const string& memo) const;
     entitlement_row select_entitlement(const name& payer, uint64_t required_kib);
+    bool has_live_usage_auth(uint64_t entitlement_id, const time_point_sec& now) const;
 };

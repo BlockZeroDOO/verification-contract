@@ -198,6 +198,16 @@ wait_for_table_match \
     ".rows[] | select(.auth_id == ${SINGLE_AUTH_ID} and ((.consumed == true) or (.consumed == 1)))" \
     "consumed single usage authorization"
 
+log "Cleaning consumed enterprise usage authorizations"
+cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" cleanauths "[10]" -p "${OWNER_ACCOUNT}@active"
+
+if get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -e \
+    --argjson id "${SINGLE_AUTH_ID}" \
+    '.rows[] | select(.auth_id == $id)' >/dev/null 2>&1; then
+    echo "Assertion failed: consumed single usage authorization was not cleaned up." >&2
+    exit 1
+fi
+
 PLAN_KIB_AFTER_CONSUME="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
     --argjson id "${SINGLE_ENTITLEMENT_ID}" \
     '.rows[] | select(.entitlement_id == $id) | .kib_remaining')"

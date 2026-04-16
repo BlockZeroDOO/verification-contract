@@ -34,6 +34,14 @@ Creates a one-time enterprise usage authorization bound to a request key and bil
 
 Marks an enterprise usage authorization as consumed after a successful downstream anchoring flow and burns the matching `KiB` quota.
 
+<h1 class="contract">cleanauths</h1>
+
+Removes consumed or expired enterprise usage authorizations in bounded batches.
+
+<h1 class="contract">cleanentls</h1>
+
+Removes expired or exhausted enterprise entitlements that are no longer referenced by a live authorization.
+
 <h1 class="contract">withdraw</h1>
 
 Transfers tokens already held by `verifbill` to another account.

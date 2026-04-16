@@ -34,11 +34,6 @@ foreach ($name in $ContractName) {
         $sourceArgs += "src/verification_enterprise.cpp"
         $sourceArgs += "src/verification_core.cpp"
     }
-    elseif ($name -eq "verifretail") {
-        $sourceFile = Join-Path $projectRoot "src\verification_retail_entry.cpp"
-        $compilerArgs += "-DVERIFICATION_RETAIL_BUILD"
-        $sourceArgs = @("src/verification_retail_entry.cpp", "src/verification_retail.cpp", "src/verification_core.cpp")
-    }
     elseif ($name -eq "verifbill") {
         $sourceFile = Join-Path $projectRoot "src\verification_billing_entry.cpp"
         $sourceArgs = @("src/verification_billing_entry.cpp", "src/verification_billing.cpp")

@@ -40,10 +40,6 @@ build_contract() {
         compiler_args+=("-DVERIFICATION_ENTERPRISE_BUILD")
         source_args+=("src/verification_enterprise.cpp")
         source_args+=("src/verification_core.cpp")
-    elif [[ "${contract_name}" == "verifretail" ]]; then
-        source_file="src/verification_retail_entry.cpp"
-        compiler_args+=("-DVERIFICATION_RETAIL_BUILD")
-        source_args=("src/verification_retail_entry.cpp" "src/verification_retail.cpp" "src/verification_core.cpp")
     elif [[ "${contract_name}" == "verifbill" ]]; then
         source_file="src/verification_billing_entry.cpp"
         source_args=("src/verification_billing_entry.cpp" "src/verification_billing.cpp")

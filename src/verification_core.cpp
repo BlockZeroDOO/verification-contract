@@ -1,6 +1,4 @@
-#if defined(VERIFICATION_RETAIL_BUILD)
-#include <verification_retail.hpp>
-#elif defined(VERIFICATION_ENTERPRISE_BUILD)
+#if defined(VERIFICATION_ENTERPRISE_BUILD)
 #include <verification_enterprise.hpp>
 #else
 #include <verification_core.hpp>

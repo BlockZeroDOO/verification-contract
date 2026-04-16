@@ -12,7 +12,7 @@ extern "C" {
                     (settoken)(rmtoken)
                     (setplan)(deactplan)
                     (setpack)(deactpack)
-                    (grantdelegate)(revokedeleg)
+                    (grantdelegate)(revokedeleg)(setverifacct)
                     (use)(consume)(withdraw)
                 )
             }

@@ -221,6 +221,16 @@ void verification_enterprise::disablezk(uint64_t id) {
     });
 }
 
+void verification_enterprise::setauthsrcs(const name& billing_account, const name& retail_payment_account) {
+    require_auth(get_self());
+    check(is_account(billing_account), "billing_account does not exist");
+    check(is_account(retail_payment_account), "retail_payment_account does not exist");
+    check(billing_account != retail_payment_account, "billing_account and retail_payment_account must differ");
+
+    auth_source_singleton auth_sources(get_self(), get_self().value);
+    auth_sources.set(auth_source_config{billing_account, retail_payment_account}, get_self());
+}
+
 void verification_enterprise::submit(
     const name& submitter,
     uint64_t schema_id,
@@ -454,11 +464,17 @@ verification_enterprise::policy_row verification_enterprise::require_policy(uint
     return verification_core::require_policy(get_self(), id);
 }
 
+verification_enterprise::auth_source_config verification_enterprise::get_auth_source_config() const {
+    auth_source_singleton auth_sources(get_self(), get_self().value);
+    return auth_sources.exists() ? auth_sources.get() : auth_source_config{};
+}
+
 verification_enterprise::usage_authorization_ref verification_enterprise::require_usage_authorization(
     uint8_t mode,
     const name& submitter,
     const checksum256& external_ref
 ) const {
+    const auto auth_sources = get_auth_source_config();
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     const auto now = time_point_sec(current_time_point());
 
@@ -468,22 +484,22 @@ verification_enterprise::usage_authorization_ref verification_enterprise::requir
     name source_contract = name{};
 
     {
-        enterprise_usage_auth_table usage_auths(billing_account, billing_account.value);
+        enterprise_usage_auth_table usage_auths(auth_sources.billing_account, auth_sources.billing_account.value);
         auto by_request = usage_auths.get_index<"byrequest"_n>();
         auto existing = by_request.find(request_key);
         if (existing != by_request.end() &&
             !existing->consumed &&
             existing->submitter == submitter &&
-            existing->mode == mode &&
-            existing->expires_at > now) {
+        existing->mode == mode &&
+        existing->expires_at > now) {
             has_enterprise_auth = true;
             auth_id = existing->auth_id;
-            source_contract = billing_account;
+            source_contract = auth_sources.billing_account;
         }
     }
 
     {
-        retail_usage_auth_table usage_auths(retail_payment_account, retail_payment_account.value);
+        retail_usage_auth_table usage_auths(auth_sources.retail_payment_account, auth_sources.retail_payment_account.value);
         auto by_request = usage_auths.get_index<"byrequest"_n>();
         auto existing = by_request.find(request_key);
         if (existing != by_request.end() &&
@@ -493,7 +509,7 @@ verification_enterprise::usage_authorization_ref verification_enterprise::requir
             existing->external_ref == external_ref) {
             has_retail_auth = true;
             auth_id = existing->auth_id;
-            source_contract = retail_payment_account;
+            source_contract = auth_sources.retail_payment_account;
         }
     }
 

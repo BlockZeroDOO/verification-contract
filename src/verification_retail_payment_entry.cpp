@@ -9,7 +9,7 @@ extern "C" {
             switch (action) {
                 EOSIO_DISPATCH_HELPER(
                     verification_retail_payment,
-                    (settoken)(rmtoken)(setprice)(consume)(withdraw)
+                    (settoken)(rmtoken)(setprice)(setverifacct)(consume)(withdraw)
                 )
             }
             return;

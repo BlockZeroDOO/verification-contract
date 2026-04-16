@@ -62,6 +62,9 @@ public:
     void revokedeleg(const name& payer, const name& submitter);
 
     [[eosio::action]]
+    void setverifacct(const name& verification_account);
+
+    [[eosio::action]]
     void use(const name& payer, const name& submitter, uint8_t mode, const checksum256& external_ref);
 
     [[eosio::action]]
@@ -94,6 +97,12 @@ private:
     using counter_state = verification_billing_tables::counter_state;
     using counter_singleton = verification_billing_tables::counter_singleton;
 
+    struct [[eosio::table("billconfig")]] billing_config {
+        name verification_account = "verif"_n;
+    };
+
+    using billing_config_singleton = singleton<"billconfig"_n, billing_config>;
+
     static constexpr uint8_t entitlement_kind_plan = 0;
     static constexpr uint8_t entitlement_kind_pack = 1;
     static constexpr uint8_t entitlement_status_active = 0;
@@ -114,6 +123,7 @@ private:
     uint64_t next_entitlement_id();
     uint64_t next_delegate_id();
     uint64_t next_usageauth_id();
+    billing_config get_billing_config() const;
     std::tuple<string, name, name> parse_purchase_memo(const string& memo) const;
     entitlement_row allocate_usage(const name& payer, uint8_t mode);
 };

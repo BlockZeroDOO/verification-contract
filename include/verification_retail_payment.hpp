@@ -31,6 +31,9 @@ public:
     void setprice(uint8_t mode, const name& token_contract, const asset& price);
 
     [[eosio::action]]
+    void setverifacct(const name& verification_account);
+
+    [[eosio::action]]
     void consume(uint64_t auth_id);
 
     [[eosio::action]]
@@ -54,7 +57,12 @@ private:
     using retail_counter_state = verification_retail_payment_tables::retail_counter_state;
     using retail_counter_singleton = verification_retail_payment_tables::retail_counter_singleton;
 
-    static constexpr name verification_account = "verif"_n;
+    struct [[eosio::table("retpaycfg")]] retail_payment_config {
+        name verification_account = "verif"_n;
+    };
+
+    using retail_payment_config_singleton = singleton<"retpaycfg"_n, retail_payment_config>;
+
     static constexpr uint8_t retail_mode_single = 0;
     static constexpr uint8_t retail_mode_batch = 1;
 
@@ -64,5 +72,6 @@ private:
     uint64_t next_retail_token_id();
     uint64_t next_retail_tariff_id();
     uint64_t next_retail_auth_id();
+    retail_payment_config get_retail_payment_config() const;
     std::tuple<uint8_t, name, checksum256> parse_payment_memo(const string& memo) const;
 };

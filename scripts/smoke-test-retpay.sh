@@ -5,6 +5,7 @@ set -euo pipefail
 RPC_URL="${RPC_URL:-https://jungle4.api.eosnation.io}"
 READ_RPC_URL="${READ_RPC_URL:-${RPC_URL}}"
 RETPAY_ACCOUNT="${RETPAY_ACCOUNT:-verifretpay}"
+VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
 OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
 SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
@@ -91,7 +92,7 @@ wait_for_consumed_auth() {
     local deadline=$(( $(date -u +%s) + WAIT_TIMEOUT_SEC ))
     while true; do
         if get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" "rtlauths" | \
-            "${JQ_BIN}" -e ".rows[] | select(.auth_id == ${auth_id} and .consumed == true)" >/dev/null 2>&1; then
+            "${JQ_BIN}" -e ".rows[] | select(.auth_id == ${auth_id} and ((.consumed == true) or (.consumed == 1)))" >/dev/null 2>&1; then
             return 0
         fi
 
@@ -111,6 +112,11 @@ EXTREF_BATCH="$(hash_text "retpay-batch-${TIMESTAMP}")"
 log "Configuring accepted retail payment token"
 cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" settoken \
     "[\"${PAYMENT_TOKEN_CONTRACT}\",\"${PAYMENT_PRECISION},${PAYMENT_SYMBOL}\"]" \
+    -p "${OWNER_ACCOUNT}@active"
+
+log "Configuring verification account for retail payment consume authorization"
+cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" setverifacct \
+    "[\"${VERIFICATION_ACCOUNT}\"]" \
     -p "${OWNER_ACCOUNT}@active"
 
 log "Configuring retail single tariff"
@@ -154,7 +160,7 @@ fi
 SINGLE_AUTH_ID="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -r \
     --arg submitter "${SUBMITTER_ACCOUNT}" \
     --arg external_ref "${EXTREF_SINGLE}" \
-    '.rows[] | select(.submitter == $submitter and .external_ref == $external_ref and .consumed == false) | .auth_id' | tail -n 1)"
+    '.rows[] | select(.submitter == $submitter and .external_ref == $external_ref and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
 
 log "Consuming retail single authorization"
 cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" consume "[${SINGLE_AUTH_ID}]" -p "${OWNER_ACCOUNT}@active"

@@ -112,9 +112,18 @@ void verification_retail_payment::setprice(uint8_t mode, const name& token_contr
     });
 }
 
+void verification_retail_payment::setverifacct(const name& verification_account) {
+    require_auth(get_self());
+    check(is_account(verification_account), "verification_account does not exist");
+
+    retail_payment_config_singleton config(get_self(), get_self().value);
+    config.set(retail_payment_config{verification_account}, get_self());
+}
+
 void verification_retail_payment::consume(uint64_t auth_id) {
+    const auto config = get_retail_payment_config();
     check(
-        has_auth(get_self()) || has_auth(verification_account),
+        has_auth(get_self()) || has_auth(config.verification_account),
         "missing required authority of retail payment contract or verif"
     );
     verification_validators::validate_registry_id(auth_id, "auth_id");
@@ -256,6 +265,11 @@ uint64_t verification_retail_payment::next_retail_auth_id() {
     state.next_auth_id = allocated + 1;
     counters.set(state, get_self());
     return allocated;
+}
+
+verification_retail_payment::retail_payment_config verification_retail_payment::get_retail_payment_config() const {
+    retail_payment_config_singleton config(get_self(), get_self().value);
+    return config.exists() ? config.get() : retail_payment_config{};
 }
 
 std::tuple<uint8_t, name, checksum256> verification_retail_payment::parse_payment_memo(const string& memo) const {

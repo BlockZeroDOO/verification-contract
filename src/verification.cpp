@@ -11,7 +11,7 @@ extern "C" {
                     verification_enterprise,
                     (issuekyc)(renewkyc)(revokekyc)(suspendkyc)
                     (addschema)(updateschema)(deprecate)
-                    (setpolicy)(enablezk)(disablezk)
+                    (setpolicy)(enablezk)(disablezk)(setauthsrcs)
                     (submit)(supersede)(revokecmmt)(expirecmmt)
                     (submitroot)(linkmanifest)(closebatch)
                     (withdraw)

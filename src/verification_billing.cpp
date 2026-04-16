@@ -258,6 +258,14 @@ void verification_billing::revokedeleg(const name& payer, const name& submitter)
     });
 }
 
+void verification_billing::setverifacct(const name& verification_account) {
+    require_auth(get_self());
+    check(is_account(verification_account), "verification_account does not exist");
+
+    billing_config_singleton config(get_self(), get_self().value);
+    config.set(billing_config{verification_account}, get_self());
+}
+
 void verification_billing::use(const name& payer, const name& submitter, uint8_t mode, const checksum256& external_ref) {
     check(is_account(payer), "payer account does not exist");
     check(is_account(submitter), "submitter account does not exist");
@@ -294,8 +302,9 @@ void verification_billing::use(const name& payer, const name& submitter, uint8_t
 }
 
 void verification_billing::consume(uint64_t auth_id) {
+    const auto config = get_billing_config();
     check(
-        has_auth(get_self()) || has_auth("verif"_n),
+        has_auth(get_self()) || has_auth(config.verification_account),
         "missing required authority of billing contract or verif"
     );
     verification_validators::validate_registry_id(auth_id, "auth_id");
@@ -494,6 +503,11 @@ uint64_t verification_billing::next_usageauth_id() {
     state.next_usageauth_id = allocated + 1;
     counters.set(state, get_self());
     return allocated;
+}
+
+verification_billing::billing_config verification_billing::get_billing_config() const {
+    billing_config_singleton config(get_self(), get_self().value);
+    return config.exists() ? config.get() : billing_config{};
 }
 
 std::tuple<string, name, name> verification_billing::parse_purchase_memo(const string& memo) const {

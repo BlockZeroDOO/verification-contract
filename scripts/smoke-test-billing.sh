@@ -5,6 +5,7 @@ set -euo pipefail
 RPC_URL="${RPC_URL:-https://jungle4.api.eosnation.io}"
 READ_RPC_URL="${READ_RPC_URL:-${RPC_URL}}"
 BILLING_ACCOUNT="${BILLING_ACCOUNT:-verifbill}"
+VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
 OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
 PAYER_ACCOUNT="${PAYER_ACCOUNT:-}"
 SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
@@ -101,6 +102,11 @@ cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" settoken \
     "[\"${PAYMENT_TOKEN_CONTRACT}\",\"${PAYMENT_PRECISION},${PAYMENT_SYMBOL}\"]" \
     -p "${OWNER_ACCOUNT}@active"
 
+log "Configuring verification account for billing consume authorization"
+cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" setverifacct \
+    "[\"${VERIFICATION_ACCOUNT}\"]" \
+    -p "${OWNER_ACCOUNT}@active"
+
 log "Configuring enterprise plan"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" setplan \
     "[\"${PLAN_CODE}\",\"${PAYMENT_TOKEN_CONTRACT}\",\"${PLAN_PRICE}\",${PLAN_DURATION_SEC},${PLAN_SINGLE_QUOTA},${PLAN_BATCH_QUOTA},true]" \
@@ -149,7 +155,7 @@ wait_for_table_match \
     "${BILLING_ACCOUNT}" \
     "${BILLING_ACCOUNT}" \
     "usageauths" \
-    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 0 and .consumed == false)" \
+    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 0 and ((.consumed == false) or (.consumed == 0)))" \
     "single usage authorization"
 
 log "Rejecting duplicate enterprise single authorization for the same request"
@@ -162,7 +168,7 @@ fi
 
 SINGLE_AUTH_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
     --arg submitter "${SUBMITTER_ACCOUNT}" \
-    '.rows[] | select(.submitter == $submitter and .mode == 0 and .consumed == false) | .auth_id' | tail -n 1)"
+    '.rows[] | select(.submitter == $submitter and .mode == 0 and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
 
 log "Consuming enterprise single usage authorization"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" consume "[${SINGLE_AUTH_ID}]" -p "${OWNER_ACCOUNT}@active"
@@ -171,7 +177,7 @@ wait_for_table_match \
     "${BILLING_ACCOUNT}" \
     "${BILLING_ACCOUNT}" \
     "usageauths" \
-    ".rows[] | select(.auth_id == ${SINGLE_AUTH_ID} and .consumed == true)" \
+    ".rows[] | select(.auth_id == ${SINGLE_AUTH_ID} and ((.consumed == true) or (.consumed == 1)))" \
     "consumed single usage authorization"
 
 log "Creating enterprise batch usage authorization"
@@ -183,7 +189,7 @@ wait_for_table_match \
     "${BILLING_ACCOUNT}" \
     "${BILLING_ACCOUNT}" \
     "usageauths" \
-    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 1 and .consumed == false)" \
+    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 1 and ((.consumed == false) or (.consumed == 0)))" \
     "batch usage authorization"
 
 if [[ "${PAYER_ACCOUNT}" != "${SUBMITTER_ACCOUNT}" ]]; then

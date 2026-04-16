@@ -80,6 +80,9 @@ public:
     void disablezk(uint64_t id);
 
     [[eosio::action]]
+    void setauthsrcs(const name& billing_account, const name& retail_payment_account);
+
+    [[eosio::action]]
     void submit(
         const name& submitter,
         uint64_t schema_id,
@@ -144,14 +147,20 @@ private:
         uint64_t auth_id;
     };
 
-    static constexpr name billing_account = "verifbill"_n;
-    static constexpr name retail_payment_account = "verifretpay"_n;
+    struct [[eosio::table("authsources")]] auth_source_config {
+        name billing_account = "verifbill"_n;
+        name retail_payment_account = "verifretpay"_n;
+    };
+
+    using auth_source_singleton = singleton<"authsources"_n, auth_source_config>;
+
     static constexpr uint8_t enterprise_mode_single = 0;
     static constexpr uint8_t enterprise_mode_batch = 1;
 
     kyc_row require_kyc_record(const name& account) const;
     schema_row require_schema(uint64_t id) const;
     policy_row require_policy(uint64_t id) const;
+    auth_source_config get_auth_source_config() const;
     usage_authorization_ref require_usage_authorization(
         uint8_t mode,
         const name& submitter,

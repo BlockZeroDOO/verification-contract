@@ -1,22 +1,18 @@
 # Retail Payment Deploy
 
-This runbook covers deployment of the `verifretpay` contract.
+This runbook covers deployment of the supported retail payment contract `verifretpay`.
 
 Repository boundary:
 
-- `C:\projects\verification-contract` owns `verif`, `verifbill`, `verifretpay`, and `verifretail`
-- `C:\projects\deNotary` owns the off-chain backend
-- `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
+- `C:\projects\verification-contract` owns `verif`, `verifbill`, and `verifretpay`
 
 ## Purpose
 
-`verifretpay` is the retail payment and authorization contract for:
+`verifretpay` is used for:
 
-- accepted retail payment tokens
-- exact retail tariffs
-- one-time retail usage authorizations consumed by `verif`
-
-It is the target retail payment surface for the unified architecture.
+- accepted retail tokens
+- exact tariffs
+- one-time retail authorization consumed by `verif`
 
 ## Build
 
@@ -24,34 +20,24 @@ It is the target retail payment surface for the unified architecture.
 ./scripts/build-retpay.sh
 ```
 
-Expected artifacts:
+Artifacts:
 
 - `dist/verifretpay/verifretpay.wasm`
 - `dist/verifretpay/verifretpay.abi`
 
-## deNotary Deploy
+## Deploy
+
+deNotary:
 
 ```bash
 ./scripts/deploy-retpay-denotary.sh
 ```
 
-Defaults:
-
-- `RPC_URL=https://history.denotary.io`
-- `RETPAY_ACCOUNT=verifretpay`
-- `BUILD_BEFORE_DEPLOY=true`
-
-## Jungle4 Deploy
+Jungle4:
 
 ```bash
 ./scripts/deploy-retpay-jungle4.sh
 ```
-
-Defaults:
-
-- `RPC_URL=https://jungle4.api.eosnation.io`
-- `RETPAY_ACCOUNT=verifretpay`
-- `BUILD_BEFORE_DEPLOY=true`
 
 ## Verify
 
@@ -61,9 +47,7 @@ cleos -u <rpc> get table verifretpay verifretpay rtltariffs
 cleos -u <rpc> get table verifretpay verifretpay rtlauths
 ```
 
-## Post-deploy wiring
-
-After deploy, point `verifretpay` at the deployed `verif` account that is allowed to consume retail usage authorizations:
+## Wiring
 
 ```bash
 cleos -u <rpc> push action verifretpay setverifacct '["verif"]' -p verifretpay@active

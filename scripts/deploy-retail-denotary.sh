@@ -24,8 +24,8 @@ if [[ "${BUILD_BEFORE_DEPLOY}" == "true" ]]; then
     "${SCRIPT_DIR}/build-retail.sh"
 fi
 
-echo "[deploy-retail-denotary] WARNING: verifretail is a deprecated compatibility path."
-echo "[deploy-retail-denotary] Prefer deploying verif + verifretpay for new environments."
+echo "[deploy-retail-denotary] WARNING: verifretail is a legacy contract and not part of the supported architecture."
+echo "[deploy-retail-denotary] Supported retail model: verif + verifretpay."
 
 echo "[deploy-retail-denotary] Verifying retail chain account"
 cleos -u "${RPC_URL}" get account "${RETAIL_ACCOUNT}" >/dev/null

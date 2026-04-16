@@ -1,82 +1,37 @@
 # Verification Contract Reference
 
-## Purpose
+## Supported Contracts
 
-This document is the full on-chain reference for the contracts in this repository:
+This repository supports three on-chain contracts:
 
 - `verif`
 - `verifbill`
 - `verifretpay`
 
-The repository contains one primary unified anchoring contract and one deprecated compatibility anchoring contract:
+`verif` is the only supported registry.
 
-- schema registry
-- policy registry
-- single commitment anchoring
-- batch anchoring
-- append-only commitment anchoring
-- embedded-manifest batch anchoring in the primary path
-
-They differ in the access and payment model:
-
-- `verif` is the unified anchoring contract
-- `verifbill` is the enterprise billing and entitlement contract
-- `verifretpay` is the wallet-first retail payment and authorization contract
-- `verifretail` is a deprecated compatibility retail anchoring contract retained during migration
-
-## Contract Roles
-
-### `verif`
-
-`verif` is the unified anchoring contract.
-
-It is intended for:
-
-- enterprise customers
-- integrators
-- self-prepared transactions
-- direct client-side transaction signing
-- client-hosted or private backends
-
-It accepts external one-time usage authorization from both:
-
-- `verifbill` for enterprise usage
-- `verifretpay` for retail usage
-
-The enterprise payment model is a separate billing contract:
-
-- see [docs/enterprise-billing-architecture.md](/c:/projects/verification-contract/docs/enterprise-billing-architecture.md:1)
-
-### `verifretpay`
+`verifbill` is the enterprise payment contract.
 
 `verifretpay` is the retail payment contract.
 
-It is intended for:
+## `verif`
 
-- wallet-first end users
-- exact on-chain payment for each request
-- one-time retail authorization for downstream `verif`
+### Purpose
 
-It supports:
+`verif` is the unified registry and anchoring contract.
 
-- exact single-payment authorizations
-- exact batch-payment authorizations
-- atomic `transfer + submit` when paired with `verif`
-- atomic `transfer + submitroot` when paired with `verif`
+It is responsible for:
 
-### `verifretail`
+- schema registry
+- policy registry
+- single-record anchoring
+- batch anchoring
+- request uniqueness
+- consuming external usage authorization after successful anchor creation
 
-`verifretail` is the deprecated compatibility retail contract.
+### Tables
 
-It keeps the old wallet-first retail anchoring flow available during migration, but it is no longer the target end-state architecture.
-
-## Shared Data Model
-
-Both contracts use the same core business registries.
-
-### `schemas`
-
-Stores schema and canonicalization references.
+#### `schemas`
 
 Fields:
 
@@ -88,14 +43,7 @@ Fields:
 - `created_at`
 - `updated_at`
 
-Meaning:
-
-- each anchoring request references an existing schema
-- the contract does not store the canonicalization algorithm itself, only its committed hash/reference
-
-### `policies`
-
-Stores submit rules.
+#### `policies`
 
 Fields:
 
@@ -106,13 +54,7 @@ Fields:
 - `created_at`
 - `updated_at`
 
-Meaning:
-
-- controls whether a request may use `submit` or `submitroot`
-
-### `commitments`
-
-Stores single-record anchors.
+#### `commitments`
 
 Fields:
 
@@ -126,15 +68,7 @@ Fields:
 - `block_num`
 - `created_at`
 
-Meaning:
-
-- one on-chain single-record anchor
-- `request_key` enforces uniqueness for the request
-- append-only commitment record in the primary unified path
-
-### `batches`
-
-Stores batch anchors.
+#### `batches`
 
 Fields:
 
@@ -150,353 +84,92 @@ Fields:
 - `block_num`
 - `created_at`
 
-Meaning:
-
-- one batch root anchoring record
-- manifest is embedded at creation time in the primary `verif` path
-- append-only batch record in the primary unified path
-
-### `counters`
-
-Stores monotonic IDs.
+#### `counters`
 
 Fields:
 
 - `next_commitment_id`
 - `next_batch_id`
 
-Meaning:
+### Actions
 
-- internal monotonic ID source for rows created by the contract
-
-## Shared Actions
-
-The following actions define the unified `verif` action surface and are still mirrored by `verifretail` only for compatibility.
-
-### Schema Governance
+#### Governance
 
 - `addschema(id, version, canonicalization_hash, hash_policy)`
 - `updateschema(id, version, canonicalization_hash, hash_policy)`
 - `deprecate(id)`
-
-Purpose:
-
-- create and maintain the schema registry used by submit flows
-
-Expected authority:
-
-- contract owner / governance account
-
-### Policy Governance
-
 - `setpolicy(id, allow_single, allow_batch, active)`
+- `setauthsrcs(billing_account, retail_payment_account)`
 
-Purpose:
-
-- create and maintain minimal submit rules
-
-Expected authority:
-
-- contract owner / governance account
-
-### Single Anchoring
+#### Anchoring
 
 - `submit(submitter, schema_id, policy_id, object_hash, external_ref)`
-
-Purpose:
-
-- anchors a single object hash on-chain
-
-Validation:
-
-- active schema must exist
-- active policy must exist
-- policy must allow single-submit mode
-- `object_hash` must be non-zero
-- `external_ref` must be non-zero
-- request must be unique
-
-Expected authority:
-
-- `submitter`
-
-### Batch Anchoring
-
 - `submitroot(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref)`
 
-Purpose:
-
-- anchor a batch root
-- attach immutable manifest reference in the same action
-
-Validation:
-
-- active schema must exist
-- active policy must exist
-- policy must allow batch mode
-- `root_hash` must be non-zero
-- `manifest_hash` must be non-zero
-- `external_ref` must be non-zero
-- `leaf_count > 0`
-- request must be unique
-
-Expected authority:
-
-- `submitter`
-
-### Treasury
+#### Treasury
 
 - `withdraw(token_contract, to, quantity, memo)`
 
-Purpose:
+### Validation Rules
 
-- move tokens already held by the contract to another account
+`submit(...)` requires:
 
-Expected authority:
+- active schema
+- active policy
+- policy allows single mode
+- non-zero `object_hash`
+- non-zero `external_ref`
+- unique request
+- valid external authorization
 
-- contract owner / governance account
+`submitroot(...)` requires:
 
-## Shared Status Model
+- active schema
+- active policy
+- policy allows batch mode
+- non-zero `root_hash`
+- non-zero `manifest_hash`
+- non-zero `external_ref`
+- `leaf_count > 0`
+- unique request
+- valid external authorization
 
-### Commitment status
+### Authorization Wiring
 
-- `0 = active`
+`verif` accepts one-time authorization from:
 
-Compatibility note:
+- `verifbill`
+- `verifretpay`
 
-- legacy compatibility paths may still interpret historical values for superseded, revoked, or expired commitments
+The deployed accounts are configured through:
 
-### Batch status
+- `setauthsrcs(billing_account, retail_payment_account)`
 
-Important:
+## `verifbill`
 
-- finality is not modeled as an on-chain business status inside the contract
+### Purpose
 
-## `verif` Specific Behavior
+`verifbill` is the enterprise payment and authorization contract.
 
-### Product model
+It is responsible for:
 
-`verif` is the clean unified anchoring contract.
+- accepted billing tokens
+- plans
+- packs
+- entitlements
+- request-bound enterprise auth
+- downstream consume authorization for `verif`
 
-Its main properties:
+### Tables
 
-- no embedded payment logic
-- no requirement for a trusted backend
-- submitter can prepare and sign transactions directly
-- suited for enterprise and integrator usage
-- no on-chain KYC access model
-- `submit` and `submitroot` require a matching external usage authorization
-- the external authorization may come from:
-  - `verifbill`
-  - `verifretpay`
+- `billtokens`
+- `plans`
+- `packs`
+- `entitlements`
+- `usageauths`
+- `billcounters`
 
-### Legacy cleanup
-
-`verif` no longer carries the former proof-payment surface.
-
-Removed from the enterprise contract:
-
-- all legacy proof-payment actions
-- all legacy proof-payment tables
-- the former enterprise-side transfer payment path
-
-## `verifretpay` Specific Behavior
-
-### Product model
-
-`verifretpay` is the retail payment and authorization contract.
-
-Its main properties:
-
-- no deposit model
-- no prepaid internal balance
-- exact tariff matching
-- usage authorization is one-time and per request
-- payer must currently match submitter
-
-### Retail Tables
-
-#### `rtltokens`
-
-Stores accepted payment tokens.
-
-Fields:
-
-- `config_id`
-- `token_contract`
-- `token_symbol`
-- `enabled`
-- `updated_at`
-
-Purpose:
-
-- whitelist tokens that may be used for retail payment
-
-#### `rtltariffs`
-
-Stores exact tariffs.
-
-Fields:
-
-- `config_id`
-- `mode`
-- `token_contract`
-- `price`
-- `active`
-- `updated_at`
-
-Meaning:
-
-- `mode = 0` means single submit
-- `mode = 1` means batch submit
-
-#### `rtlauths`
-
-Stores one-time retail usage authorizations.
-
-Fields:
-
-- `auth_id`
-- `mode`
-- `payer`
-- `submitter`
-- `external_ref`
-- `request_key`
-- `token_contract`
-- `quantity`
-- `consumed`
-- `created_at`
-- `consumed_at`
-
-Purpose:
-
-- links one incoming transfer to one exact request
-- consumed after successful use by downstream `verif`
-
-#### `rtlcounters`
-
-Stores retail-specific monotonic IDs.
-
-Fields:
-
-- `next_token_id`
-- `next_tariff_id`
-- `next_auth_id`
-
-### Retail-only Actions
-
-- `settoken(token_contract, token_symbol)`
-- `rmtoken(token_contract, token_symbol)`
-- `setprice(mode, token_contract, price)`
-- `consume(auth_id)`
-
-Purpose:
-
-- configure accepted tokens and exact prices for retail submit flows
-
-Expected authority:
-
-- contract owner / governance account
-
-### Retail Transfer Flow
-
-Retail payment happens through:
-
-- `eosio.token::transfer -> verifretpay`
-
-The contract parses the transfer memo and creates a one-time pending usage authorization.
-
-Current memo format:
-
-```text
-single|submitter|external_ref_hex
-batch|submitter|external_ref_hex
-```
-
-Interpretation:
-
-- `single` means the payment is for `submit`
-- `batch` means the payment is for `submitroot`
-- `submitter` is the account that will later call the action
-- `external_ref_hex` is the request reference that must match the later submit
-
-### Retail Payment Rules
-
-Current rules:
-
-- exact payment only
-- underpayment is rejected
-- wrong token is rejected
-- mode mismatch is rejected
-- authorization must be pending and unconsumed
-- submitter and payer are currently expected to be the same account
-
-### Retail Authorization Consumption
-
-`verifretpay` does not anchor by itself. Instead:
-
-- it creates a retail authorization bound to the request key
-- `verif` may use that authorization for `submit` or `submitroot`
-- `verif` consumes the authorization after successful anchor creation
-
-This is the target retail path for the unified architecture.
-
-## `verifretail` Specific Behavior
-
-### Product model
-
-`verifretail` is the deprecated compatibility retail anchoring contract.
-
-It keeps the older wallet-first `atomic pay + submit` flow available while migration proceeds toward the unified `verif + verifretpay` architecture.
-
-### Compatibility role
-
-Current role:
-
-- preserve the already validated legacy retail path
-- provide backward compatibility for deployments not yet migrated to `verifretpay`
-- avoid forcing a hard cutover in one step
-- stay out of the primary deploy and smoke path
-
-## `verifbill` Specific Behavior
-
-### Product model
-
-`verifbill` is the enterprise billing and entitlement contract.
-
-Its main properties:
-
-- no deposit balance inside `verif`
-- plans and packs instead of floating internal balance
-- one-time usage authorization tied to request key
-
-### Billing Tables
-
-#### `billtokens`
-
-Stores accepted enterprise billing tokens.
-
-#### `plans`
-
-Stores plan definitions with duration and single or batch quotas.
-
-#### `packs`
-
-Stores usage-pack definitions with single or batch units.
-
-#### `entitlements`
-
-Stores purchased plan and pack rights for a payer.
-
-#### `usageauths`
-
-Stores one-time enterprise usage authorizations created by `use(...)`.
-
-#### `billcounters`
-
-Stores monotonic IDs for enterprise billing tables.
-
-### Billing Actions
+### Actions
 
 - `settoken(token_contract, token_symbol)`
 - `rmtoken(token_contract, token_symbol)`
@@ -506,11 +179,12 @@ Stores monotonic IDs for enterprise billing tables.
 - `deactpack(pack_id)`
 - `use(payer, submitter, mode, external_ref)`
 - `consume(auth_id)`
+- `setverifacct(verification_account)`
 - `withdraw(token_contract, to, quantity, memo)`
 
-### Billing Transfer Flow
+### Purchase Flow
 
-Enterprise purchases happen through:
+Enterprise purchases are funded through:
 
 - `eosio.token::transfer -> verifbill`
 
@@ -521,134 +195,108 @@ plan|payer|plan_code
 pack|payer|pack_code
 ```
 
-### Current implementation boundary
+### Usage Flow
 
-`verifbill` already owns enterprise purchase, quota allocation, and usage-authorization state.
+1. enterprise payer buys plan or pack
+2. `use(...)` issues one-time auth for a concrete request
+3. `verif` anchors the request
+4. `verif` calls `verifbill::consume(...)`
 
-`verif` validates enterprise usage authorization from `verifbill` and consumes it after successful anchor creation.
+### Authority Model
 
-## Unified Authorization Wiring
+- governance config is controlled by contract authority
+- `use(...)` accepts real user authority
+- account delegation should be handled by native Antelope permissions, not by contract state
 
-### `verif::setauthsrcs`
+## `verifretpay`
 
-Configures the two external authorization sources used by `verif`:
+### Purpose
 
-- `billing_account`
-- `retail_payment_account`
+`verifretpay` is the supported retail payment and authorization contract.
 
-This allows real deployed account names to differ from the canonical contract names.
+It is responsible for:
 
-### `verifbill::setverifacct`
+- accepted retail tokens
+- exact tariffs
+- one-time retail auth for `verif`
+- downstream consume authorization for `verif`
 
-Configures which deployed `verif` account is allowed to call `verifbill::consume(...)`.
+### Tables
 
-### `verifretpay::setverifacct`
+- `rtltokens`
+- `rtltariffs`
+- `rtlauths`
+- `rtlcounters`
 
-Configures which deployed `verif` account is allowed to call `verifretpay::consume(...)`.
+### Actions
 
-## Authorization Model
+- `settoken(token_contract, token_symbol)`
+- `rmtoken(token_contract, token_symbol)`
+- `setprice(mode, token_contract, price)`
+- `consume(auth_id)`
+- `setverifacct(verification_account)`
+- `withdraw(token_contract, to, quantity, memo)`
 
-### Governance account
+### Retail Payment Flow
 
-The governance account is responsible for:
+Retail payment is funded through:
 
-- schema management
-- policy management
-- tariff and token management in retail
-- withdrawals
+- `eosio.token::transfer -> verifretpay`
 
-### Submitter
+Current memo format:
 
-The submitter is responsible for:
+```text
+single|submitter|external_ref_hex
+batch|submitter|external_ref_hex
+```
 
-- `submit`
-- `submitroot`
+Rules:
 
-### Retail payer
+- exact payment only
+- underpayment is rejected
+- wrong token is rejected
+- mode mismatch is rejected
+- auth is one-time and request-bound
+- payer currently must match submitter
 
-In retail flow, the payer currently:
+### Usage Flow
 
-- sends the exact token transfer
-- must match the declared submitter
+1. retail payer transfers exact amount to `verifretpay`
+2. `verifretpay` creates one-time auth for the request
+3. `verif` anchors the request
+4. `verif` calls `verifretpay::consume(...)`
 
-### Enterprise payer and submitter
+## Deployment Names
 
-In enterprise flow:
+Canonical names:
 
-- the payer buys plans and packs on-chain through `verifbill`
-- `use(...)` accepts authority from either the payer or the submitter
-- account-level delegation is expected to be handled through native Antelope permissions, not contract state
-
-## Request Identity and Uniqueness
-
-Both contracts derive request uniqueness from request-key semantics.
-
-Inputs used by the contract-level model include:
-
-- submitter
-- external reference
-- mode or lifecycle context
-
-Practical effect:
-
-- duplicate request submission with the same request identity is rejected
-- duplicate batch submission with the same request identity is rejected
-
-## What These Contracts Do Not Do
-
-These contracts do not perform:
-
-- off-chain canonicalization
-- finality observation
-- receipt generation
-- audit indexing
-- ingress preparation
-- storage billing
-- DFS logic
-
-Those concerns are either:
-
-- off-chain concerns in `C:\projects\deNotary`
-- or DFS concerns in `C:\projects\decentralized_storage\contracts\dfs`
-
-## Deployment Notes
-
-Current final names:
-
-- unified anchoring contract/account: `verif`
-- retail payment contract/account: `verifretpay`
-- enterprise billing contract/account: `verifbill`
+- `verif`
+- `verifbill`
+- `verifretpay`
 
 Build outputs:
 
 - `dist/verif/verif.wasm`
 - `dist/verif/verif.abi`
-- `dist/verifretpay/verifretpay.wasm`
-- `dist/verifretpay/verifretpay.abi`
 - `dist/verifbill/verifbill.wasm`
 - `dist/verifbill/verifbill.abi`
+- `dist/verifretpay/verifretpay.wasm`
+- `dist/verifretpay/verifretpay.abi`
 
-Primary runbooks:
+## Primary Docs
 
 - [docs/enterprise-deploy.md](/c:/projects/verification-contract/docs/enterprise-deploy.md:1)
+- [docs/billing-deploy.md](/c:/projects/verification-contract/docs/billing-deploy.md:1)
 - [docs/retail-payment-deploy.md](/c:/projects/verification-contract/docs/retail-payment-deploy.md:1)
 - [docs/enterprise-onchain-smoke.md](/c:/projects/verification-contract/docs/enterprise-onchain-smoke.md:1)
+- [docs/billing-onchain-smoke.md](/c:/projects/verification-contract/docs/billing-onchain-smoke.md:1)
 - [docs/retail-payment-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-payment-onchain-smoke.md:1)
 - [docs/unified-retail-onchain-smoke.md](/c:/projects/verification-contract/docs/unified-retail-onchain-smoke.md:1)
 
 ## Summary
 
-`verif` is the clean unified anchoring contract.
+Supported production model:
 
-`verifretpay` is the target retail payment and authorization contract for the unified architecture.
-
-`verifretail` is a deprecated compatibility retail anchoring contract.
-
-`verifbill` is the enterprise billing and entitlement contract.
-
-Together they provide:
-
-- one canonical anchoring surface
-- one enterprise billing surface
-- one target retail payment surface
-- one deprecated compatibility retail anchoring surface during migration
+- `verif` as the only registry
+- `verifbill` as the enterprise payment model
+- `verifretpay` as the retail payment model

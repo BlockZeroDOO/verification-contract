@@ -508,7 +508,6 @@ Current contract set:
 - `verif`
 - `verifbill`
 - `verifretpay`
-- deprecated compatibility contract `verifretail`
 
 ## Working Recommendation
 

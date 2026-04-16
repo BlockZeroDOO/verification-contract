@@ -2,231 +2,148 @@
 
 ## Target Model
 
-Keep three contracts:
+Keep three supported contracts:
 
 - `verif`
 - `verifbill`
 - `verifretpay`
 
-Use `verif` as the single registry and anchoring surface.
+Use `verif` as the only supported registry and anchoring surface.
 
-Keep separate payment contracts because they represent different commercial flows:
+Use separate payment contracts because they represent different commercial flows:
 
 - `verifbill` for enterprise
-- `verifretpay` for retail
+- `verifretpay` for all other clients
 
-Replace contract-level access modeling with native Antelope permissions and account delegation.
+Use native Antelope permissions for account control instead of contract-level access registries.
 
 ## Design Principles
 
 1. One canonical registry
-- all commitments and batches live only in `verif`
+- all supported commitments and batches live only in `verif`
 
 2. Separate payment concerns
-- `verifbill` and `verifretpay` issue one-time request-bound authorizations
-- `verif` only verifies and consumes them
+- `verifbill` issues request-bound enterprise authorizations for `verif`
+- `verifretpay` issues request-bound retail authorizations for `verif`
+- `verif` verifies and consumes them
 
-3. No on-chain business access model
-- no KYC registry as an access gate
+3. No contract-level business access model
+- no on-chain KYC access registry
 - no delegate registry inside billing contracts
-- no allowlist unless absolutely necessary later
+- no duplicated access model in contract state
 
 4. Native authority over contract authority
-- who may sign a submit is determined by account permissions
-- contract state should not duplicate that model
+- the real signer controls submit permissions
+- enterprise operational delegation should be done with native account permissions
 
 5. Minimize mutable state
 - fewer tables
-- fewer long-lived rows
 - fewer lifecycle transitions
+- fewer long-lived rows
 
-## Recommended Contract Roles
+## Supported Roles
 
 ### `verif`
 
-Should keep:
+Keep:
 
-- schema registry
-- minimal policy/config registry
+- `schemas`
+- `policies`
 - `commitments`
 - `batches`
 - `submit`
 - `submitroot`
+- `setauthsrcs`
 
-Should not own:
+Do not keep:
 
 - payment logic
-- customer balances
-- entitlement logic
-- delegation logic
-- access registry logic
+- prepaid balances
+- KYC access logic
+- enterprise delegate state
 
 ### `verifbill`
 
-Should remain the enterprise payment contract.
+Keep:
 
-Near-term:
+- accepted billing tokens
+- plans
+- packs
+- entitlements
+- `use`
+- `consume`
+- `setverifacct`
 
-- keep enterprise purchases and request-bound auth
+Simplify:
 
-Mid-term:
-
-- remove on-chain delegate state
-- simplify enterprise pricing model if possible
+- keep native permissions as the only delegation model
+- do not reintroduce contract-level delegates
 
 ### `verifretpay`
 
-Should remain the retail payment contract.
-
 Keep:
 
-- exact tariff
-- transfer memo parsing
-- one-time request-bound auth
-- consume after successful anchor
-
-This contract is already close to the desired shape.
-
-## What To Remove From `verif`
-
-### Phase 1
-
-Remove KYC access model:
-
-- `issuekyc`
-- `renewkyc`
-- `revokekyc`
-- `suspendkyc`
-- KYC validation in `submit`
-- KYC validation in `submitroot`
-
-### Phase 2
-
-Simplify policy model.
-
-Keep only:
-
-- `allow_single`
-- `allow_batch`
-- `active`
-
-Remove from policy:
-
-- `require_kyc`
-- `min_kyc_level`
-- `allow_zk`
-
-Also remove:
-
-- `enablezk`
-- `disablezk`
-
-### Phase 3
-
-Reduce mutable lifecycle.
-
-Target removals:
-
-- `supersede`
-- `revokecmmt`
-- `expirecmmt`
-
-For batches, target simplification:
-
-- move `manifest_hash` into `submitroot`
-- remove `linkmanifest`
-- remove `closebatch`
-
-## What To Remove From `verifbill`
-
-### Phase 1
-
-Remove contract-level delegation:
-
-- `grantdelegate`
-- `revokedeleg`
-- `delegates` table
-- delegate checks in `use(...)`
-
-This is replaced by native account permissions and real submitter signatures.
-
-### Phase 2
-
-Reassess enterprise pricing complexity.
-
-Possible later simplification:
-
-- collapse plans and packs into a smaller exact-price or simple quota model
-
-But this is not required for the first simplification pass.
-
-## What To Keep In `verifretpay`
-
-Keep most of the current structure:
-
-- accepted tokens
+- accepted retail tokens
 - exact tariffs
 - one-time request-bound auth
-- consume after successful anchor
+- `consume`
+- `setverifacct`
 
-This remains the clean retail path.
+This is the supported retail payment contract.
 
-## Unified Runtime Flow
+## Runtime Flow
 
 ### Enterprise
 
 1. `token::transfer -> verifbill`
-2. `verifbill` issues one-time auth
-3. `verif::submit` or `verif::submitroot`
-4. `verifbill::consume`
+2. `verifbill` records plan or pack purchase
+3. `verifbill::use(...)` issues one-time auth
+4. `verif::submit(...)` or `submitroot(...)`
+5. `verifbill::consume(...)`
 
 ### Retail
 
 1. `token::transfer -> verifretpay`
 2. `verifretpay` issues one-time auth
-3. `verif::submit` or `verif::submitroot`
-4. `verifretpay::consume`
+3. `verif::submit(...)` or `submitroot(...)`
+4. `verifretpay::consume(...)`
 
-## First Implementation Slice
+## Simplification Work
 
-The safest first implementation slice is:
+### Completed
 
-1. save this revised roadmap
-2. remove KYC action surface from `verif`
-3. remove KYC runtime checks from `verif`
-4. simplify `verif::setpolicy` to minimal mode flags
-5. update enterprise smoke to no longer depend on KYC
+- removed KYC action surface from `verif`
+- removed KYC checks from `verif`
+- simplified `setpolicy(...)`
+- removed legacy commitment lifecycle actions from `verif`
+- embedded `manifest_hash` directly into `submitroot(...)`
+- removed contract-level delegate state from `verifbill`
 
-This gives immediate simplification with limited blast radius.
+### Remaining
 
-## Recommended Commit Sequence
-
-1. `docs: add revised contract simplification plan`
-2. `refactor: remove kyc access model from verif`
-3. `refactor: simplify verif policy shape`
-4. `refactor: remove delegate state from verifbill`
-5. `refactor: deprecate verifretail from primary path`
-6. `refactor: simplify verif commitment lifecycle`
-7. `refactor: simplify verif batch lifecycle`
+1. Remove unsupported documentation and legacy migration narratives
+2. Reduce or archive legacy retail artifacts that are no longer part of the supported model
+3. Reassess whether `verifbill` still needs full plan and pack complexity
+4. Add cleanup strategy for stale auth rows to reduce RAM pressure
 
 ## End State
 
-Final intended structure:
+Supported architecture:
 
 - `verif` = canonical registry
 - `verifbill` = enterprise payment/auth
 - `verifretpay` = retail payment/auth
-- access = native Antelope permissions
 
 This preserves:
 
 - one registry
-- separate enterprise and retail payment models
+- one enterprise model
+- one retail model
 - direct client-side transaction signing
 
-while materially reducing:
+while reducing:
 
+- duplicated retail paths
 - contract complexity
 - state size
-- RAM exposure
-- action surface
+- operational ambiguity

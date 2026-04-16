@@ -14,7 +14,7 @@ WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
 PAYMENT_SYMBOL="${PAYMENT_SYMBOL:-EOS}"
 PAYMENT_PRECISION="${PAYMENT_PRECISION:-4}"
-ENTERPRISE_PACK_CODE="${ENTERPRISE_PACK_CODE:-smokepack}"
+ENTERPRISE_PACK_CODE="${ENTERPRISE_PACK_CODE:-}"
 ENTERPRISE_PACK_PRICE="${ENTERPRISE_PACK_PRICE:-0.0500 EOS}"
 ENTERPRISE_PACK_INCLUDED_KIB="${ENTERPRISE_PACK_INCLUDED_KIB:-12}"
 BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
@@ -49,6 +49,11 @@ hash_text() {
         echo "A SHA-256 tool is required (sha256sum, shasum, or openssl)." >&2
         exit 1
     fi
+}
+
+normalize_name_fragment() {
+    local input="$1"
+    printf '%s' "${input}" | tr '06789' 'abcde'
 }
 
 log() {
@@ -208,6 +213,13 @@ get_batch_id_by_external_ref() {
 
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
 BASE_ID="$(date -u +%s)"
+if [[ -z "${ENTERPRISE_PACK_CODE}" ]]; then
+    ENTERPRISE_PACK_CODE="ep$(normalize_name_fragment "${TIMESTAMP:8:6}")"
+fi
+if [[ ${#ENTERPRISE_PACK_CODE} -gt 12 ]]; then
+    echo "ENTERPRISE_PACK_CODE must be 12 characters or fewer: ${ENTERPRISE_PACK_CODE}" >&2
+    exit 1
+fi
 
 SCHEMA_ID="${SCHEMA_ID:-$((BASE_ID + 1000))}"
 POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-$((BASE_ID + 2000))}"

@@ -157,13 +157,13 @@ get_rtlauth_id_by_external_ref() {
 }
 
 assert_rtlauth_consumed() {
-    local auth_id="$1"
+    local external_ref="$1"
     wait_for_table_match \
         "${RETPAY_ACCOUNT}" \
         "${RETPAY_ACCOUNT}" \
         "rtlauths" \
-        ".rows[] | select(.auth_id == ${auth_id} and ((.consumed == true) or (.consumed == 1)))" \
-        "consumed retail authorization ${auth_id}"
+        ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .external_ref == \"${external_ref}\" and ((.consumed == true) or (.consumed == 1)))" \
+        "consumed retail authorization for ${external_ref}"
 }
 
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
@@ -258,7 +258,7 @@ COMMITMENT_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOU
 assert_eq "${SUBMITTER_ACCOUNT}" "${COMMITMENT_SUBMITTER}" "unified retail commitment submitter"
 assert_eq "${BILLABLE_BYTES_SINGLE}" "${COMMITMENT_BYTES}" "unified retail commitment billable bytes"
 assert_eq "2" "${COMMITMENT_KIB}" "unified retail commitment billable kib"
-assert_rtlauth_consumed "${SINGLE_AUTH_ID}"
+assert_rtlauth_consumed "${SINGLE_EXTREF}"
 
 log "Funding unified retail auth for size mismatch test"
 cleos -u "${RPC_URL}" transfer \
@@ -332,6 +332,6 @@ assert_eq "${SUBMITTER_ACCOUNT}" "${BATCH_SUBMITTER}" "unified retail batch subm
 assert_eq "${MANIFEST_HASH}" "${BATCH_MANIFEST}" "unified retail batch manifest hash"
 assert_eq "${BILLABLE_BYTES_BATCH}" "${BATCH_BYTES}" "unified retail batch billable bytes"
 assert_eq "4" "${BATCH_KIB}" "unified retail batch billable kib"
-assert_rtlauth_consumed "${BATCH_AUTH_ID}"
+assert_rtlauth_consumed "${BATCH_EXTREF}"
 
 log "Unified retail smoke test passed"

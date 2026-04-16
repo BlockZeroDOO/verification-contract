@@ -12,8 +12,8 @@ SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
 PAYMENT_SYMBOL="${PAYMENT_SYMBOL:-EOS}"
 PAYMENT_PRECISION="${PAYMENT_PRECISION:-4}"
-PLAN_CODE="${PLAN_CODE:-smokeplan}"
-PACK_CODE="${PACK_CODE:-smokepack}"
+PLAN_CODE="${PLAN_CODE:-}"
+PACK_CODE="${PACK_CODE:-}"
 PLAN_PRICE="${PLAN_PRICE:-0.0300 EOS}"
 PACK_PRICE="${PACK_PRICE:-0.0200 EOS}"
 PLAN_DURATION_SEC="${PLAN_DURATION_SEC:-2592000}"
@@ -61,6 +61,11 @@ hash_text() {
     fi
 }
 
+normalize_name_fragment() {
+    local input="$1"
+    printf '%s' "${input}" | tr '06789' 'abcde'
+}
+
 log() {
     printf '[smoke-test-billing] %s\n' "$1"
 }
@@ -105,7 +110,46 @@ wait_for_table_match() {
     done
 }
 
+wait_for_table_absence() {
+    local code="$1"
+    local scope="$2"
+    local table="$3"
+    local jq_filter="$4"
+    local description="$5"
+
+    local deadline=$(( $(date -u +%s) + WAIT_TIMEOUT_SEC ))
+    while true; do
+        if ! get_table_json "${code}" "${scope}" "${table}" | "${JQ_BIN}" -e "${jq_filter}" >/dev/null 2>&1; then
+            return 0
+        fi
+
+        if (( $(date -u +%s) >= deadline )); then
+            echo "Timed out waiting for ${description}." >&2
+            exit 1
+        fi
+
+        sleep "${WAIT_INTERVAL_SEC}"
+    done
+}
+
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
+if [[ -z "${PLAN_CODE}" ]]; then
+    PLAN_CODE="pl$(normalize_name_fragment "${TIMESTAMP:8:6}")"
+fi
+if [[ -z "${PACK_CODE}" ]]; then
+    PACK_CODE="pk$(normalize_name_fragment "${TIMESTAMP:8:6}")"
+fi
+
+if [[ ${#PLAN_CODE} -gt 12 ]]; then
+    echo "PLAN_CODE must be 12 characters or fewer: ${PLAN_CODE}" >&2
+    exit 1
+fi
+
+if [[ ${#PACK_CODE} -gt 12 ]]; then
+    echo "PACK_CODE must be 12 characters or fewer: ${PACK_CODE}" >&2
+    exit 1
+fi
+
 PLAN_REF="$(hash_text "bill-plan-${TIMESTAMP}")"
 USE_REF_SINGLE="$(hash_text "bill-use-single-${TIMESTAMP}")"
 USE_REF_BATCH="$(hash_text "bill-use-batch-${TIMESTAMP}")"
@@ -209,12 +253,12 @@ wait_for_table_match \
 log "Cleaning consumed enterprise usage authorizations"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" cleanauths "[10]" -p "${OWNER_ACCOUNT}@active"
 
-if get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -e \
-    --argjson id "${SINGLE_AUTH_ID}" \
-    '.rows[] | select(.auth_id == $id)' >/dev/null 2>&1; then
-    echo "Assertion failed: consumed single usage authorization was not cleaned up." >&2
-    exit 1
-fi
+wait_for_table_absence \
+    "${BILLING_ACCOUNT}" \
+    "${BILLING_ACCOUNT}" \
+    "usageauths" \
+    ".rows[] | select(.auth_id == ${SINGLE_AUTH_ID})" \
+    "cleanup of consumed single usage authorization"
 
 PLAN_KIB_AFTER_CONSUME="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
     --argjson id "${SINGLE_ENTITLEMENT_ID}" \
@@ -241,7 +285,10 @@ log "Consuming reissued enterprise authorization"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" consume "[${REISSUED_AUTH_ID}]" -p "${OWNER_ACCOUNT}@active"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" cleanauths "[10]" -p "${OWNER_ACCOUNT}@active"
 
-TOO_LARGE_BYTES="$(( (PLAN_INCLUDED_KIB + 2) * 1024 ))"
+MAX_LIVE_KIB="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
+    --arg payer "${PAYER_ACCOUNT}" \
+    '[.rows[] | select(.payer == $payer and .status == 0) | .kib_remaining] | max // 0')"
+TOO_LARGE_BYTES="$(( (MAX_LIVE_KIB + 1) * 1024 ))"
 log "Rejecting enterprise authorization larger than any single entitlement"
 if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
     "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_TOO_LARGE}\",${TOO_LARGE_BYTES}]" \
@@ -287,12 +334,12 @@ if [[ "${RUN_EXPIRY_TESTS}" == "true" ]]; then
     log "Cleaning expired enterprise authorizations"
     cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" cleanauths "[10]" -p "${OWNER_ACCOUNT}@active"
 
-    if get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -e \
-        --argjson id "${EXPIRED_AUTH_ID}" \
-        '.rows[] | select(.auth_id == $id)' >/dev/null 2>&1; then
-        echo "Assertion failed: expired enterprise authorization was not cleaned up." >&2
-        exit 1
-    fi
+    wait_for_table_absence \
+        "${BILLING_ACCOUNT}" \
+        "${BILLING_ACCOUNT}" \
+        "usageauths" \
+        ".rows[] | select(.auth_id == ${EXPIRED_AUTH_ID})" \
+        "cleanup of expired enterprise authorization"
 
     log "Reissuing enterprise auth after expiry cleanup"
     LAST_AUTH_ID_BEFORE_EXPIRY_REISSUE="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r '[.rows[].auth_id] | max // 0')"

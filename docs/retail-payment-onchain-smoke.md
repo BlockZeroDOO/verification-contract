@@ -20,4 +20,11 @@ These smoke tests validate the standalone `verifretpay` surface.
 - persisted `billable_kib`
 - explicit `consume`
 - `cleanauths`
+- reissue of the same request after `consume + cleanauths`
 - configured downstream `verif` consumer
+
+Optional deep expiry coverage:
+
+- set `RUN_EXPIRY_TESTS=true`
+- optionally override `AUTH_TTL_WAIT_SEC`
+- this enables a long-running check for expired retail auth cleanup and reissue

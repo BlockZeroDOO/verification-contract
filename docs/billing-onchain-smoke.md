@@ -71,8 +71,17 @@ deNotary:
 - plan purchase through `transfer -> verifbill`
 - pack purchase through `transfer -> verifbill`
 - `use` for single mode with payer authority
+- nearest-expiry entitlement selection
 - duplicate request authorization rejection
+- oversized `billable_bytes` rejection when no single entitlement can satisfy the request
 - `consume`
 - `cleanauths`
+- reissue of the same request after `consume + cleanauths`
 - `use` for batch mode
 - stored `billable_kib` matching the declared request size
+
+Optional deep expiry coverage:
+
+- set `RUN_EXPIRY_TESTS=true`
+- optionally override `AUTH_TTL_WAIT_SEC`
+- this enables a long-running check for expired auth cleanup and reissue

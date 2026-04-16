@@ -18,6 +18,8 @@ BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-4096}"
 WRONG_TOKEN_CONTRACT="${WRONG_TOKEN_CONTRACT:-retail.fake}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
+RUN_EXPIRY_TESTS="${RUN_EXPIRY_TESTS:-false}"
+AUTH_TTL_WAIT_SEC="${AUTH_TTL_WAIT_SEC:-610}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the retail payment contract authority account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded test account that can sign transfers.}"
@@ -134,6 +136,7 @@ wait_for_consumed_auth() {
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
 EXTREF_SINGLE="$(hash_text "retpay-single-${TIMESTAMP}")"
 EXTREF_BATCH="$(hash_text "retpay-batch-${TIMESTAMP}")"
+EXTREF_EXPIRED="$(hash_text "retpay-expired-${TIMESTAMP}")"
 SINGLE_KIB="$(( (BILLABLE_BYTES_SINGLE + 1023) / 1024 ))"
 BATCH_KIB="$(( (BILLABLE_BYTES_BATCH + 1023) / 1024 ))"
 SINGLE_TOTAL_UNITS="$(( SINGLE_KIB * $(asset_to_units "${PRICE_PER_KIB_SINGLE}") ))"
@@ -218,6 +221,26 @@ if get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}"
     exit 1
 fi
 
+log "Reissuing retail single authorization for the same request after cleanup"
+cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_SINGLE}" \
+    "single|${SUBMITTER_ACCOUNT}|${EXTREF_SINGLE}|${BILLABLE_BYTES_SINGLE}"
+
+wait_for_auth_request "${SUBMITTER_ACCOUNT}" "${EXTREF_SINGLE}" "reissued retail single authorization"
+
+REISSUED_SINGLE_AUTH_ID="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -r \
+    --arg submitter "${SUBMITTER_ACCOUNT}" \
+    --arg external_ref "${EXTREF_SINGLE}" \
+    '.rows[] | select(.submitter == $submitter and .external_ref == $external_ref and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
+
+if [[ -z "${REISSUED_SINGLE_AUTH_ID}" || "${REISSUED_SINGLE_AUTH_ID}" == "${SINGLE_AUTH_ID}" ]]; then
+    echo "Assertion failed: retail authorization was not reissued after cleanup." >&2
+    exit 1
+fi
+
+log "Consuming reissued retail authorization"
+cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" consume "[${REISSUED_SINGLE_AUTH_ID}]" -p "${OWNER_ACCOUNT}@active"
+cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" cleanauths "[10]" -p "${OWNER_ACCOUNT}@active"
+
 log "Funding exact retail batch authorization"
 cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_BATCH}" \
     "batch|${SUBMITTER_ACCOUNT}|${EXTREF_BATCH}|${BILLABLE_BYTES_BATCH}"
@@ -235,6 +258,32 @@ BATCH_AUTH_KIB="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauth
 if [[ "${BATCH_AUTH_KIB}" != "${BATCH_KIB}" ]]; then
     echo "Assertion failed: retail batch auth billable_kib mismatch." >&2
     exit 1
+fi
+
+if [[ "${RUN_EXPIRY_TESTS}" == "true" ]]; then
+    log "Funding retail authorization for expiry/reissue test"
+    cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_SINGLE}" \
+        "single|${SUBMITTER_ACCOUNT}|${EXTREF_EXPIRED}|${BILLABLE_BYTES_SINGLE}"
+
+    wait_for_auth_request "${SUBMITTER_ACCOUNT}" "${EXTREF_EXPIRED}" "retail authorization for expiry test"
+
+    log "Waiting ${AUTH_TTL_WAIT_SEC}s for retail auth to expire"
+    sleep "${AUTH_TTL_WAIT_SEC}"
+
+    log "Cleaning expired retail authorizations"
+    cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" cleanauths "[10]" -p "${OWNER_ACCOUNT}@active"
+
+    if get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -e \
+        --arg submitter "${SUBMITTER_ACCOUNT}" \
+        --arg external_ref "${EXTREF_EXPIRED}" \
+        '.rows[] | select(.submitter == $submitter and .external_ref == $external_ref)' >/dev/null 2>&1; then
+        echo "Assertion failed: expired retail authorization was not cleaned up." >&2
+        exit 1
+    fi
+
+    log "Reissuing retail auth after expiry cleanup"
+    cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_SINGLE}" \
+        "single|${SUBMITTER_ACCOUNT}|${EXTREF_EXPIRED}|${BILLABLE_BYTES_SINGLE}"
 fi
 
 log "Retail payment authorization smoke test passed"

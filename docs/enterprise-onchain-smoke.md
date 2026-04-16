@@ -29,5 +29,6 @@ The wrappers delegate to:
 - `verif::submitroot`
 - persisted `billable_bytes`
 - persisted `billable_kib`
+- size-mismatch rejection between billing auth and `verif::submit`
 - duplicate request rejection
 - zero-hash rejection

@@ -24,5 +24,6 @@ These smoke tests validate the supported retail model:
 - `verif::submitroot`
 - persisted `billable_bytes`
 - persisted `billable_kib`
+- size-mismatch rejection between retail auth and `verif::submit`
 - downstream `consume`
 - embedded `manifest_hash`

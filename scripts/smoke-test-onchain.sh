@@ -19,6 +19,7 @@ ENTERPRISE_PACK_PRICE="${ENTERPRISE_PACK_PRICE:-0.0500 EOS}"
 ENTERPRISE_PACK_INCLUDED_KIB="${ENTERPRISE_PACK_INCLUDED_KIB:-12}"
 BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
 BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-4096}"
+MISMATCH_BYTES_SINGLE="${MISMATCH_BYTES_SINGLE:-2049}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the enterprise contract authority account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded test account that can sign submits.}"
@@ -214,6 +215,7 @@ POLICY_BATCH_ID="${POLICY_BATCH_ID:-$((BASE_ID + 2001))}"
 
 COMMIT_EXTREF_1="$(hash_text "commit-1-${TIMESTAMP}")"
 COMMIT_EXTREF_2="$(hash_text "commit-2-${TIMESTAMP}")"
+COMMIT_EXTREF_MISMATCH="$(hash_text "commit-mismatch-${TIMESTAMP}")"
 
 OBJECT_HASH_1="$(hash_text "object-1-${TIMESTAMP}")"
 OBJECT_HASH_2="$(hash_text "object-2-${TIMESTAMP}")"
@@ -282,6 +284,20 @@ COMMITMENT_ID_1="$(get_commitment_id_by_external_ref "${COMMIT_EXTREF_1}")"
 assert_commitment_field "${COMMITMENT_ID_1}" "submitter" "${SUBMITTER_ACCOUNT}"
 assert_commitment_field "${COMMITMENT_ID_1}" "billable_bytes" "${BILLABLE_BYTES_SINGLE}"
 assert_commitment_field "${COMMITMENT_ID_1}" "billable_kib" "2"
+
+log "Rejecting enterprise submit with mismatched billable_bytes"
+enterprise_use 0 "${COMMIT_EXTREF_MISMATCH}" "${BILLABLE_BYTES_SINGLE}"
+if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "object-mismatch-${TIMESTAMP}")\",\"${COMMIT_EXTREF_MISMATCH}\",${MISMATCH_BYTES_SINGLE}]" \
+    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: enterprise submit with mismatched billable_bytes was accepted." >&2
+    exit 1
+fi
+
+log "Submitting enterprise commitment after size mismatch rejection"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "object-mismatch-ok-${TIMESTAMP}")\",\"${COMMIT_EXTREF_MISMATCH}\",${BILLABLE_BYTES_SINGLE}]" \
+    -p "${SUBMITTER_ACCOUNT}@active"
 
 log "Rejecting duplicate commitment request"
 if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \

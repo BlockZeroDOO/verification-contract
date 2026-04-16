@@ -19,6 +19,7 @@ WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
 BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-4096}"
+MISMATCH_BYTES_SINGLE="${MISMATCH_BYTES_SINGLE:-2049}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the verification contract authority account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded account that can sign submits.}"
@@ -177,6 +178,7 @@ POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-$((BASE_ID + 6000))}"
 POLICY_BATCH_ID="${POLICY_BATCH_ID:-$((BASE_ID + 6001))}"
 
 SINGLE_EXTREF="$(hash_text "unified-retail-single-${TIMESTAMP}")"
+SINGLE_EXTREF_MISMATCH="$(hash_text "unified-retail-mismatch-${TIMESTAMP}")"
 SINGLE_OBJECT_HASH="$(hash_text "unified-retail-object-${TIMESTAMP}")"
 BATCH_EXTREF="$(hash_text "unified-retail-batch-${TIMESTAMP}")"
 BATCH_ROOT_HASH="$(hash_text "unified-retail-root-${TIMESTAMP}")"
@@ -257,6 +259,33 @@ assert_eq "${SUBMITTER_ACCOUNT}" "${COMMITMENT_SUBMITTER}" "unified retail commi
 assert_eq "${BILLABLE_BYTES_SINGLE}" "${COMMITMENT_BYTES}" "unified retail commitment billable bytes"
 assert_eq "2" "${COMMITMENT_KIB}" "unified retail commitment billable kib"
 assert_rtlauth_consumed "${SINGLE_AUTH_ID}"
+
+log "Funding unified retail auth for size mismatch test"
+cleos -u "${RPC_URL}" transfer \
+    "${SUBMITTER_ACCOUNT}" \
+    "${RETPAY_ACCOUNT}" \
+    "${PRICE_SINGLE}" \
+    "single|${SUBMITTER_ACCOUNT}|${SINGLE_EXTREF_MISMATCH}|${BILLABLE_BYTES_SINGLE}"
+
+wait_for_table_match \
+    "${RETPAY_ACCOUNT}" \
+    "${RETPAY_ACCOUNT}" \
+    "rtlauths" \
+    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .external_ref == \"${SINGLE_EXTREF_MISMATCH}\" and ((.consumed == false) or (.consumed == 0)))" \
+    "retail mismatch authorization"
+
+log "Rejecting unified retail submit with mismatched billable_bytes"
+if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "unified-retail-object-mismatch-${TIMESTAMP}")\",\"${SINGLE_EXTREF_MISMATCH}\",${MISMATCH_BYTES_SINGLE}]" \
+    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: unified retail submit with mismatched billable_bytes was accepted." >&2
+    exit 1
+fi
+
+log "Submitting unified retail commitment after size mismatch rejection"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
+    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "unified-retail-object-mismatch-ok-${TIMESTAMP}")\",\"${SINGLE_EXTREF_MISMATCH}\",${BILLABLE_BYTES_SINGLE}]" \
+    -p "${SUBMITTER_ACCOUNT}@active"
 
 log "Rejecting duplicate unified retail single submit"
 if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \

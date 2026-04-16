@@ -29,7 +29,6 @@ TSD v2 требует поддержать batch anchoring:
 - `schema_id`
 - `policy_id`
 - `manifest_hash`
-- `block_num`
 - `created_at`
 
 - off-chain хранит:

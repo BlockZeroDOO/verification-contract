@@ -59,7 +59,6 @@ struct [[eosio::table("commitments")]] commitment_row {
     uint64_t billable_kib;
     checksum256 external_ref;
     checksum256 request_key;
-    uint32_t block_num;
     time_point_sec created_at;
 
     uint64_t primary_key() const { return id; }
@@ -92,7 +91,6 @@ struct [[eosio::table("batches")]] batch_row {
     uint64_t billable_kib;
     checksum256 external_ref;
     checksum256 request_key;
-    uint32_t block_num;
     time_point_sec created_at;
 
     uint64_t primary_key() const { return id; }

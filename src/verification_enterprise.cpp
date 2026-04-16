@@ -157,7 +157,6 @@ void verification_enterprise::submit(
         row.billable_kib = billable_kib;
         row.external_ref = external_ref;
         row.request_key = request_key;
-        row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());
         row.created_at = now;
     });
 
@@ -215,7 +214,6 @@ void verification_enterprise::submitroot(
         row.billable_kib = billable_kib;
         row.external_ref = external_ref;
         row.request_key = request_key;
-        row.block_num = static_cast<uint32_t>(eosio::tapos_block_num());
         row.created_at = now;
     });
 

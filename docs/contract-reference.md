@@ -67,7 +67,6 @@ Fields:
 - `billable_kib`
 - `external_ref`
 - `request_key`
-- `block_num`
 - `created_at`
 
 #### `batches`
@@ -85,7 +84,6 @@ Fields:
 - `billable_kib`
 - `external_ref`
 - `request_key`
-- `block_num`
 - `created_at`
 
 #### `counters`

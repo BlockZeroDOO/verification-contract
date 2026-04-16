@@ -65,6 +65,7 @@ private:
 
     static constexpr uint8_t retail_mode_single = 0;
     static constexpr uint8_t retail_mode_batch = 1;
+    static constexpr uint32_t retail_auth_ttl_sec = 600;
 
     uint128_t make_payment_key(const name& token_contract, const symbol_code& token_symbol) const;
     accepted_token_row require_accepted_token(const name& token_contract, const symbol_code& token_symbol) const;

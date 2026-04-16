@@ -76,6 +76,7 @@ struct [[eosio::table("rtlauths")]] usage_auth_row {
     bool consumed;
     time_point_sec created_at;
     time_point_sec consumed_at;
+    time_point_sec expires_at;
 
     uint64_t primary_key() const { return auth_id; }
     checksum256 byrequest() const { return request_key; }

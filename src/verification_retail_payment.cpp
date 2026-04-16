@@ -197,15 +197,16 @@ void verification_retail_payment::ontransfer(
     usage_auth_table usage_auths(get_self(), get_self().value);
     auto by_request = usage_auths.get_index<"byrequest"_n>();
     auto existing = by_request.find(request_key);
+    const auto now = time_point_sec(current_time_point());
     if (existing != by_request.end()) {
-        if (existing->consumed) {
+        const bool expired = existing->expires_at.sec_since_epoch() > 0 && existing->expires_at <= now;
+        if (existing->consumed || expired) {
             by_request.erase(existing);
         } else {
             check(false, "retail usage authorization already exists for request");
         }
     }
 
-    const auto now = time_point_sec(current_time_point());
     usage_auths.emplace(get_self(), [&](auto& row) {
         row.auth_id = next_retail_auth_id();
         row.mode = mode;
@@ -220,6 +221,7 @@ void verification_retail_payment::ontransfer(
         row.consumed = false;
         row.created_at = now;
         row.consumed_at = time_point_sec{};
+        row.expires_at = time_point_sec(now.sec_since_epoch() + retail_auth_ttl_sec);
     });
 }
 

@@ -72,6 +72,7 @@ Expected artifacts:
 - [docs/retail-payment-deploy.md](/c:/projects/verification-contract/docs/retail-payment-deploy.md:1)
 - [docs/denotary-deploy.md](/c:/projects/verification-contract/docs/denotary-deploy.md:1)
 - [docs/jungle4-deploy.md](/c:/projects/verification-contract/docs/jungle4-deploy.md:1)
+- [docs/jungle4-validation-report.md](/c:/projects/verification-contract/docs/jungle4-validation-report.md:1)
 
 ## Smoke
 

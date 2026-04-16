@@ -88,6 +88,7 @@ Expected artifacts:
 - [docs/enterprise-billing-architecture.md](/c:/projects/verification-contract/docs/enterprise-billing-architecture.md:1)
 - [docs/revised-contract-simplification-plan.md](/c:/projects/verification-contract/docs/revised-contract-simplification-plan.md:1)
 - [docs/size-based-billing-roadmap.md](/c:/projects/verification-contract/docs/size-based-billing-roadmap.md:1)
+- [docs/contract-only-verif-migration-plan.md](/c:/projects/verification-contract/docs/contract-only-verif-migration-plan.md:1)
 - [docs/denotary-l1-contract-core.md](/c:/projects/verification-contract/docs/denotary-l1-contract-core.md:1)
 
 ## Notes

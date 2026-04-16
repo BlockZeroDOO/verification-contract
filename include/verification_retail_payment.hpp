@@ -8,6 +8,7 @@
 #include <eosio/time.hpp>
 
 #include <verification_retail_payment_tables.hpp>
+#include <verification_request_size.hpp>
 #include <verification_validators.hpp>
 
 #include <string>
@@ -56,7 +57,6 @@ private:
         uint8_t mode = 0;
         name submitter{};
         checksum256 external_ref{};
-        uint64_t billable_bytes = 0;
         uint64_t schema_id = 0;
         uint64_t policy_id = 0;
         checksum256 object_hash{};

@@ -21,8 +21,6 @@ PACK_PRICE="${PACK_PRICE:-0.0200 EOS}"
 PLAN_DURATION_SEC="${PLAN_DURATION_SEC:-2592000}"
 PLAN_INCLUDED_KIB="${PLAN_INCLUDED_KIB:-8}"
 PACK_INCLUDED_KIB="${PACK_INCLUDED_KIB:-6}"
-BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
-BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-3072}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 
@@ -143,8 +141,10 @@ ROOT_HASH_BATCH="$(hash_text "bill-root-${TIMESTAMP}")"
 MANIFEST_HASH_BATCH="$(hash_text "bill-manifest-${TIMESTAMP}")"
 ZERO_HASH="$(printf '0%.0s' {1..64})"
 
-EXPECTED_SINGLE_KIB="$(( (BILLABLE_BYTES_SINGLE + 1023) / 1024 ))"
-EXPECTED_BATCH_KIB="$(( (BILLABLE_BYTES_BATCH + 1023) / 1024 ))"
+EXPECTED_SINGLE_BYTES=88
+EXPECTED_BATCH_BYTES=124
+EXPECTED_SINGLE_KIB="$(( (EXPECTED_SINGLE_BYTES + 1023) / 1024 ))"
+EXPECTED_BATCH_KIB="$(( (EXPECTED_BATCH_BYTES + 1023) / 1024 ))"
 
 log "Configuring verification authorization sources"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setauthsrcs \
@@ -217,7 +217,7 @@ PLAN_KIB_BEFORE_SINGLE="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT
 
 log "Rejecting enterprise submit with mismatched payer and submitter"
 if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
-    "[\"${PAYER_ACCOUNT}\",\"${OWNER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "bill-mismatch-object-${TIMESTAMP}")\",\"$(hash_text "bill-mismatch-ext-${TIMESTAMP}")\",${BILLABLE_BYTES_SINGLE}]" \
+    "[\"${PAYER_ACCOUNT}\",\"${OWNER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "bill-mismatch-object-${TIMESTAMP}")\",\"$(hash_text "bill-mismatch-ext-${TIMESTAMP}")\"]" \
     -p "${PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: enterprise submit with mismatched payer/submitter was accepted." >&2
     exit 1
@@ -225,7 +225,7 @@ fi
 
 log "Submitting atomic enterprise single record"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_SINGLE}\",\"${COMMIT_EXTREF_SINGLE}\",${BILLABLE_BYTES_SINGLE}]" \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_SINGLE}\",\"${COMMIT_EXTREF_SINGLE}\"]" \
     -p "${PAYER_ACCOUNT}@active"
 
 wait_for_table_match \
@@ -244,7 +244,7 @@ COMMITMENT_BYTES="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACC
 COMMITMENT_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
     --argjson id "${COMMITMENT_ID}" \
     '.rows[] | select(.id == $id) | .billable_kib')"
-assert_eq "${BILLABLE_BYTES_SINGLE}" "${COMMITMENT_BYTES}" "enterprise commitment billable bytes"
+assert_eq "${EXPECTED_SINGLE_BYTES}" "${COMMITMENT_BYTES}" "enterprise commitment billable bytes"
 assert_eq "${EXPECTED_SINGLE_KIB}" "${COMMITMENT_KIB}" "enterprise commitment billable kib"
 
 PLAN_KIB_AFTER_SINGLE="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
@@ -254,27 +254,15 @@ assert_eq "$(( PLAN_KIB_BEFORE_SINGLE - EXPECTED_SINGLE_KIB ))" "${PLAN_KIB_AFTE
 
 log "Rejecting duplicate enterprise single request"
 if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_DUPLICATE}\",\"${COMMIT_EXTREF_SINGLE}\",${BILLABLE_BYTES_SINGLE}]" \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_DUPLICATE}\",\"${COMMIT_EXTREF_SINGLE}\"]" \
     -p "${PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: duplicate enterprise single request was accepted." >&2
     exit 1
 fi
 
-MAX_LIVE_KIB="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
-    --arg payer "${PAYER_ACCOUNT}" \
-    '[.rows[] | select(.payer == $payer and .status == 0) | .kib_remaining] | max // 0')"
-TOO_LARGE_BYTES="$(( (MAX_LIVE_KIB + 1) * 1024 ))"
-log "Rejecting oversized enterprise request"
-if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "bill-too-large-object-${TIMESTAMP}")\",\"${COMMIT_EXTREF_DUPLICATE}\",${TOO_LARGE_BYTES}]" \
-    -p "${PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
-    echo "Assertion failed: oversized enterprise request was accepted." >&2
-    exit 1
-fi
-
 log "Rejecting zero object hash"
 if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${ZERO_HASH}\",\"$(hash_text "bill-zero-hash-${TIMESTAMP}")\",${BILLABLE_BYTES_SINGLE}]" \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${ZERO_HASH}\",\"$(hash_text "bill-zero-hash-${TIMESTAMP}")\"]" \
     -p "${PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: zero object hash was accepted." >&2
     exit 1
@@ -282,7 +270,7 @@ fi
 
 log "Submitting atomic enterprise batch"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submitroot \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH_BATCH}\",2,\"${MANIFEST_HASH_BATCH}\",\"${COMMIT_EXTREF_BATCH}\",${BILLABLE_BYTES_BATCH}]" \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH_BATCH}\",2,\"${MANIFEST_HASH_BATCH}\",\"${COMMIT_EXTREF_BATCH}\"]" \
     -p "${PAYER_ACCOUNT}@active"
 
 wait_for_table_match \
@@ -301,7 +289,7 @@ BATCH_BYTES="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}
 BATCH_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
     --argjson id "${BATCH_ID}" \
     '.rows[] | select(.id == $id) | .billable_kib')"
-assert_eq "${BILLABLE_BYTES_BATCH}" "${BATCH_BYTES}" "enterprise batch billable bytes"
+assert_eq "${EXPECTED_BATCH_BYTES}" "${BATCH_BYTES}" "enterprise batch billable bytes"
 assert_eq "${EXPECTED_BATCH_KIB}" "${BATCH_KIB}" "enterprise batch billable kib"
 
 log "Enterprise billing smoke test passed"

@@ -17,9 +17,6 @@ PAYMENT_PRECISION="${PAYMENT_PRECISION:-4}"
 ENTERPRISE_PACK_CODE="${ENTERPRISE_PACK_CODE:-}"
 ENTERPRISE_PACK_PRICE="${ENTERPRISE_PACK_PRICE:-0.0500 EOS}"
 ENTERPRISE_PACK_INCLUDED_KIB="${ENTERPRISE_PACK_INCLUDED_KIB:-12}"
-BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
-BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-4096}"
-MISMATCH_BYTES_SINGLE="${MISMATCH_BYTES_SINGLE:-2049}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the enterprise contract authority account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded test account that can sign submits.}"
@@ -227,6 +224,10 @@ ZERO_HASH="$(printf '0%.0s' {1..64})"
 BATCH_EXTREF="$(hash_text "batch-${TIMESTAMP}")"
 ROOT_HASH="$(hash_text "root-${TIMESTAMP}")"
 MANIFEST_HASH="$(hash_text "manifest-${TIMESTAMP}")"
+EXPECTED_SINGLE_BYTES=88
+EXPECTED_BATCH_BYTES=124
+EXPECTED_SINGLE_KIB="$(( (EXPECTED_SINGLE_BYTES + 1023) / 1024 ))"
+EXPECTED_BATCH_KIB="$(( (EXPECTED_BATCH_BYTES + 1023) / 1024 ))"
 
 log "Creating schema"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" addschema \
@@ -285,16 +286,16 @@ cleos -u "${RPC_URL}" transfer \
 
 log "Submitting commitment #1"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_1}\",\"${COMMIT_EXTREF_1}\",${BILLABLE_BYTES_SINGLE}]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_1}\",\"${COMMIT_EXTREF_1}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active"
 COMMITMENT_ID_1="$(get_commitment_id_by_external_ref "${COMMIT_EXTREF_1}")"
 assert_commitment_field "${COMMITMENT_ID_1}" "submitter" "${SUBMITTER_ACCOUNT}"
-assert_commitment_field "${COMMITMENT_ID_1}" "billable_bytes" "${BILLABLE_BYTES_SINGLE}"
-assert_commitment_field "${COMMITMENT_ID_1}" "billable_kib" "2"
+assert_commitment_field "${COMMITMENT_ID_1}" "billable_bytes" "${EXPECTED_SINGLE_BYTES}"
+assert_commitment_field "${COMMITMENT_ID_1}" "billable_kib" "${EXPECTED_SINGLE_KIB}"
 
 log "Rejecting contract-only enterprise submit with mismatched payer and submitter"
 if cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${OWNER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "object-mismatch-${TIMESTAMP}")\",\"${COMMIT_EXTREF_MISMATCH}\",${BILLABLE_BYTES_SINGLE}]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${OWNER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "object-mismatch-${TIMESTAMP}")\",\"${COMMIT_EXTREF_MISMATCH}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: contract-only enterprise submit with mismatched payer/submitter was accepted." >&2
     exit 1
@@ -302,12 +303,12 @@ fi
 
 log "Submitting enterprise commitment through contract-only path"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "object-mismatch-ok-${TIMESTAMP}")\",\"${COMMIT_EXTREF_MISMATCH}\",${BILLABLE_BYTES_SINGLE}]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "object-mismatch-ok-${TIMESTAMP}")\",\"${COMMIT_EXTREF_MISMATCH}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active"
 
 log "Rejecting duplicate commitment request"
 if cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_1}\",\"${COMMIT_EXTREF_1}\",${BILLABLE_BYTES_SINGLE}]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_1}\",\"${COMMIT_EXTREF_1}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: duplicate commitment request was accepted." >&2
     exit 1
@@ -315,7 +316,7 @@ fi
 
 log "Rejecting zero object_hash commitment"
 if cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${ZERO_HASH}\",\"$(hash_text "zero-hash-${TIMESTAMP}")\",${BILLABLE_BYTES_SINGLE}]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${ZERO_HASH}\",\"$(hash_text "zero-hash-${TIMESTAMP}")\"]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: zero object_hash commitment was accepted." >&2
     exit 1
@@ -323,25 +324,25 @@ fi
 
 log "Submitting successor commitment #2"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_2}\",\"${COMMIT_EXTREF_2}\",${BILLABLE_BYTES_SINGLE}]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_2}\",\"${COMMIT_EXTREF_2}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active"
 COMMITMENT_ID_2="$(get_commitment_id_by_external_ref "${COMMIT_EXTREF_2}")"
-assert_commitment_field "${COMMITMENT_ID_2}" "billable_bytes" "${BILLABLE_BYTES_SINGLE}"
-assert_commitment_field "${COMMITMENT_ID_2}" "billable_kib" "2"
+assert_commitment_field "${COMMITMENT_ID_2}" "billable_bytes" "${EXPECTED_SINGLE_BYTES}"
+assert_commitment_field "${COMMITMENT_ID_2}" "billable_kib" "${EXPECTED_SINGLE_KIB}"
 
 log "Submitting batch #1 through contract-only path"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" submitroot \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\",${BILLABLE_BYTES_BATCH}]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active"
 BATCH_ID_1="$(get_batch_id_by_external_ref "${BATCH_EXTREF}")"
 assert_batch_field "${BATCH_ID_1}" "submitter" "${SUBMITTER_ACCOUNT}"
 assert_batch_field "${BATCH_ID_1}" "manifest_hash" "${MANIFEST_HASH}"
-assert_batch_field "${BATCH_ID_1}" "billable_bytes" "${BILLABLE_BYTES_BATCH}"
-assert_batch_field "${BATCH_ID_1}" "billable_kib" "4"
+assert_batch_field "${BATCH_ID_1}" "billable_bytes" "${EXPECTED_BATCH_BYTES}"
+assert_batch_field "${BATCH_ID_1}" "billable_kib" "${EXPECTED_BATCH_KIB}"
 
 log "Rejecting duplicate batch request"
 if cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" submitroot \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\",${BILLABLE_BYTES_BATCH}]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: duplicate batch request was accepted." >&2
     exit 1

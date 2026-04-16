@@ -17,9 +17,6 @@ PRICE_PER_KIB_SINGLE="${PRICE_PER_KIB_SINGLE:-0.0050 EOS}"
 PRICE_PER_KIB_BATCH="${PRICE_PER_KIB_BATCH:-0.0050 EOS}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
-BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
-BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-4096}"
-MISMATCH_BYTES_SINGLE="${MISMATCH_BYTES_SINGLE:-2049}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the verification contract authority account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded account that can sign submits.}"
@@ -150,8 +147,10 @@ get_batch_id_by_external_ref() {
 
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
 BASE_ID="$(date -u +%s)"
-SINGLE_KIB="$(( (BILLABLE_BYTES_SINGLE + 1023) / 1024 ))"
-BATCH_KIB="$(( (BILLABLE_BYTES_BATCH + 1023) / 1024 ))"
+EXPECTED_SINGLE_BYTES=88
+EXPECTED_BATCH_BYTES=124
+SINGLE_KIB="$(( (EXPECTED_SINGLE_BYTES + 1023) / 1024 ))"
+BATCH_KIB="$(( (EXPECTED_BATCH_BYTES + 1023) / 1024 ))"
 PRICE_SINGLE="$(units_to_asset "$(( SINGLE_KIB * $(asset_to_units "${PRICE_PER_KIB_SINGLE}") ))" "${PAYMENT_SYMBOL}")"
 PRICE_BATCH="$(units_to_asset "$(( BATCH_KIB * $(asset_to_units "${PRICE_PER_KIB_BATCH}") ))" "${PAYMENT_SYMBOL}")"
 
@@ -211,7 +210,7 @@ cleos -u "${RPC_URL}" transfer \
     "${SUBMITTER_ACCOUNT}" \
     "${RETPAY_ACCOUNT}" \
     "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|${SINGLE_OBJECT_HASH}|${SINGLE_EXTREF}|${BILLABLE_BYTES_SINGLE}"
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|${SINGLE_OBJECT_HASH}|${SINGLE_EXTREF}"
 
 COMMITMENT_ID="$(get_commitment_id_by_external_ref "${SINGLE_EXTREF}")"
 COMMITMENT_SUBMITTER="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
@@ -221,15 +220,15 @@ COMMITMENT_BYTES="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACC
 COMMITMENT_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
     --argjson id "${COMMITMENT_ID}" '.rows[] | select(.id == $id) | .billable_kib')"
 assert_eq "${SUBMITTER_ACCOUNT}" "${COMMITMENT_SUBMITTER}" "unified retail commitment submitter"
-assert_eq "${BILLABLE_BYTES_SINGLE}" "${COMMITMENT_BYTES}" "unified retail commitment billable bytes"
-assert_eq "2" "${COMMITMENT_KIB}" "unified retail commitment billable kib"
+assert_eq "${EXPECTED_SINGLE_BYTES}" "${COMMITMENT_BYTES}" "unified retail commitment billable bytes"
+assert_eq "${SINGLE_KIB}" "${COMMITMENT_KIB}" "unified retail commitment billable kib"
 
 log "Rejecting atomic retail single transfer with invalid policy"
 if cleos -u "${RPC_URL}" transfer \
     "${SUBMITTER_ACCOUNT}" \
     "${RETPAY_ACCOUNT}" \
     "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_BATCH_ID}|$(hash_text "unified-retail-invalid-policy-${TIMESTAMP}")|$(hash_text "unified-retail-invalid-policy-ext-${TIMESTAMP}")|${BILLABLE_BYTES_SINGLE}" >/dev/null 2>&1; then
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_BATCH_ID}|$(hash_text "unified-retail-invalid-policy-${TIMESTAMP}")|$(hash_text "unified-retail-invalid-policy-ext-${TIMESTAMP}")" >/dev/null 2>&1; then
     echo "Assertion failed: atomic retail single transfer with invalid policy was accepted." >&2
     exit 1
 fi
@@ -239,14 +238,14 @@ cleos -u "${RPC_URL}" transfer \
     "${SUBMITTER_ACCOUNT}" \
     "${RETPAY_ACCOUNT}" \
     "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|$(hash_text "unified-retail-object-mismatch-ok-${TIMESTAMP}")|${SINGLE_EXTREF_MISMATCH}|${BILLABLE_BYTES_SINGLE}"
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|$(hash_text "unified-retail-object-mismatch-ok-${TIMESTAMP}")|${SINGLE_EXTREF_MISMATCH}"
 
 log "Rejecting duplicate unified retail single submit"
 if cleos -u "${RPC_URL}" transfer \
     "${SUBMITTER_ACCOUNT}" \
     "${RETPAY_ACCOUNT}" \
     "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|$(hash_text "unified-retail-duplicate-${TIMESTAMP}")|${SINGLE_EXTREF}|${BILLABLE_BYTES_SINGLE}" >/dev/null 2>&1; then
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|$(hash_text "unified-retail-duplicate-${TIMESTAMP}")|${SINGLE_EXTREF}" >/dev/null 2>&1; then
     echo "Assertion failed: duplicate unified retail single request was accepted." >&2
     exit 1
 fi
@@ -256,7 +255,7 @@ cleos -u "${RPC_URL}" transfer \
     "${SUBMITTER_ACCOUNT}" \
     "${RETPAY_ACCOUNT}" \
     "${PRICE_BATCH}" \
-    "batch|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_BATCH_ID}|${BATCH_ROOT_HASH}|2|${MANIFEST_HASH}|${BATCH_EXTREF}|${BILLABLE_BYTES_BATCH}"
+    "batch|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_BATCH_ID}|${BATCH_ROOT_HASH}|2|${MANIFEST_HASH}|${BATCH_EXTREF}"
 
 BATCH_ID="$(get_batch_id_by_external_ref "${BATCH_EXTREF}")"
 BATCH_SUBMITTER="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
@@ -265,11 +264,11 @@ BATCH_MANIFEST="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOU
     --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .manifest_hash')"
 BATCH_BYTES="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
     --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .billable_bytes')"
-BATCH_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
+BATCH_BILLABLE_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
     --argjson id "${BATCH_ID}" '.rows[] | select(.id == $id) | .billable_kib')"
 assert_eq "${SUBMITTER_ACCOUNT}" "${BATCH_SUBMITTER}" "unified retail batch submitter"
 assert_eq "${MANIFEST_HASH}" "${BATCH_MANIFEST}" "unified retail batch manifest hash"
-assert_eq "${BILLABLE_BYTES_BATCH}" "${BATCH_BYTES}" "unified retail batch billable bytes"
-assert_eq "4" "${BATCH_KIB}" "unified retail batch billable kib"
+assert_eq "${EXPECTED_BATCH_BYTES}" "${BATCH_BYTES}" "unified retail batch billable bytes"
+assert_eq "${BATCH_KIB}" "${BATCH_BILLABLE_KIB}" "unified retail batch billable kib"
 
 log "Unified retail smoke test passed"

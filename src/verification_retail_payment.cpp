@@ -193,7 +193,23 @@ void verification_retail_payment::ontransfer(
     const auto mode = parsed_payment.mode;
     const auto submitter = parsed_payment.submitter;
     const auto external_ref = parsed_payment.external_ref;
-    const auto billable_bytes = parsed_payment.billable_bytes;
+    const auto billable_bytes = mode == retail_mode_single
+        ? verification_request_size::compute_single_registry_bytes(
+            submitter,
+            parsed_payment.schema_id,
+            parsed_payment.policy_id,
+            parsed_payment.object_hash,
+            external_ref
+        )
+        : verification_request_size::compute_batch_registry_bytes(
+            submitter,
+            parsed_payment.schema_id,
+            parsed_payment.policy_id,
+            parsed_payment.root_hash,
+            parsed_payment.leaf_count,
+            parsed_payment.manifest_hash,
+            external_ref
+        );
     const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
     check(from == submitter, "payer must match submitter for retail flow");
 
@@ -221,8 +237,7 @@ void verification_retail_payment::ontransfer(
                 parsed_payment.schema_id,
                 parsed_payment.policy_id,
                 parsed_payment.object_hash,
-                external_ref,
-                billable_bytes
+                external_ref
             )
         ).send();
         return;
@@ -239,8 +254,7 @@ void verification_retail_payment::ontransfer(
             parsed_payment.root_hash,
             parsed_payment.leaf_count,
             parsed_payment.manifest_hash,
-            external_ref,
-            billable_bytes
+            external_ref
         )
     ).send();
 }
@@ -308,7 +322,7 @@ verification_retail_payment::retail_payment_config verification_retail_payment::
 verification_retail_payment::parsed_payment_memo verification_retail_payment::parse_payment_memo(const string& memo) const {
     const auto fields = split_memo_fields(memo);
     check(
-        fields.size() == 7 || fields.size() == 9,
+        fields.size() == 6 || fields.size() == 8,
         "retail memo format must use the atomic retail variant"
     );
 
@@ -327,7 +341,7 @@ verification_retail_payment::parsed_payment_memo verification_retail_payment::pa
     parsed.schema_id = parse_decimal_u64(fields[2], "schema_id");
     parsed.policy_id = parse_decimal_u64(fields[3], "policy_id");
 
-    if (fields.size() == 7) {
+    if (fields.size() == 6) {
         check(parsed.mode == retail_mode_single, "single atomic retail memo must use single mode");
         verification_validators::validate_printable_ascii_text(fields[4], 64, "object_hash", false);
         verification_validators::validate_printable_ascii_text(fields[5], 64, "external_ref", false);
@@ -335,8 +349,6 @@ verification_retail_payment::parsed_payment_memo verification_retail_payment::pa
         check(fields[5].size() == 64, "external_ref must be 64 hex characters");
         parsed.object_hash = verification_validators::parse_hash(fields[4]);
         parsed.external_ref = verification_validators::parse_hash(fields[5]);
-        parsed.billable_bytes = parse_decimal_u64(fields[6], "billable_bytes");
-        verification_validators::validate_billable_bytes(parsed.billable_bytes, "billable_bytes");
         return parsed;
     }
 
@@ -355,7 +367,5 @@ verification_retail_payment::parsed_payment_memo verification_retail_payment::pa
     check(parsed.leaf_count > 0, "leaf_count must be greater than zero");
     parsed.manifest_hash = verification_validators::parse_hash(fields[6]);
     parsed.external_ref = verification_validators::parse_hash(fields[7]);
-    parsed.billable_bytes = parse_decimal_u64(fields[8], "billable_bytes");
-    verification_validators::validate_billable_bytes(parsed.billable_bytes, "billable_bytes");
     return parsed;
 }

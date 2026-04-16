@@ -23,6 +23,7 @@ Supported smoke coverage:
 - `verifbill::submitroot -> verif::billbatch`
 - persisted `billable_bytes`
 - persisted `billable_kib`
+- contract-computed canonical request size
 - duplicate and zero-hash rejection
 
 ### Retail
@@ -33,6 +34,7 @@ Supported smoke coverage:
 - `verif::retailbatch`
 - persisted `billable_bytes`
 - persisted `billable_kib`
+- contract-computed canonical request size
 - duplicate and tariff-validation rejection
 
 ## DFS Boundary

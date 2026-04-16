@@ -19,8 +19,6 @@ export VERIFICATION_OWNER_ACCOUNT=verif
 export VERIFICATION_ACCOUNT=verif
 export VERIFICATION_BILLING_ACCOUNT=verifbill
 export SUBMITTER_ACCOUNT=someuser
-export BILLABLE_BYTES_SINGLE=1536
-export BILLABLE_BYTES_BATCH=4096
 ```
 
 ## Coverage
@@ -29,11 +27,11 @@ export BILLABLE_BYTES_BATCH=4096
 - tariff configuration
 - schema/policy setup on `verif`
 - `setauthsrcs` wiring for `verif`
-- size-based payment calculation from `billable_bytes`
+- size-based payment calculation from contract-computed canonical request size
 - underpayment rejection
 - wrong-token rejection
 - exact atomic single transfer
 - duplicate request rejection for the same request
 - exact atomic batch transfer
-- persisted `billable_kib` in `verif`
+- persisted contract-computed `billable_kib` in `verif`
 - configured downstream `verif` consumer

@@ -23,5 +23,5 @@ These smoke tests validate the supported retail model:
 - `verif::retailbatch`
 - persisted `billable_bytes`
 - persisted `billable_kib`
-- size-mismatch rejection between retail payment size and registry payload
+- contract-computed canonical request size for single and batch flows
 - embedded `manifest_hash`

@@ -111,12 +111,11 @@ void verification_enterprise::billsubmit(
     uint64_t schema_id,
     uint64_t policy_id,
     const checksum256& object_hash,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
+    const checksum256& external_ref
 ) {
     const auto auth_sources = get_auth_source_config();
     require_internal_registry_caller(auth_sources.billing_account);
-    anchor_single_request(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes);
+    anchor_single_request(submitter, schema_id, policy_id, object_hash, external_ref);
 }
 
 void verification_enterprise::retailsub(
@@ -124,12 +123,11 @@ void verification_enterprise::retailsub(
     uint64_t schema_id,
     uint64_t policy_id,
     const checksum256& object_hash,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
+    const checksum256& external_ref
 ) {
     const auto auth_sources = get_auth_source_config();
     require_internal_registry_caller(auth_sources.retail_payment_account);
-    anchor_single_request(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes);
+    anchor_single_request(submitter, schema_id, policy_id, object_hash, external_ref);
 }
 
 void verification_enterprise::billbatch(
@@ -139,8 +137,7 @@ void verification_enterprise::billbatch(
     const checksum256& root_hash,
     uint32_t leaf_count,
     const checksum256& manifest_hash,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
+    const checksum256& external_ref
 ) {
     const auto auth_sources = get_auth_source_config();
     require_internal_registry_caller(auth_sources.billing_account);
@@ -151,8 +148,7 @@ void verification_enterprise::billbatch(
         root_hash,
         leaf_count,
         manifest_hash,
-        external_ref,
-        billable_bytes
+        external_ref
     );
 }
 
@@ -163,8 +159,7 @@ void verification_enterprise::retailbatch(
     const checksum256& root_hash,
     uint32_t leaf_count,
     const checksum256& manifest_hash,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
+    const checksum256& external_ref
 ) {
     const auto auth_sources = get_auth_source_config();
     require_internal_registry_caller(auth_sources.retail_payment_account);
@@ -175,8 +170,7 @@ void verification_enterprise::retailbatch(
         root_hash,
         leaf_count,
         manifest_hash,
-        external_ref,
-        billable_bytes
+        external_ref
     );
 }
 
@@ -223,13 +217,18 @@ void verification_enterprise::anchor_single_request(
     uint64_t schema_id,
     uint64_t policy_id,
     const checksum256& object_hash,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
+    const checksum256& external_ref
 ) {
     check(is_account(submitter), "submitter account does not exist");
     verification_validators::validate_nonzero_checksum(object_hash, "object_hash");
     verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
-    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
+    const auto billable_bytes = verification_request_size::compute_single_registry_bytes(
+        submitter,
+        schema_id,
+        policy_id,
+        object_hash,
+        external_ref
+    );
     const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
 
     const auto schema = require_schema(schema_id);
@@ -266,15 +265,22 @@ void verification_enterprise::anchor_batch_request(
     const checksum256& root_hash,
     uint32_t leaf_count,
     const checksum256& manifest_hash,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
+    const checksum256& external_ref
 ) {
     check(is_account(submitter), "submitter account does not exist");
     check(leaf_count > 0, "leaf_count must be greater than zero");
     verification_validators::validate_nonzero_checksum(root_hash, "root_hash");
     verification_validators::validate_nonzero_checksum(manifest_hash, "manifest_hash");
     verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
-    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
+    const auto billable_bytes = verification_request_size::compute_batch_registry_bytes(
+        submitter,
+        schema_id,
+        policy_id,
+        root_hash,
+        leaf_count,
+        manifest_hash,
+        external_ref
+    );
     const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
 
     const auto schema = require_schema(schema_id);

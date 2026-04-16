@@ -10,7 +10,7 @@ These smoke tests validate the current `verifbill` runtime together with the req
 - entitlement purchase
 - atomic enterprise submit
 - atomic enterprise batch submit
-- size-aware `billable_bytes -> billable_kib` billing
+- contract-computed canonical request size -> `billable_kib` billing
 - nearest-expiry entitlement selection
 
 Scripts:
@@ -43,8 +43,6 @@ export PAYER_ACCOUNT=somepayer
 export SUBMITTER_ACCOUNT=somesubmitter
 export PLAN_INCLUDED_KIB=8
 export PACK_INCLUDED_KIB=6
-export BILLABLE_BYTES_SINGLE=1536
-export BILLABLE_BYTES_BATCH=3072
 ```
 
 ## Run
@@ -77,8 +75,9 @@ deNotary:
 - `setauthsrcs` wiring for `verif`
 - schema/policy setup on `verif`
 - atomic `submit` for single mode with payer authority
+- contract-computed canonical single-request size
 - nearest-expiry entitlement selection
 - duplicate request rejection
-- oversized `billable_bytes` rejection when no single entitlement can satisfy the request
 - atomic `submitroot` for batch mode
-- stored `billable_kib` matching the declared request size
+- contract-computed canonical batch-request size
+- stored `billable_kib` matching the computed request size

@@ -83,6 +83,7 @@ Expected artifacts:
 ## Reference
 
 - [docs/contract-reference.md](/c:/projects/verification-contract/docs/contract-reference.md:1)
+- [docs/canonical-request-size-plan.md](/c:/projects/verification-contract/docs/canonical-request-size-plan.md:1)
 
 ## Notes
 

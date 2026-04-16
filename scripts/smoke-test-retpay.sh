@@ -15,8 +15,6 @@ PAYMENT_SYMBOL="${PAYMENT_SYMBOL:-EOS}"
 PAYMENT_PRECISION="${PAYMENT_PRECISION:-4}"
 PRICE_PER_KIB_SINGLE="${PRICE_PER_KIB_SINGLE:-0.0050 EOS}"
 PRICE_PER_KIB_BATCH="${PRICE_PER_KIB_BATCH:-0.0050 EOS}"
-BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
-BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-4096}"
 WRONG_TOKEN_CONTRACT="${WRONG_TOKEN_CONTRACT:-retail.fake}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
@@ -127,8 +125,10 @@ wait_for_table_match() {
 
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
 BASE_ID="$(date -u +%s)"
-SINGLE_KIB="$(( (BILLABLE_BYTES_SINGLE + 1023) / 1024 ))"
-BATCH_KIB="$(( (BILLABLE_BYTES_BATCH + 1023) / 1024 ))"
+EXPECTED_SINGLE_BYTES=88
+EXPECTED_BATCH_BYTES=124
+SINGLE_KIB="$(( (EXPECTED_SINGLE_BYTES + 1023) / 1024 ))"
+BATCH_KIB="$(( (EXPECTED_BATCH_BYTES + 1023) / 1024 ))"
 PRICE_SINGLE="$(units_to_asset "$(( SINGLE_KIB * $(asset_to_units "${PRICE_PER_KIB_SINGLE}") ))" "${PAYMENT_SYMBOL}")"
 PRICE_BATCH="$(units_to_asset "$(( BATCH_KIB * $(asset_to_units "${PRICE_PER_KIB_BATCH}") ))" "${PAYMENT_SYMBOL}")"
 UNDERPAY_SINGLE="$(units_to_asset "$(( SINGLE_KIB * $(asset_to_units "${PRICE_PER_KIB_SINGLE}") - 1 ))" "${PAYMENT_SYMBOL}")"
@@ -186,14 +186,14 @@ cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" setprice \
 
 log "Rejecting underpayment for atomic retail single flow"
 if cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${UNDERPAY_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|${SINGLE_OBJECT_HASH}|${SINGLE_EXTREF}|${BILLABLE_BYTES_SINGLE}" >/dev/null 2>&1; then
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|${SINGLE_OBJECT_HASH}|${SINGLE_EXTREF}" >/dev/null 2>&1; then
     echo "Assertion failed: underpayment retail transfer was accepted." >&2
     exit 1
 fi
 
 log "Rejecting wrong token for atomic retail single flow"
 if cleos -u "${RPC_URL}" push action "${WRONG_TOKEN_CONTRACT}" transfer \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${RETPAY_ACCOUNT}\",\"${PRICE_SINGLE}\",\"single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|${SINGLE_OBJECT_HASH}|${SINGLE_EXTREF}|${BILLABLE_BYTES_SINGLE}\"]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${RETPAY_ACCOUNT}\",\"${PRICE_SINGLE}\",\"single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|${SINGLE_OBJECT_HASH}|${SINGLE_EXTREF}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: wrong-token retail transfer was accepted." >&2
     exit 1
@@ -201,7 +201,7 @@ fi
 
 log "Funding atomic retail single transfer"
 cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|${SINGLE_OBJECT_HASH}|${SINGLE_EXTREF}|${BILLABLE_BYTES_SINGLE}"
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|${SINGLE_OBJECT_HASH}|${SINGLE_EXTREF}"
 
 wait_for_table_match \
     "${VERIFICATION_ACCOUNT}" \
@@ -219,30 +219,30 @@ COMMITMENT_BYTES="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACC
 COMMITMENT_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
     --argjson id "${COMMITMENT_ID}" \
     '.rows[] | select(.id == $id) | .billable_kib')"
-assert_eq "${BILLABLE_BYTES_SINGLE}" "${COMMITMENT_BYTES}" "retail commitment billable bytes"
+assert_eq "${EXPECTED_SINGLE_BYTES}" "${COMMITMENT_BYTES}" "retail commitment billable bytes"
 assert_eq "${SINGLE_KIB}" "${COMMITMENT_KIB}" "retail commitment billable kib"
 
 log "Rejecting atomic retail single transfer with invalid policy"
 if cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_BATCH_ID}|$(hash_text "retpay-invalid-policy-object-${TIMESTAMP}")|$(hash_text "retpay-invalid-policy-ext-${TIMESTAMP}")|${BILLABLE_BYTES_SINGLE}" >/dev/null 2>&1; then
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_BATCH_ID}|$(hash_text "retpay-invalid-policy-object-${TIMESTAMP}")|$(hash_text "retpay-invalid-policy-ext-${TIMESTAMP}")" >/dev/null 2>&1; then
     echo "Assertion failed: atomic retail single transfer with invalid policy was accepted." >&2
     exit 1
 fi
 
 log "Rejecting duplicate atomic retail single request"
 if cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|$(hash_text "retpay-duplicate-object-${TIMESTAMP}")|${SINGLE_EXTREF}|${BILLABLE_BYTES_SINGLE}" >/dev/null 2>&1; then
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|$(hash_text "retpay-duplicate-object-${TIMESTAMP}")|${SINGLE_EXTREF}" >/dev/null 2>&1; then
     echo "Assertion failed: duplicate atomic retail single request was accepted." >&2
     exit 1
 fi
 
 log "Funding second atomic retail single transfer with fresh request"
 cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|$(hash_text "retpay-second-object-${TIMESTAMP}")|${SINGLE_EXTREF_DUPLICATE}|${BILLABLE_BYTES_SINGLE}"
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|$(hash_text "retpay-second-object-${TIMESTAMP}")|${SINGLE_EXTREF_DUPLICATE}"
 
 log "Funding atomic retail batch transfer"
 cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_BATCH}" \
-    "batch|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_BATCH_ID}|${BATCH_ROOT_HASH}|2|${MANIFEST_HASH}|${BATCH_EXTREF}|${BILLABLE_BYTES_BATCH}"
+    "batch|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_BATCH_ID}|${BATCH_ROOT_HASH}|2|${MANIFEST_HASH}|${BATCH_EXTREF}"
 
 wait_for_table_match \
     "${VERIFICATION_ACCOUNT}" \
@@ -260,7 +260,7 @@ BATCH_BYTES="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}
 BATCH_BILLABLE_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
     --argjson id "${BATCH_ID}" \
     '.rows[] | select(.id == $id) | .billable_kib')"
-assert_eq "${BILLABLE_BYTES_BATCH}" "${BATCH_BYTES}" "retail batch billable bytes"
+assert_eq "${EXPECTED_BATCH_BYTES}" "${BATCH_BYTES}" "retail batch billable bytes"
 assert_eq "${BATCH_KIB}" "${BATCH_BILLABLE_KIB}" "retail batch billable kib"
 
 log "Retail payment smoke test passed"

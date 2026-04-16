@@ -220,17 +220,22 @@ void verification_billing::submit(
     uint64_t schema_id,
     uint64_t policy_id,
     const checksum256& object_hash,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
+    const checksum256& external_ref
 ) {
     check(is_account(payer), "payer account does not exist");
     check(is_account(submitter), "submitter account does not exist");
     verification_validators::validate_nonzero_checksum(object_hash, "object_hash");
     verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
-    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
     require_auth(payer);
     require_contract_only_submitter(payer, submitter);
 
+    const auto billable_bytes = verification_request_size::compute_single_registry_bytes(
+        submitter,
+        schema_id,
+        policy_id,
+        object_hash,
+        external_ref
+    );
     const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
     const auto entitlement = select_entitlement(payer, billable_kib);
     const auto config = get_billing_config();
@@ -244,8 +249,7 @@ void verification_billing::submit(
             schema_id,
             policy_id,
             object_hash,
-            external_ref,
-            billable_bytes
+            external_ref
         )
     ).send();
 
@@ -260,8 +264,7 @@ void verification_billing::submitroot(
     const checksum256& root_hash,
     uint32_t leaf_count,
     const checksum256& manifest_hash,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
+    const checksum256& external_ref
 ) {
     check(is_account(payer), "payer account does not exist");
     check(is_account(submitter), "submitter account does not exist");
@@ -269,10 +272,18 @@ void verification_billing::submitroot(
     verification_validators::validate_nonzero_checksum(root_hash, "root_hash");
     verification_validators::validate_nonzero_checksum(manifest_hash, "manifest_hash");
     verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
-    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
     require_auth(payer);
     require_contract_only_submitter(payer, submitter);
 
+    const auto billable_bytes = verification_request_size::compute_batch_registry_bytes(
+        submitter,
+        schema_id,
+        policy_id,
+        root_hash,
+        leaf_count,
+        manifest_hash,
+        external_ref
+    );
     const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
     const auto entitlement = select_entitlement(payer, billable_kib);
     const auto config = get_billing_config();
@@ -288,8 +299,7 @@ void verification_billing::submitroot(
             root_hash,
             leaf_count,
             manifest_hash,
-            external_ref,
-            billable_bytes
+            external_ref
         )
     ).send();
 

@@ -105,10 +105,10 @@ Fields:
 
 #### Anchoring
 
-- `billsubmit(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
-- `retailsub(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
-- `billbatch(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
-- `retailbatch(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
+- `billsubmit(submitter, schema_id, policy_id, object_hash, external_ref)`
+- `retailsub(submitter, schema_id, policy_id, object_hash, external_ref)`
+- `billbatch(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref)`
+- `retailbatch(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref)`
 
 #### Treasury
 
@@ -122,6 +122,7 @@ Contract-only runtime:
 - `retailsub(...)` and `retailbatch(...)` require `verifretpay` authority
 - these internal entrypoints perform the same registry validation and uniqueness checks
 - they are the active anchoring runtime for the supported payment contracts
+- `billable_bytes` and `billable_kib` are computed inside `verif` from the canonical registry request shape
 
 ### Authorization Wiring
 
@@ -167,8 +168,8 @@ It is responsible for:
 - `deactplan(plan_id)`
 - `setpack(pack_code, token_contract, price, included_kib, active)`
 - `deactpack(pack_id)`
-- `submit(payer, submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
-- `submitroot(payer, submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
+- `submit(payer, submitter, schema_id, policy_id, object_hash, external_ref)`
+- `submitroot(payer, submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref)`
 - `cleanentls(limit)`
 - `setverifacct(verification_account)`
 - `withdraw(token_contract, to, quantity, memo)`
@@ -187,9 +188,10 @@ pack|payer|pack_code
 ```
 
 1. enterprise payer buys plan or pack
-2. `verifbill::submit(...)` or `submitroot(...)` validates payer entitlement
-3. `verifbill` calls `verif::billsubmit(...)` or `billbatch(...)`
-4. `verifbill` burns the matching `KiB` after successful inline anchoring
+2. `verifbill::submit(...)` or `submitroot(...)` computes the canonical registry request size
+3. `verifbill::submit(...)` or `submitroot(...)` validates payer entitlement
+4. `verifbill` calls `verif::billsubmit(...)` or `billbatch(...)`
+5. `verifbill` burns the matching `KiB` after successful inline anchoring
 
 Maintenance:
 
@@ -199,6 +201,7 @@ Entitlement selection:
 
 - `submit(...)` and `submitroot(...)` spend the eligible entitlement with the nearest `expires_at`
 - non-expiring pack entitlements are used only when no sooner-expiring entitlement can satisfy the request
+- request size is contract-computed from the canonical serialized request to `verif`
 
 ### Authority Model
 
@@ -243,18 +246,18 @@ Retail payment is funded through:
 Supported atomic memo formats:
 
 ```text
-single|submitter|schema_id|policy_id|object_hash|external_ref_hex|billable_bytes
-batch|submitter|schema_id|policy_id|root_hash|leaf_count|manifest_hash|external_ref_hex|billable_bytes
+single|submitter|schema_id|policy_id|object_hash|external_ref_hex
+batch|submitter|schema_id|policy_id|root_hash|leaf_count|manifest_hash|external_ref_hex
 ```
 
 Rules:
 
 - exact payment only
-- payment is derived from `billable_kib * price_per_kib`
+- payment is derived from contract-computed `billable_kib * price_per_kib`
 - underpayment is rejected
 - wrong token is rejected
 - mode mismatch is rejected
-- request size is bound to `billable_bytes` and `billable_kib`
+- request size is computed by `verifretpay` from the canonical registry request shape
 - payer currently must match submitter
 - atomic retail transfer performs inline anchoring and does not create pending auth rows
 

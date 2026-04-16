@@ -9,6 +9,7 @@
 #include <eosio/time.hpp>
 
 #include <verification_billing_tables.hpp>
+#include <verification_request_size.hpp>
 #include <verification_validators.hpp>
 
 #include <string>
@@ -62,8 +63,7 @@ public:
         uint64_t schema_id,
         uint64_t policy_id,
         const checksum256& object_hash,
-        const checksum256& external_ref,
-        uint64_t billable_bytes
+        const checksum256& external_ref
     );
 
     [[eosio::action]]
@@ -75,8 +75,7 @@ public:
         const checksum256& root_hash,
         uint32_t leaf_count,
         const checksum256& manifest_hash,
-        const checksum256& external_ref,
-        uint64_t billable_bytes
+        const checksum256& external_ref
     );
 
     [[eosio::action]]

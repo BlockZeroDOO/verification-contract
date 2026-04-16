@@ -8,7 +8,6 @@
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
 
-#include <request_key.hpp>
 #include <verification_billing_tables.hpp>
 #include <verification_validators.hpp>
 
@@ -81,21 +80,6 @@ public:
     );
 
     [[eosio::action]]
-    void use(
-        const name& payer,
-        const name& submitter,
-        uint8_t mode,
-        const checksum256& external_ref,
-        uint64_t billable_bytes
-    );
-
-    [[eosio::action]]
-    void consume(uint64_t auth_id);
-
-    [[eosio::action]]
-    void cleanauths(uint32_t limit);
-
-    [[eosio::action]]
     void cleanentls(uint32_t limit);
 
     [[eosio::action]]
@@ -118,8 +102,6 @@ private:
     using pack_table = verification_billing_tables::pack_table;
     using entitlement_row = verification_billing_tables::entitlement_row;
     using entitlement_table = verification_billing_tables::entitlement_table;
-    using usage_auth_row = verification_billing_tables::usage_auth_row;
-    using usage_auth_table = verification_billing_tables::usage_auth_table;
     using counter_state = verification_billing_tables::counter_state;
     using counter_singleton = verification_billing_tables::counter_singleton;
 
@@ -134,9 +116,6 @@ private:
     static constexpr uint8_t entitlement_status_active = 0;
     static constexpr uint8_t entitlement_status_exhausted = 1;
     static constexpr uint8_t entitlement_status_expired = 2;
-    static constexpr uint8_t enterprise_mode_single = 0;
-    static constexpr uint8_t enterprise_mode_batch = 1;
-    static constexpr uint32_t usage_auth_ttl_sec = 600;
     static constexpr uint32_t cleanup_limit_max = 500;
 
     uint128_t make_payment_key(const name& token_contract, const symbol_code& token_symbol) const;
@@ -147,11 +126,9 @@ private:
     uint64_t next_plan_id();
     uint64_t next_pack_id();
     uint64_t next_entitlement_id();
-    uint64_t next_usageauth_id();
     billing_config get_billing_config() const;
     std::tuple<string, name, name> parse_purchase_memo(const string& memo) const;
     entitlement_row select_entitlement(const name& payer, uint64_t required_kib);
     void consume_entitlement_kib(uint64_t entitlement_id, uint64_t required_kib);
     void require_contract_only_submitter(const name& payer, const name& submitter) const;
-    bool has_live_usage_auth(uint64_t entitlement_id, const time_point_sec& now) const;
 };

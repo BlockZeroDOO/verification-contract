@@ -8,9 +8,10 @@ These smoke tests validate the standalone `verifbill` surface for:
 - plan configuration
 - pack configuration
 - entitlement purchase
-- enterprise usage authorization
-- size-aware `billable_bytes -> billable_kib` authorization binding
-- explicit authorization consumption
+- atomic enterprise submit
+- atomic enterprise batch submit
+- size-aware `billable_bytes -> billable_kib` billing
+- nearest-expiry entitlement selection
 
 Scripts:
 
@@ -35,6 +36,7 @@ export RPC_URL=https://your-rpc
 export READ_RPC_URL=${RPC_URL}
 export BILLING_ACCOUNT=verifbill
 export OWNER_ACCOUNT=verifbill
+export VERIFICATION_OWNER_ACCOUNT=verif
 export PAYER_ACCOUNT=somepayer
 export SUBMITTER_ACCOUNT=somesubmitter
 export PLAN_INCLUDED_KIB=8
@@ -70,18 +72,11 @@ deNotary:
 - `setpack`
 - plan purchase through `transfer -> verifbill`
 - pack purchase through `transfer -> verifbill`
-- `use` for single mode with payer authority
+- `setauthsrcs` wiring for `verif`
+- schema/policy setup on `verif`
+- atomic `submit` for single mode with payer authority
 - nearest-expiry entitlement selection
-- duplicate request authorization rejection
+- duplicate request rejection
 - oversized `billable_bytes` rejection when no single entitlement can satisfy the request
-- `consume`
-- `cleanauths`
-- reissue of the same request after `consume + cleanauths`
-- `use` for batch mode
+- atomic `submitroot` for batch mode
 - stored `billable_kib` matching the declared request size
-
-Optional deep expiry coverage:
-
-- set `RUN_EXPIRY_TESTS=true`
-- optionally override `AUTH_TTL_WAIT_SEC`
-- this enables a long-running check for expired auth cleanup and reissue

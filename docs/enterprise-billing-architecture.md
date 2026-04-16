@@ -1,5 +1,14 @@
 # Enterprise Billing Architecture
 
+Historical note:
+
+- this document captures the earlier design exploration that introduced `verifbill`
+- the current supported runtime is simpler than the original blueprint
+- current production path is atomic:
+  - `verifbill::submit/submitroot`
+  - inline anchoring into internal-only `verif`
+- the current runtime no longer relies on long-lived `usageauths`
+
 ## Purpose
 
 This document defines the recommended on-chain billing model for the enterprise verification surface.

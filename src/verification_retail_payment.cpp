@@ -156,46 +156,6 @@ void verification_retail_payment::setverifacct(const name& verification_account)
     config.set(retail_payment_config{verification_account}, get_self());
 }
 
-void verification_retail_payment::consume(uint64_t auth_id) {
-    const auto config = get_retail_payment_config();
-    check(
-        has_auth(get_self()) || has_auth(config.verification_account),
-        "missing required authority of retail payment contract or verif"
-    );
-    verification_validators::validate_registry_id(auth_id, "auth_id");
-
-    usage_auth_table usage_auths(get_self(), get_self().value);
-    auto existing = usage_auths.find(auth_id);
-    check(existing != usage_auths.end(), "retail usage authorization does not exist");
-    check(!existing->consumed, "retail usage authorization is already consumed");
-
-    usage_auths.modify(existing, get_self(), [&](auto& row) {
-        row.consumed = true;
-        row.consumed_at = time_point_sec(current_time_point());
-    });
-}
-
-void verification_retail_payment::cleanauths(uint32_t limit) {
-    require_auth(get_self());
-    check(limit > 0, "limit must be greater than zero");
-    check(limit <= cleanup_limit_max, "limit exceeds cleanup maximum");
-
-    usage_auth_table usage_auths(get_self(), get_self().value);
-    const auto now = time_point_sec(current_time_point());
-    uint32_t removed = 0;
-
-    auto itr = usage_auths.begin();
-    while (itr != usage_auths.end() && removed < limit) {
-        const bool expired = itr->expires_at.sec_since_epoch() > 0 && itr->expires_at <= now;
-        if (itr->consumed || expired) {
-            itr = usage_auths.erase(itr);
-            ++removed;
-            continue;
-        }
-        ++itr;
-    }
-}
-
 void verification_retail_payment::withdraw(
     const name& token_contract,
     const name& to,
@@ -248,36 +208,19 @@ void verification_retail_payment::ontransfer(
     const auto expected_amount = static_cast<int64_t>(price_per_kib_amount * billable_kib);
     check(quantity == asset(expected_amount, tariff.price_per_kib.symbol), "retail payment must match exact size-based tariff");
 
-    if (parsed_payment.atomic) {
-        const auto config = get_retail_payment_config();
-        if (mode == retail_mode_single) {
-            action(
-                permission_level{get_self(), "active"_n},
-                config.verification_account,
-                "retailsub"_n,
-                std::make_tuple(
-                    submitter,
-                    parsed_payment.schema_id,
-                    parsed_payment.policy_id,
-                    parsed_payment.object_hash,
-                    external_ref,
-                    billable_bytes
-                )
-            ).send();
-            return;
-        }
+    check(parsed_payment.atomic, "retail memo must use atomic contract-only format");
 
+    const auto config = get_retail_payment_config();
+    if (mode == retail_mode_single) {
         action(
             permission_level{get_self(), "active"_n},
             config.verification_account,
-            "retailbatch"_n,
+            "retailsub"_n,
             std::make_tuple(
                 submitter,
                 parsed_payment.schema_id,
                 parsed_payment.policy_id,
-                parsed_payment.root_hash,
-                parsed_payment.leaf_count,
-                parsed_payment.manifest_hash,
+                parsed_payment.object_hash,
                 external_ref,
                 billable_bytes
             )
@@ -285,36 +228,21 @@ void verification_retail_payment::ontransfer(
         return;
     }
 
-    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
-    usage_auth_table usage_auths(get_self(), get_self().value);
-    auto by_request = usage_auths.get_index<"byrequest"_n>();
-    auto existing = by_request.find(request_key);
-    const auto now = time_point_sec(current_time_point());
-    if (existing != by_request.end()) {
-        const bool expired = existing->expires_at.sec_since_epoch() > 0 && existing->expires_at <= now;
-        if (existing->consumed || expired) {
-            by_request.erase(existing);
-        } else {
-            check(false, "retail usage authorization already exists for request");
-        }
-    }
-
-    usage_auths.emplace(get_self(), [&](auto& row) {
-        row.auth_id = next_retail_auth_id();
-        row.mode = mode;
-        row.payer = from;
-        row.submitter = submitter;
-        row.external_ref = external_ref;
-        row.request_key = request_key;
-        row.billable_bytes = billable_bytes;
-        row.billable_kib = billable_kib;
-        row.token_contract = get_first_receiver();
-        row.quantity = quantity;
-        row.consumed = false;
-        row.created_at = now;
-        row.consumed_at = time_point_sec{};
-        row.expires_at = time_point_sec(now.sec_since_epoch() + retail_auth_ttl_sec);
-    });
+    action(
+        permission_level{get_self(), "active"_n},
+        config.verification_account,
+        "retailbatch"_n,
+        std::make_tuple(
+            submitter,
+            parsed_payment.schema_id,
+            parsed_payment.policy_id,
+            parsed_payment.root_hash,
+            parsed_payment.leaf_count,
+            parsed_payment.manifest_hash,
+            external_ref,
+            billable_bytes
+        )
+    ).send();
 }
 
 uint128_t verification_retail_payment::make_payment_key(const name& token_contract, const symbol_code& token_symbol) const {
@@ -372,15 +300,6 @@ uint64_t verification_retail_payment::next_retail_tariff_id() {
     return allocated;
 }
 
-uint64_t verification_retail_payment::next_retail_auth_id() {
-    retail_counter_singleton counters(get_self(), get_self().value);
-    auto state = counters.exists() ? counters.get() : retail_counter_state{};
-    const uint64_t allocated = state.next_auth_id == 0 ? 1 : state.next_auth_id;
-    state.next_auth_id = allocated + 1;
-    counters.set(state, get_self());
-    return allocated;
-}
-
 verification_retail_payment::retail_payment_config verification_retail_payment::get_retail_payment_config() const {
     retail_payment_config_singleton config(get_self(), get_self().value);
     return config.exists() ? config.get() : retail_payment_config{};
@@ -389,8 +308,8 @@ verification_retail_payment::retail_payment_config verification_retail_payment::
 verification_retail_payment::parsed_payment_memo verification_retail_payment::parse_payment_memo(const string& memo) const {
     const auto fields = split_memo_fields(memo);
     check(
-        fields.size() == 4 || fields.size() == 7 || fields.size() == 9,
-        "retail memo format must be mode|submitter|external_ref|billable_bytes or atomic retail variant"
+        fields.size() == 7 || fields.size() == 9,
+        "retail memo format must use the atomic retail variant"
     );
 
     const auto& mode_value = fields[0];
@@ -403,15 +322,6 @@ verification_retail_payment::parsed_payment_memo verification_retail_payment::pa
     parsed.submitter = name(submitter_value);
     check(parsed.submitter.value > 0, "submitter in retail memo is invalid");
     check(is_account(parsed.submitter), "submitter account does not exist");
-
-    if (fields.size() == 4) {
-        verification_validators::validate_printable_ascii_text(fields[2], 64, "external_ref", false);
-        check(fields[2].size() == 64, "external_ref must be 64 hex characters");
-        parsed.external_ref = verification_validators::parse_hash(fields[2]);
-        parsed.billable_bytes = parse_decimal_u64(fields[3], "billable_bytes");
-        verification_validators::validate_billable_bytes(parsed.billable_bytes, "billable_bytes");
-        return parsed;
-    }
 
     parsed.atomic = true;
     parsed.schema_id = parse_decimal_u64(fields[2], "schema_id");

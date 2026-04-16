@@ -12,19 +12,13 @@ These smoke tests validate the standalone `verifretpay` surface.
 
 - token configuration
 - tariff configuration
+- schema/policy setup on `verif`
+- `setauthsrcs` wiring for `verif`
 - size-based payment calculation from `billable_bytes`
 - underpayment rejection
 - wrong-token rejection
-- exact single auth creation
-- duplicate auth rejection for the same request
-- persisted `billable_kib`
-- explicit `consume`
-- `cleanauths`
-- reissue of the same request after `consume + cleanauths`
+- exact atomic single transfer
+- duplicate request rejection for the same request
+- exact atomic batch transfer
+- persisted `billable_kib` in `verif`
 - configured downstream `verif` consumer
-
-Optional deep expiry coverage:
-
-- set `RUN_EXPIRY_TESTS=true`
-- optionally override `AUTH_TTL_WAIT_SEC`
-- this enables a long-running check for expired retail auth cleanup and reissue

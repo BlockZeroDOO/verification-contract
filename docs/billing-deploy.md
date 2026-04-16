@@ -15,7 +15,7 @@ Repository boundary:
 - accepted billing tokens
 - plans
 - packs
-- one-time usage authorizations for `verif`
+- atomic enterprise billing into `verif`
 
 ## Build
 
@@ -49,7 +49,7 @@ cleos -u <rpc> get table verifbill verifbill billtokens
 cleos -u <rpc> get table verifbill verifbill plans
 cleos -u <rpc> get table verifbill verifbill packs
 cleos -u <rpc> get table verifbill verifbill entitlements
-cleos -u <rpc> get table verifbill verifbill usageauths
+cleos -u <rpc> get table verifbill verifbill billconfig
 ```
 
 ## Wiring

@@ -296,100 +296,6 @@ void verification_billing::submitroot(
     consume_entitlement_kib(entitlement.entitlement_id, billable_kib);
 }
 
-void verification_billing::use(
-    const name& payer,
-    const name& submitter,
-    uint8_t mode,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
-) {
-    check(is_account(payer), "payer account does not exist");
-    check(is_account(submitter), "submitter account does not exist");
-    check(mode == enterprise_mode_single || mode == enterprise_mode_batch, "unsupported enterprise usage mode");
-    verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
-    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
-    require_auth(payer);
-
-    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
-    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
-    usage_auth_table usage_auths(get_self(), get_self().value);
-    auto by_request = usage_auths.get_index<"byrequest"_n>();
-    const auto now = time_point_sec(current_time_point());
-    auto existing = by_request.find(request_key);
-    if (existing != by_request.end()) {
-        const bool expired = existing->expires_at <= now;
-        if (existing->consumed || expired) {
-            by_request.erase(existing);
-        } else {
-            check(false, "enterprise usage authorization already exists for request");
-        }
-    }
-
-    const auto entitlement = select_entitlement(payer, billable_kib);
-    usage_auths.emplace(get_self(), [&](auto& row) {
-        row.auth_id = next_usageauth_id();
-        row.payer = payer;
-        row.submitter = submitter;
-        row.mode = mode;
-        row.request_key = request_key;
-        row.billable_bytes = billable_bytes;
-        row.billable_kib = billable_kib;
-        row.entitlement_id = entitlement.entitlement_id;
-        row.consumed = false;
-        row.created_at = now;
-        row.consumed_at = time_point_sec{};
-        row.expires_at = time_point_sec(now.sec_since_epoch() + usage_auth_ttl_sec);
-    });
-}
-
-void verification_billing::consume(uint64_t auth_id) {
-    const auto config = get_billing_config();
-    check(
-        has_auth(get_self()) || has_auth(config.verification_account),
-        "missing required authority of billing contract or verif"
-    );
-    verification_validators::validate_registry_id(auth_id, "auth_id");
-
-    usage_auth_table usage_auths(get_self(), get_self().value);
-    auto existing = usage_auths.find(auth_id);
-    check(existing != usage_auths.end(), "enterprise usage authorization does not exist");
-    check(!existing->consumed, "enterprise usage authorization is already consumed");
-    const auto now = time_point_sec(current_time_point());
-
-    entitlement_table entitlements(get_self(), get_self().value);
-    auto entitlement = entitlements.find(existing->entitlement_id);
-    check(entitlement != entitlements.end(), "enterprise entitlement does not exist");
-    check(existing->expires_at > now, "enterprise usage authorization has expired");
-
-    consume_entitlement_kib(existing->entitlement_id, existing->billable_kib);
-
-    usage_auths.modify(existing, get_self(), [&](auto& row) {
-        row.consumed = true;
-        row.consumed_at = now;
-    });
-}
-
-void verification_billing::cleanauths(uint32_t limit) {
-    require_auth(get_self());
-    check(limit > 0, "limit must be greater than zero");
-    check(limit <= cleanup_limit_max, "limit exceeds cleanup maximum");
-
-    usage_auth_table usage_auths(get_self(), get_self().value);
-    const auto now = time_point_sec(current_time_point());
-    uint32_t removed = 0;
-
-    auto itr = usage_auths.begin();
-    while (itr != usage_auths.end() && removed < limit) {
-        const bool expired = itr->expires_at <= now;
-        if (itr->consumed || expired) {
-            itr = usage_auths.erase(itr);
-            ++removed;
-            continue;
-        }
-        ++itr;
-    }
-}
-
 void verification_billing::cleanentls(uint32_t limit) {
     require_auth(get_self());
     check(limit > 0, "limit must be greater than zero");
@@ -424,9 +330,6 @@ void verification_billing::cleanentls(uint32_t limit) {
         }
 
         if (current->status == entitlement_status_active) {
-            continue;
-        }
-        if (has_live_usage_auth(current->entitlement_id, now)) {
             continue;
         }
 
@@ -592,15 +495,6 @@ uint64_t verification_billing::next_entitlement_id() {
     return allocated;
 }
 
-uint64_t verification_billing::next_usageauth_id() {
-    counter_singleton counters(get_self(), get_self().value);
-    auto state = counters.exists() ? counters.get() : counter_state{};
-    const auto allocated = state.next_usageauth_id == 0 ? 1 : state.next_usageauth_id;
-    state.next_usageauth_id = allocated + 1;
-    counters.set(state, get_self());
-    return allocated;
-}
-
 verification_billing::billing_config verification_billing::get_billing_config() const {
     billing_config_singleton config(get_self(), get_self().value);
     return config.exists() ? config.get() : billing_config{};
@@ -639,6 +533,7 @@ verification_billing::entitlement_row verification_billing::select_entitlement(
     uint64_t required_kib
 ) {
     entitlement_table entitlements(get_self(), get_self().value);
+    auto by_payer = entitlements.get_index<"bypayer"_n>();
     const auto now = time_point_sec(current_time_point());
     bool found_candidate = false;
     entitlement_row candidate{};
@@ -658,17 +553,17 @@ verification_billing::entitlement_row verification_billing::select_entitlement(
         return lhs.entitlement_id < rhs.entitlement_id;
     };
 
-    for (auto itr = entitlements.begin(); itr != entitlements.end(); ) {
+    for (auto itr = by_payer.find(payer.value); itr != by_payer.end() && itr->payer == payer; ) {
         auto current = itr;
         ++itr;
 
-        if (current->payer != payer || current->status != entitlement_status_active) {
+        if (current->status != entitlement_status_active) {
             continue;
         }
 
         const bool has_expiry = current->expires_at.sec_since_epoch() > 0;
         if (has_expiry && current->expires_at <= now) {
-            entitlements.modify(current, get_self(), [&](auto& row) {
+            by_payer.modify(current, get_self(), [&](auto& row) {
                 row.status = entitlement_status_expired;
                 row.updated_at = now;
             });
@@ -676,7 +571,7 @@ verification_billing::entitlement_row verification_billing::select_entitlement(
         }
 
         if (current->kib_remaining == 0) {
-            entitlements.modify(current, get_self(), [&](auto& row) {
+            by_payer.modify(current, get_self(), [&](auto& row) {
                 row.status = entitlement_status_exhausted;
                 row.updated_at = now;
             });
@@ -728,17 +623,4 @@ void verification_billing::require_contract_only_submitter(const name& payer, co
         payer == submitter,
         "contract-only enterprise flow requires submitter to match payer"
     );
-}
-
-bool verification_billing::has_live_usage_auth(uint64_t entitlement_id, const time_point_sec& now) const {
-    usage_auth_table usage_auths(get_self(), get_self().value);
-    auto by_entitlement = usage_auths.get_index<"byentitle"_n>();
-    auto itr = by_entitlement.find(entitlement_id);
-    while (itr != by_entitlement.end() && itr->entitlement_id == entitlement_id) {
-        if (!itr->consumed && itr->expires_at > now) {
-            return true;
-        }
-        ++itr;
-    }
-    return false;
 }

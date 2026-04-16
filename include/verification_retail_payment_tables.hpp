@@ -62,38 +62,9 @@ using tariff_table = multi_index<
     indexed_by<"bytokensym"_n, const_mem_fun<tariff_row, uint128_t, &tariff_row::bytokensym>>
 >;
 
-struct [[eosio::table("rtlauths")]] usage_auth_row {
-    uint64_t auth_id;
-    uint8_t mode;
-    name payer;
-    name submitter;
-    checksum256 external_ref;
-    checksum256 request_key;
-    uint64_t billable_bytes;
-    uint64_t billable_kib;
-    name token_contract;
-    asset quantity;
-    bool consumed;
-    time_point_sec created_at;
-    time_point_sec consumed_at;
-    time_point_sec expires_at;
-
-    uint64_t primary_key() const { return auth_id; }
-    checksum256 byrequest() const { return request_key; }
-    uint64_t bypayer() const { return payer.value; }
-};
-
-using usage_auth_table = multi_index<
-    "rtlauths"_n,
-    usage_auth_row,
-    indexed_by<"byrequest"_n, const_mem_fun<usage_auth_row, checksum256, &usage_auth_row::byrequest>>,
-    indexed_by<"bypayer"_n, const_mem_fun<usage_auth_row, uint64_t, &usage_auth_row::bypayer>>
->;
-
 struct [[eosio::table("rtlcounters")]] retail_counter_state {
     uint64_t next_token_id = 1;
     uint64_t next_tariff_id = 1;
-    uint64_t next_auth_id = 1;
 };
 
 using retail_counter_singleton = singleton<"rtlcounters"_n, retail_counter_state>;

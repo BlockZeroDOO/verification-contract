@@ -148,8 +148,8 @@ It is responsible for:
 - plans
 - packs
 - entitlements
-- request-bound enterprise auth
-- downstream consume authorization for `verif`
+- atomic enterprise billing
+- inline anchoring into `verif`
 
 ### Tables
 
@@ -157,7 +157,6 @@ It is responsible for:
 - `plans`
 - `packs`
 - `entitlements`
-- `usageauths`
 - `billcounters`
 
 ### Actions
@@ -170,9 +169,6 @@ It is responsible for:
 - `deactpack(pack_id)`
 - `submit(payer, submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
 - `submitroot(payer, submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
-- `use(payer, submitter, mode, external_ref, billable_bytes)`
-- `consume(auth_id)`
-- `cleanauths(limit)`
 - `cleanentls(limit)`
 - `setverifacct(verification_account)`
 - `withdraw(token_contract, to, quantity, memo)`
@@ -190,15 +186,6 @@ plan|payer|plan_code
 pack|payer|pack_code
 ```
 
-### Usage Flow
-
-1. enterprise payer buys plan or pack
-2. `use(...)` issues one-time auth for a concrete request and billable size
-3. `verif` anchors the request
-4. `verif` calls `verifbill::consume(...)`
-
-Transitional contract-only flow:
-
 1. enterprise payer buys plan or pack
 2. `verifbill::submit(...)` or `submitroot(...)` validates payer entitlement
 3. `verifbill` calls `verif::billsubmit(...)` or `billbatch(...)`
@@ -206,20 +193,18 @@ Transitional contract-only flow:
 
 Maintenance:
 
-- `cleanauths(limit)` removes consumed or expired `usageauths`
-- `cleanentls(limit)` removes expired or exhausted `entitlements` that are no longer referenced by live auth
+- `cleanentls(limit)` removes expired or exhausted `entitlements`
 
 Entitlement selection:
 
-- `use(...)` spends the eligible entitlement with the nearest `expires_at`
+- `submit(...)` and `submitroot(...)` spend the eligible entitlement with the nearest `expires_at`
 - non-expiring pack entitlements are used only when no sooner-expiring entitlement can satisfy the request
 
 ### Authority Model
 
 - governance config is controlled by contract authority
-- `use(...)` requires real payer authority
-- transitional atomic `submit(...)` and `submitroot(...)` also require real payer authority
-- current contract-only atomic flow requires `payer == submitter`
+- `submit(...)` and `submitroot(...)` require real payer authority
+- current contract-only enterprise flow requires `payer == submitter`
 - account delegation should be handled by native Antelope permissions, not by contract state
 
 ## `verifretpay`
@@ -232,14 +217,13 @@ It is responsible for:
 
 - accepted retail tokens
 - exact size-based tariffs
-- one-time retail auth for `verif`
-- downstream consume authorization for `verif`
+- atomic retail payment
+- inline anchoring into `verif`
 
 ### Tables
 
 - `rtltokens`
 - `rtltariffs`
-- `rtlauths`
 - `rtlcounters`
 
 ### Actions
@@ -247,8 +231,6 @@ It is responsible for:
 - `settoken(token_contract, token_symbol)`
 - `rmtoken(token_contract, token_symbol)`
 - `setprice(mode, token_contract, price_per_kib)`
-- `consume(auth_id)`
-- `cleanauths(limit)`
 - `setverifacct(verification_account)`
 - `withdraw(token_contract, to, quantity, memo)`
 
@@ -258,11 +240,9 @@ Retail payment is funded through:
 
 - `eosio.token::transfer -> verifretpay`
 
-Current transitional memo formats:
+Supported atomic memo formats:
 
 ```text
-single|submitter|external_ref_hex|billable_bytes
-batch|submitter|external_ref_hex|billable_bytes
 single|submitter|schema_id|policy_id|object_hash|external_ref_hex|billable_bytes
 batch|submitter|schema_id|policy_id|root_hash|leaf_count|manifest_hash|external_ref_hex|billable_bytes
 ```
@@ -274,28 +254,14 @@ Rules:
 - underpayment is rejected
 - wrong token is rejected
 - mode mismatch is rejected
-- auth is one-time and request-bound
-- auth is bound to `billable_bytes` and `billable_kib`
+- request size is bound to `billable_bytes` and `billable_kib`
 - payer currently must match submitter
-- atomic retail variants perform inline anchoring and do not create pending auth rows
-
-### Usage Flow
-
-1. retail payer transfers exact amount to `verifretpay`
-2. `verifretpay` creates one-time auth for the request
-3. `verif` anchors the request
-4. `verif` calls `verifretpay::consume(...)`
-
-Transitional contract-only flow:
+- atomic retail transfer performs inline anchoring and does not create pending auth rows
 
 1. retail payer transfers exact amount to `verifretpay`
 2. `verifretpay` validates atomic memo payload and exact tariff
 3. `verifretpay` calls `verif::retailsub(...)` or `retailbatch(...)`
-4. transaction finalizes without creating a pending retail auth row
-
-Maintenance:
-
-- `cleanauths(limit)` removes consumed or expired `rtlauths`
+4. transaction finalizes without creating any pending retail auth row
 
 ## Deployment Names
 

@@ -14,7 +14,7 @@ extern "C" {
                     (setpack)(deactpack)
                     (setverifacct)
                     (submit)(submitroot)
-                    (use)(consume)(cleanauths)(cleanentls)(withdraw)
+                    (cleanentls)(withdraw)
                 )
             }
             return;

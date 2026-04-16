@@ -1,5 +1,14 @@
 # Contract-Only `verif` Migration Plan
 
+Historical note:
+
+- the migration described here has already been completed
+- current supported runtime is:
+  - `verif` as internal-only registry
+  - `verifbill` as enterprise public entrypoint
+  - `verifretpay` as retail public entrypoint
+- sections below remain as implementation history and rationale
+
 ## Purpose
 
 This document defines the target migration from the current auth-based registry model to a contract-only registry model:

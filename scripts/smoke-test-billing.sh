@@ -5,8 +5,10 @@ set -euo pipefail
 RPC_URL="${RPC_URL:-https://jungle4.api.eosnation.io}"
 READ_RPC_URL="${READ_RPC_URL:-${RPC_URL}}"
 BILLING_ACCOUNT="${BILLING_ACCOUNT:-verifbill}"
-VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verification}"
+VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verif}"
 OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
+VERIFICATION_OWNER_ACCOUNT="${VERIFICATION_OWNER_ACCOUNT:-${VERIFICATION_ACCOUNT}}"
+RETAIL_PAYMENT_ACCOUNT="${RETAIL_PAYMENT_ACCOUNT:-${BILLING_ACCOUNT}}"
 PAYER_ACCOUNT="${PAYER_ACCOUNT:-}"
 SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
@@ -19,16 +21,15 @@ PACK_PRICE="${PACK_PRICE:-0.0200 EOS}"
 PLAN_DURATION_SEC="${PLAN_DURATION_SEC:-2592000}"
 PLAN_INCLUDED_KIB="${PLAN_INCLUDED_KIB:-8}"
 PACK_INCLUDED_KIB="${PACK_INCLUDED_KIB:-6}"
-USE_SINGLE_BYTES="${USE_SINGLE_BYTES:-1536}"
-USE_BATCH_BYTES="${USE_BATCH_BYTES:-3072}"
+BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
+BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-3072}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
-RUN_EXPIRY_TESTS="${RUN_EXPIRY_TESTS:-false}"
-AUTH_TTL_WAIT_SEC="${AUTH_TTL_WAIT_SEC:-610}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the billing contract authority account.}"
-: "${PAYER_ACCOUNT:?Set PAYER_ACCOUNT to a funded account that can purchase billing products.}"
-: "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to the account that signs enterprise usage requests.}"
+: "${VERIFICATION_OWNER_ACCOUNT:?Set VERIFICATION_OWNER_ACCOUNT to the verif authority account.}"
+: "${PAYER_ACCOUNT:?Set PAYER_ACCOUNT to a funded enterprise payer account.}"
+: "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to the enterprise submitter account.}"
 
 if [[ ${#BILLING_ACCOUNT} -gt 12 ]]; then
     echo "BILLING_ACCOUNT must be 12 characters or fewer for Antelope account names: ${BILLING_ACCOUNT}" >&2
@@ -110,29 +111,8 @@ wait_for_table_match() {
     done
 }
 
-wait_for_table_absence() {
-    local code="$1"
-    local scope="$2"
-    local table="$3"
-    local jq_filter="$4"
-    local description="$5"
-
-    local deadline=$(( $(date -u +%s) + WAIT_TIMEOUT_SEC ))
-    while true; do
-        if ! get_table_json "${code}" "${scope}" "${table}" | "${JQ_BIN}" -e "${jq_filter}" >/dev/null 2>&1; then
-            return 0
-        fi
-
-        if (( $(date -u +%s) >= deadline )); then
-            echo "Timed out waiting for ${description}." >&2
-            exit 1
-        fi
-
-        sleep "${WAIT_INTERVAL_SEC}"
-    done
-}
-
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
+BASE_ID="$(date -u +%s)"
 if [[ -z "${PLAN_CODE}" ]]; then
     PLAN_CODE="pl$(normalize_name_fragment "${TIMESTAMP:8:6}")"
 fi
@@ -150,18 +130,48 @@ if [[ ${#PACK_CODE} -gt 12 ]]; then
     exit 1
 fi
 
-PLAN_REF="$(hash_text "bill-plan-${TIMESTAMP}")"
-USE_REF_SINGLE="$(hash_text "bill-use-single-${TIMESTAMP}")"
-USE_REF_BATCH="$(hash_text "bill-use-batch-${TIMESTAMP}")"
-USE_REF_EXPIRED="$(hash_text "bill-use-expired-${TIMESTAMP}")"
-USE_REF_TOO_LARGE="$(hash_text "bill-use-too-large-${TIMESTAMP}")"
+SCHEMA_ID="${SCHEMA_ID:-$((BASE_ID + 1000))}"
+POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-$((BASE_ID + 2000))}"
+POLICY_BATCH_ID="${POLICY_BATCH_ID:-$((BASE_ID + 2001))}"
+
+COMMIT_EXTREF_SINGLE="$(hash_text "bill-single-${TIMESTAMP}")"
+COMMIT_EXTREF_BATCH="$(hash_text "bill-batch-${TIMESTAMP}")"
+COMMIT_EXTREF_DUPLICATE="$(hash_text "bill-duplicate-${TIMESTAMP}")"
+OBJECT_HASH_SINGLE="$(hash_text "bill-object-single-${TIMESTAMP}")"
+OBJECT_HASH_DUPLICATE="$(hash_text "bill-object-duplicate-${TIMESTAMP}")"
+ROOT_HASH_BATCH="$(hash_text "bill-root-${TIMESTAMP}")"
+MANIFEST_HASH_BATCH="$(hash_text "bill-manifest-${TIMESTAMP}")"
+ZERO_HASH="$(printf '0%.0s' {1..64})"
+
+EXPECTED_SINGLE_KIB="$(( (BILLABLE_BYTES_SINGLE + 1023) / 1024 ))"
+EXPECTED_BATCH_KIB="$(( (BILLABLE_BYTES_BATCH + 1023) / 1024 ))"
+
+log "Configuring verification authorization sources"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setauthsrcs \
+    "[\"${BILLING_ACCOUNT}\",\"${RETAIL_PAYMENT_ACCOUNT}\"]" \
+    -p "${VERIFICATION_OWNER_ACCOUNT}@active"
+
+log "Creating billing schema"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" addschema \
+    "[${SCHEMA_ID},\"1.0.0\",\"$(hash_text "bill-schema-${TIMESTAMP}")\",\"$(hash_text "bill-schema-policy-${TIMESTAMP}")\"]" \
+    -p "${VERIFICATION_OWNER_ACCOUNT}@active"
+
+log "Creating billing single policy"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
+    "[${POLICY_SINGLE_ID},true,false,true]" \
+    -p "${VERIFICATION_OWNER_ACCOUNT}@active"
+
+log "Creating billing batch policy"
+cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
+    "[${POLICY_BATCH_ID},false,true,true]" \
+    -p "${VERIFICATION_OWNER_ACCOUNT}@active"
 
 log "Configuring accepted billing token"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" settoken \
     "[\"${PAYMENT_TOKEN_CONTRACT}\",\"${PAYMENT_PRECISION},${PAYMENT_SYMBOL}\"]" \
     -p "${OWNER_ACCOUNT}@active"
 
-log "Configuring verification account for billing consume authorization"
+log "Configuring verification account for billing orchestration"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" setverifacct \
     "[\"${VERIFICATION_ACCOUNT}\"]" \
     -p "${OWNER_ACCOUNT}@active"
@@ -198,164 +208,100 @@ wait_for_table_match \
     ".rows[] | select(.payer == \"${PAYER_ACCOUNT}\" and .kind == 1)" \
     "pack entitlement for ${PAYER_ACCOUNT}"
 
-EXPECTED_SINGLE_KIB="$(( (USE_SINGLE_BYTES + 1023) / 1024 ))"
-EXPECTED_BATCH_KIB="$(( (USE_BATCH_BYTES + 1023) / 1024 ))"
+PLAN_ENTITLEMENT_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
+    --arg payer "${PAYER_ACCOUNT}" \
+    '.rows[] | select(.payer == $payer and .kind == 0) | .entitlement_id' | tail -n 1)"
+PLAN_KIB_BEFORE_SINGLE="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
+    --argjson id "${PLAN_ENTITLEMENT_ID}" \
+    '.rows[] | select(.entitlement_id == $id) | .kib_remaining')"
 
-log "Creating enterprise single usage authorization"
-cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_SINGLE}\",${USE_SINGLE_BYTES}]" \
-    -p "${PAYER_ACCOUNT}@active"
-
-wait_for_table_match \
-    "${BILLING_ACCOUNT}" \
-    "${BILLING_ACCOUNT}" \
-    "usageauths" \
-    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 0 and ((.consumed == false) or (.consumed == 0)))" \
-    "single usage authorization"
-
-log "Rejecting duplicate enterprise single authorization for the same request"
-if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_SINGLE}\",${USE_SINGLE_BYTES}]" \
+log "Rejecting enterprise submit with mismatched payer and submitter"
+if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
+    "[\"${PAYER_ACCOUNT}\",\"${OWNER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "bill-mismatch-object-${TIMESTAMP}")\",\"$(hash_text "bill-mismatch-ext-${TIMESTAMP}")\",${BILLABLE_BYTES_SINGLE}]" \
     -p "${PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
-    echo "Assertion failed: duplicate enterprise single authorization was accepted." >&2
+    echo "Assertion failed: enterprise submit with mismatched payer/submitter was accepted." >&2
     exit 1
 fi
 
-SINGLE_AUTH_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
-    --arg submitter "${SUBMITTER_ACCOUNT}" \
-    '.rows[] | select(.submitter == $submitter and .mode == 0 and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
-SINGLE_ENTITLEMENT_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
-    --argjson id "${SINGLE_AUTH_ID}" \
-    '.rows[] | select(.auth_id == $id) | .entitlement_id')"
-SINGLE_ENTITLEMENT_KIND="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
-    --argjson id "${SINGLE_ENTITLEMENT_ID}" \
-    '.rows[] | select(.entitlement_id == $id) | .kind')"
-SINGLE_ENTITLEMENT_KIB_BEFORE_CONSUME="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
-    --argjson id "${SINGLE_ENTITLEMENT_ID}" \
-    '.rows[] | select(.entitlement_id == $id) | .kib_remaining')"
-
-SINGLE_AUTH_KIB="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
-    --argjson id "${SINGLE_AUTH_ID}" \
-    '.rows[] | select(.auth_id == $id) | .billable_kib')"
-assert_eq "${EXPECTED_SINGLE_KIB}" "${SINGLE_AUTH_KIB}" "single auth billable_kib"
-assert_eq "0" "${SINGLE_ENTITLEMENT_KIND}" "nearest-expiry entitlement kind for single auth"
-
-log "Consuming enterprise single usage authorization"
-cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" consume "[${SINGLE_AUTH_ID}]" -p "${OWNER_ACCOUNT}@active"
-
-wait_for_table_match \
-    "${BILLING_ACCOUNT}" \
-    "${BILLING_ACCOUNT}" \
-    "usageauths" \
-    ".rows[] | select(.auth_id == ${SINGLE_AUTH_ID} and ((.consumed == true) or (.consumed == 1)))" \
-    "consumed single usage authorization"
-
-log "Cleaning consumed enterprise usage authorizations"
-cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" cleanauths "[10]" -p "${OWNER_ACCOUNT}@active"
-
-wait_for_table_absence \
-    "${BILLING_ACCOUNT}" \
-    "${BILLING_ACCOUNT}" \
-    "usageauths" \
-    ".rows[] | select(.auth_id == ${SINGLE_AUTH_ID})" \
-    "cleanup of consumed single usage authorization"
-
-PLAN_KIB_AFTER_CONSUME="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
-    --argjson id "${SINGLE_ENTITLEMENT_ID}" \
-    '.rows[] | select(.entitlement_id == $id) | .kib_remaining')"
-assert_eq "$(( SINGLE_ENTITLEMENT_KIB_BEFORE_CONSUME - EXPECTED_SINGLE_KIB ))" "${PLAN_KIB_AFTER_CONSUME}" "selected entitlement kib_remaining after single consume"
-
-log "Reissuing enterprise authorization for the same request after cleanup"
-LAST_AUTH_ID_BEFORE_REISSUE="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r '[.rows[].auth_id] | max // 0')"
-cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_SINGLE}\",${USE_SINGLE_BYTES}]" \
+log "Submitting atomic enterprise single record"
+cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_SINGLE}\",\"${COMMIT_EXTREF_SINGLE}\",${BILLABLE_BYTES_SINGLE}]" \
     -p "${PAYER_ACCOUNT}@active"
 
-REISSUED_AUTH_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
-    --arg submitter "${SUBMITTER_ACCOUNT}" \
-    --argjson last_id "${LAST_AUTH_ID_BEFORE_REISSUE}" \
-    '.rows[] | select(.submitter == $submitter and .mode == 0 and .auth_id > $last_id and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
+wait_for_table_match \
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "commitments" \
+    ".rows[] | select(.external_ref == \"${COMMIT_EXTREF_SINGLE}\")" \
+    "enterprise commitment ${COMMIT_EXTREF_SINGLE}"
 
-if [[ -z "${REISSUED_AUTH_ID}" || "${REISSUED_AUTH_ID}" == "${SINGLE_AUTH_ID}" ]]; then
-    echo "Assertion failed: enterprise authorization was not reissued after cleanup." >&2
+COMMITMENT_ID="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
+    --arg external_ref "${COMMIT_EXTREF_SINGLE}" \
+    '.rows[] | select(.external_ref == $external_ref) | .id' | tail -n 1)"
+COMMITMENT_BYTES="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
+    --argjson id "${COMMITMENT_ID}" \
+    '.rows[] | select(.id == $id) | .billable_bytes')"
+COMMITMENT_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
+    --argjson id "${COMMITMENT_ID}" \
+    '.rows[] | select(.id == $id) | .billable_kib')"
+assert_eq "${BILLABLE_BYTES_SINGLE}" "${COMMITMENT_BYTES}" "enterprise commitment billable bytes"
+assert_eq "${EXPECTED_SINGLE_KIB}" "${COMMITMENT_KIB}" "enterprise commitment billable kib"
+
+PLAN_KIB_AFTER_SINGLE="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
+    --argjson id "${PLAN_ENTITLEMENT_ID}" \
+    '.rows[] | select(.entitlement_id == $id) | .kib_remaining')"
+assert_eq "$(( PLAN_KIB_BEFORE_SINGLE - EXPECTED_SINGLE_KIB ))" "${PLAN_KIB_AFTER_SINGLE}" "nearest-expiry plan entitlement usage"
+
+log "Rejecting duplicate enterprise single request"
+if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_DUPLICATE}\",\"${COMMIT_EXTREF_SINGLE}\",${BILLABLE_BYTES_SINGLE}]" \
+    -p "${PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: duplicate enterprise single request was accepted." >&2
     exit 1
 fi
-
-log "Consuming reissued enterprise authorization"
-cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" consume "[${REISSUED_AUTH_ID}]" -p "${OWNER_ACCOUNT}@active"
-cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" cleanauths "[10]" -p "${OWNER_ACCOUNT}@active"
 
 MAX_LIVE_KIB="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
     --arg payer "${PAYER_ACCOUNT}" \
     '[.rows[] | select(.payer == $payer and .status == 0) | .kib_remaining] | max // 0')"
 TOO_LARGE_BYTES="$(( (MAX_LIVE_KIB + 1) * 1024 ))"
-log "Rejecting enterprise authorization larger than any single entitlement"
-if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_TOO_LARGE}\",${TOO_LARGE_BYTES}]" \
+log "Rejecting oversized enterprise request"
+if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "bill-too-large-object-${TIMESTAMP}")\",\"${COMMIT_EXTREF_DUPLICATE}\",${TOO_LARGE_BYTES}]" \
     -p "${PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
-    echo "Assertion failed: oversized enterprise authorization was accepted." >&2
+    echo "Assertion failed: oversized enterprise request was accepted." >&2
     exit 1
 fi
 
-log "Creating enterprise batch usage authorization"
-cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",1,\"${USE_REF_BATCH}\",${USE_BATCH_BYTES}]" \
+log "Rejecting zero object hash"
+if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${ZERO_HASH}\",\"$(hash_text "bill-zero-hash-${TIMESTAMP}")\",${BILLABLE_BYTES_SINGLE}]" \
+    -p "${PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
+    echo "Assertion failed: zero object hash was accepted." >&2
+    exit 1
+fi
+
+log "Submitting atomic enterprise batch"
+cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submitroot \
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH_BATCH}\",2,\"${MANIFEST_HASH_BATCH}\",\"${COMMIT_EXTREF_BATCH}\",${BILLABLE_BYTES_BATCH}]" \
     -p "${PAYER_ACCOUNT}@active"
 
 wait_for_table_match \
-    "${BILLING_ACCOUNT}" \
-    "${BILLING_ACCOUNT}" \
-    "usageauths" \
-    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 1 and ((.consumed == false) or (.consumed == 0)))" \
-    "batch usage authorization"
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "batches" \
+    ".rows[] | select(.external_ref == \"${COMMIT_EXTREF_BATCH}\")" \
+    "enterprise batch ${COMMIT_EXTREF_BATCH}"
 
-BATCH_AUTH_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
-    --arg submitter "${SUBMITTER_ACCOUNT}" \
-    '.rows[] | select(.submitter == $submitter and .mode == 1 and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
-
-BATCH_AUTH_KIB="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
-    --argjson id "${BATCH_AUTH_ID}" \
-    '.rows[] | select(.auth_id == $id) | .billable_kib')"
-assert_eq "${EXPECTED_BATCH_KIB}" "${BATCH_AUTH_KIB}" "batch auth billable_kib"
-
-if [[ "${RUN_EXPIRY_TESTS}" == "true" ]]; then
-    log "Creating enterprise auth for expiry/reissue test"
-    cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
-        "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_EXPIRED}\",${USE_SINGLE_BYTES}]" \
-        -p "${PAYER_ACCOUNT}@active"
-
-    EXPIRED_AUTH_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
-        --arg submitter "${SUBMITTER_ACCOUNT}" \
-        '.rows[] | select(.submitter == $submitter and .mode == 0 and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
-
-    log "Waiting ${AUTH_TTL_WAIT_SEC}s for enterprise auth to expire"
-    sleep "${AUTH_TTL_WAIT_SEC}"
-
-    log "Cleaning expired enterprise authorizations"
-    cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" cleanauths "[10]" -p "${OWNER_ACCOUNT}@active"
-
-    wait_for_table_absence \
-        "${BILLING_ACCOUNT}" \
-        "${BILLING_ACCOUNT}" \
-        "usageauths" \
-        ".rows[] | select(.auth_id == ${EXPIRED_AUTH_ID})" \
-        "cleanup of expired enterprise authorization"
-
-    log "Reissuing enterprise auth after expiry cleanup"
-    LAST_AUTH_ID_BEFORE_EXPIRY_REISSUE="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r '[.rows[].auth_id] | max // 0')"
-    cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
-        "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_EXPIRED}\",${USE_SINGLE_BYTES}]" \
-        -p "${PAYER_ACCOUNT}@active"
-
-    REISSUED_EXPIRED_AUTH_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
-        --arg submitter "${SUBMITTER_ACCOUNT}" \
-        --argjson last_id "${LAST_AUTH_ID_BEFORE_EXPIRY_REISSUE}" \
-        '.rows[] | select(.submitter == $submitter and .mode == 0 and .auth_id > $last_id and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
-
-    if [[ -z "${REISSUED_EXPIRED_AUTH_ID}" || "${REISSUED_EXPIRED_AUTH_ID}" == "${EXPIRED_AUTH_ID}" ]]; then
-        echo "Assertion failed: enterprise auth was not reissued after expiry cleanup." >&2
-        exit 1
-    fi
-fi
+BATCH_ID="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
+    --arg external_ref "${COMMIT_EXTREF_BATCH}" \
+    '.rows[] | select(.external_ref == $external_ref) | .id' | tail -n 1)"
+BATCH_BYTES="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
+    --argjson id "${BATCH_ID}" \
+    '.rows[] | select(.id == $id) | .billable_bytes')"
+BATCH_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
+    --argjson id "${BATCH_ID}" \
+    '.rows[] | select(.id == $id) | .billable_kib')"
+assert_eq "${BILLABLE_BYTES_BATCH}" "${BATCH_BYTES}" "enterprise batch billable bytes"
+assert_eq "${EXPECTED_BATCH_KIB}" "${BATCH_KIB}" "enterprise batch billable kib"
 
 log "Enterprise billing smoke test passed"

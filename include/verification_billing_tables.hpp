@@ -112,40 +112,11 @@ using entitlement_table = multi_index<
     indexed_by<"bystatus"_n, const_mem_fun<entitlement_row, uint64_t, &entitlement_row::bystatus>>
 >;
 
-struct [[eosio::table("usageauths")]] usage_auth_row {
-    uint64_t auth_id;
-    name payer;
-    name submitter;
-    uint8_t mode;
-    checksum256 request_key;
-    uint64_t billable_bytes;
-    uint64_t billable_kib;
-    uint64_t entitlement_id;
-    bool consumed;
-    time_point_sec created_at;
-    time_point_sec consumed_at;
-    time_point_sec expires_at;
-
-    uint64_t primary_key() const { return auth_id; }
-    checksum256 byrequest() const { return request_key; }
-    uint64_t bysubmitter() const { return submitter.value; }
-    uint64_t byentitle() const { return entitlement_id; }
-};
-
-using usage_auth_table = multi_index<
-    "usageauths"_n,
-    usage_auth_row,
-    indexed_by<"byrequest"_n, const_mem_fun<usage_auth_row, checksum256, &usage_auth_row::byrequest>>,
-    indexed_by<"bysubmitter"_n, const_mem_fun<usage_auth_row, uint64_t, &usage_auth_row::bysubmitter>>,
-    indexed_by<"byentitle"_n, const_mem_fun<usage_auth_row, uint64_t, &usage_auth_row::byentitle>>
->;
-
 struct [[eosio::table("billcounters")]] counter_state {
     uint64_t next_token_id = 1;
     uint64_t next_plan_id = 1;
     uint64_t next_pack_id = 1;
     uint64_t next_entitlement_id = 1;
-    uint64_t next_usageauth_id = 1;
 };
 
 using counter_singleton = singleton<"billcounters"_n, counter_state>;

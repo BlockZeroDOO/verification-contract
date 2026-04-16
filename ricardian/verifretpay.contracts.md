@@ -12,15 +12,7 @@ Creates or updates a retail `price_per_kib` tariff for single or batch anchoring
 
 <h1 class="contract">setverifacct</h1>
 
-Configures which deployed `verif` account may consume retail usage authorizations after successful anchoring.
-
-<h1 class="contract">consume</h1>
-
-Marks a retail usage authorization as consumed after a successful downstream anchoring flow.
-
-<h1 class="contract">cleanauths</h1>
-
-Removes consumed or expired retail usage authorizations in bounded batches.
+Configures which deployed `verif` account receives inline retail anchoring calls.
 
 <h1 class="contract">withdraw</h1>
 

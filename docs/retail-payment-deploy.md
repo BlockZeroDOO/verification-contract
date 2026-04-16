@@ -12,7 +12,7 @@ Repository boundary:
 
 - accepted retail tokens
 - exact `price_per_kib` tariffs
-- one-time retail authorization consumed by `verif`
+- atomic retail payment into `verif`
 
 ## Build
 
@@ -44,7 +44,7 @@ Jungle4:
 ```bash
 cleos -u <rpc> get table verifretpay verifretpay rtltokens
 cleos -u <rpc> get table verifretpay verifretpay rtltariffs
-cleos -u <rpc> get table verifretpay verifretpay rtlauths
+cleos -u <rpc> get table verifretpay verifretpay retpaycfg
 ```
 
 ## Wiring

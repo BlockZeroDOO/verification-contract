@@ -9,7 +9,7 @@ Final deployment targets:
 - enterprise contract/account: `verifent`
 - retail contract/account: `verifretail`
 
-Recommended future enterprise billing target:
+Enterprise billing target:
 
 - billing contract/account: `verifbill`
 
@@ -24,7 +24,7 @@ It focuses on:
 
 ## Current Starting Point
 
-The repository currently contains one canonical contract:
+The repository originally started from one canonical contract:
 
 - `include/verification.hpp`
 - `include/request_key.hpp`
@@ -265,9 +265,7 @@ Likely shape:
 
 ### Build Scripts
 
-Current generic scripts should be split or parameterized for clarity.
-
-Recommended script set:
+Current script set:
 
 - `scripts/build-enterprise.sh`
 - `scripts/build-enterprise.ps1`
@@ -494,12 +492,12 @@ This gives a low-risk refactor foundation before introducing new contract names 
 
 ## Short-Term Working Assumptions
 
-Until implementation starts, assume:
+Current working assumptions:
 
 - current `verification` behavior maps to enterprise
 - retail pricing starts with exact fixed pricing
 - retail batch pricing is fixed per batch in the first version
-- enterprise billing will be added as separate `verifbill`, not inside `verifent`
+- enterprise billing is implemented as separate `verifbill`, not inside `verifent`
 
 ## Deliverables Checklist
 
@@ -508,6 +506,7 @@ The split should be considered structurally complete when the repository contain
 - shared core headers and source
 - separate enterprise wrapper
 - separate retail wrapper
+- separate billing wrapper
 - split Ricardian
 - split build targets
 - split deploy scripts

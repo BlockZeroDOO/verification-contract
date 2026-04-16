@@ -10,6 +10,23 @@ It is intended to solve one problem:
 
 without reintroducing any of the removed legacy payment behavior into `verifent` itself.
 
+## Current Status
+
+`verifbill` now exists in this repository as an initial contract shell.
+
+Implemented in the current shell:
+
+- accepted billing tokens
+- plan definitions
+- pack definitions
+- entitlement rows created by purchases
+- delegated submitter mapping
+- `use(...)` with one-time `usageauths`
+
+Still pending:
+
+- deploy and smoke tooling for `verifbill`
+
 ## Design Goal
 
 The target architecture must satisfy all of the following:
@@ -515,12 +532,12 @@ Do not add yet:
 
 This repository currently owns only verification contracts.
 
-So the next clean structural step is:
+The clean structural step has now been completed:
 
-- add architecture docs first
-- then implement `verifbill` as a third contract target in this repository
+- architecture docs were added
+- `verifbill` was implemented as a third contract target in this repository
 
-Recommended future contract set:
+Current contract set:
 
 - `verifent`
 - `verifretail`

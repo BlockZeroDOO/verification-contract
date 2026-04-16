@@ -10,6 +10,7 @@
 #include <eosio/transaction.hpp>
 
 #include <request_key.hpp>
+#include <verification_billing_tables.hpp>
 #include <verification_core.hpp>
 #include <verification_tables.hpp>
 #include <verification_validators.hpp>
@@ -132,9 +133,18 @@ private:
     using batch_table = verification_tables::batch_table;
     using counter_state = verification_tables::counter_state;
     using counter_singleton = verification_tables::counter_singleton;
+    using usage_auth_row = verification_billing_tables::usage_auth_row;
+    using usage_auth_table = verification_billing_tables::usage_auth_table;
+
+    static constexpr name billing_account = "verifbill"_n;
+    static constexpr uint8_t enterprise_mode_single = 0;
+    static constexpr uint8_t enterprise_mode_batch = 1;
+
     kyc_row require_kyc_record(const name& account) const;
     schema_row require_schema(uint64_t id) const;
     policy_row require_policy(uint64_t id) const;
+    usage_auth_row require_usage_authorization(uint8_t mode, const name& submitter, const checksum256& external_ref) const;
+    void consume_usage_authorization(uint64_t auth_id) const;
     uint64_t next_batch_id();
     uint64_t next_commitment_id();
     void validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const;

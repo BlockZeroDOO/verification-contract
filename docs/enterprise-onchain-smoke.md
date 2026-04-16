@@ -9,6 +9,7 @@ These smoke tests validate the enterprise verification contract surface for:
 - `Policy`
 - `Commitment`
 - `Batch`
+- `Enterprise Billing Authorization`
 
 Scripts:
 
@@ -23,10 +24,12 @@ The enterprise wrappers delegate to the canonical on-chain smoke:
 ## Prerequisites
 
 - deployed `verifent` contract
+- deployed `verifbill` contract
 - `cleos`
 - `jq`
 - imported keys for:
-  - contract owner account
+  - enterprise contract owner account
+  - billing contract owner account
   - submitter account
 
 ## Required env vars
@@ -35,7 +38,9 @@ The enterprise wrappers delegate to the canonical on-chain smoke:
 export RPC_URL=https://your-rpc
 export READ_RPC_URL=${RPC_URL}
 export VERIFICATION_ACCOUNT=verifent
+export VERIFICATION_BILLING_ACCOUNT=verifbill
 export OWNER_ACCOUNT=verifent
+export BILLING_OWNER_ACCOUNT=verifbill
 export SUBMITTER_ACCOUNT=someuser
 ```
 
@@ -65,6 +70,10 @@ deNotary:
 - `renewkyc`
 - `addschema`
 - `setpolicy` for single and batch flows
+- `verifbill::settoken`
+- `verifbill::setpack`
+- pack purchase via `transfer -> verifbill`
+- `verifbill::use` before every enterprise `submit` and `submitroot`
 - `submit`
 - duplicate single request rejection
 - zero `object_hash` rejection
@@ -79,7 +88,7 @@ deNotary:
 
 ## Notes
 
-- enterprise smoke validates the `verifent` contract, which is the current deployment target for `verification_enterprise`
+- enterprise smoke now validates the combined `verifent + verifbill` path
 - for Jungle4, using a separate `READ_RPC_URL` for table polling is recommended
 - the smoke uses `get table --limit 1000` to avoid false negatives from paginated registry tables
 - retail smoke is documented separately in [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)

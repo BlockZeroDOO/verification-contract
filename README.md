@@ -4,10 +4,11 @@ This repository is the canonical home of the on-chain verification contracts:
 
 - `verifent`
 - `verifretail`
+- `verifbill`
 
 Repository boundary:
 
-- this repository owns the `verifent` and `verifretail` contracts, their Ricardian files, and contract-facing runbooks
+- this repository owns the `verifent`, `verifretail`, and `verifbill` contracts, their Ricardian files, and contract-facing runbooks
 - `deNotary` owns the off-chain backend and operational runtime around the contract
 - `decentralized_storage\contracts\dfs` owns the DFS contract
 
@@ -29,6 +30,14 @@ The retail `verifretail` contract covers:
 - wallet-first `atomic pay + submit`
 - exact tariff-governed retail payment receipts
 - no deposit model
+
+The enterprise billing `verifbill` contract covers:
+
+- accepted enterprise billing tokens
+- subscription plans
+- usage packs
+- delegated submitter rights
+- one-time enterprise usage authorizations
 
 ## On-chain tables
 
@@ -76,6 +85,7 @@ Linux / WSL:
 ./scripts/build-enterprise.sh
 ./scripts/build-testnet.sh
 ./scripts/build-retail.sh
+./scripts/build-billing.sh
 ./scripts/build-release.sh
 ```
 
@@ -85,6 +95,7 @@ PowerShell:
 ./scripts/build-enterprise.ps1
 ./scripts/build-testnet.ps1
 ./scripts/build-retail.ps1
+./scripts/build-billing.ps1
 ./scripts/build-release.ps1
 ```
 
@@ -94,6 +105,8 @@ Expected artifacts:
 - `dist/verifent/verifent.abi`
 - `dist/verifretail/verifretail.wasm`
 - `dist/verifretail/verifretail.abi`
+- `dist/verifbill/verifbill.wasm`
+- `dist/verifbill/verifbill.abi`
 
 ## Deploy
 

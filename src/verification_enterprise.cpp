@@ -247,6 +247,7 @@ void verification_enterprise::submit(
         check(kyc.level >= policy.min_kyc_level, "kyc level is below policy minimum");
     }
 
+    const auto usage_auth = require_usage_authorization(enterprise_mode_single, submitter, external_ref);
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     validate_commitment_request_unique(submitter, external_ref);
 
@@ -267,6 +268,8 @@ void verification_enterprise::submit(
         row.status = verification_core::commitment_status_active;
         row.superseded_by = 0;
     });
+
+    consume_usage_authorization(usage_auth.auth_id);
 }
 
 void verification_enterprise::supersede(uint64_t id, uint64_t successor_id) {
@@ -352,6 +355,7 @@ void verification_enterprise::submitroot(
         check(kyc.level >= policy.min_kyc_level, "kyc level is below policy minimum");
     }
 
+    const auto usage_auth = require_usage_authorization(enterprise_mode_batch, submitter, external_ref);
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     validate_batch_request_unique(submitter, external_ref);
 
@@ -374,6 +378,8 @@ void verification_enterprise::submitroot(
         row.status_changed_at = now;
         row.status = verification_core::batch_status_open;
     });
+
+    consume_usage_authorization(usage_auth.auth_id);
 }
 
 void verification_enterprise::linkmanifest(uint64_t id, const checksum256& manifest_hash) {
@@ -446,6 +452,32 @@ verification_enterprise::schema_row verification_enterprise::require_schema(uint
 
 verification_enterprise::policy_row verification_enterprise::require_policy(uint64_t id) const {
     return verification_core::require_policy(get_self(), id);
+}
+
+verification_enterprise::usage_auth_row verification_enterprise::require_usage_authorization(
+    uint8_t mode,
+    const name& submitter,
+    const checksum256& external_ref
+) const {
+    usage_auth_table usage_auths(billing_account, billing_account.value);
+    auto by_request = usage_auths.get_index<"byrequest"_n>();
+    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
+    auto existing = by_request.find(request_key);
+    check(existing != by_request.end(), "enterprise usage authorization is missing");
+    check(!existing->consumed, "enterprise usage authorization is already consumed");
+    check(existing->submitter == submitter, "enterprise usage authorization submitter does not match request");
+    check(existing->mode == mode, "enterprise usage authorization mode does not match request");
+    check(existing->expires_at > time_point_sec(current_time_point()), "enterprise usage authorization is expired");
+    return *existing;
+}
+
+void verification_enterprise::consume_usage_authorization(uint64_t auth_id) const {
+    action(
+        permission_level{get_self(), "active"_n},
+        billing_account,
+        "consume"_n,
+        std::make_tuple(auth_id)
+    ).send();
 }
 
 uint64_t verification_enterprise::next_batch_id() {

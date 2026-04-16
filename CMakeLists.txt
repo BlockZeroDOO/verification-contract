@@ -22,3 +22,11 @@ target_sources(
         ${CMAKE_SOURCE_DIR}/src/verification_retail.cpp
         ${CMAKE_SOURCE_DIR}/src/verification_core.cpp
 )
+
+add_contract(verifbill verifbill src/verification_billing_entry.cpp)
+target_include_directories(verifbill PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_sources(
+    verifbill
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/verification_billing.cpp
+)

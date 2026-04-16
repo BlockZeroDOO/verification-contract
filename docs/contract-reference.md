@@ -2,12 +2,13 @@
 
 ## Purpose
 
-This document is the full on-chain reference for the two verification contracts in this repository:
+This document is the full on-chain reference for the contracts in this repository:
 
 - `verifent`
 - `verifretail`
+- `verifbill`
 
-Both contracts share the same anchoring core:
+The two anchoring contracts share the same anchoring core:
 
 - KYC registry
 - schema registry
@@ -20,6 +21,7 @@ They differ in the access and payment model:
 
 - `verifent` is the enterprise and integrator contract
 - `verifretail` is the wallet-first retail contract with atomic on-chain payment
+- `verifbill` is the enterprise billing and entitlement contract
 
 ## Contract Roles
 
@@ -37,7 +39,7 @@ It is intended for:
 
 It does not accept the retail token-payment flow as an active product path.
 
-The recommended future enterprise payment model is a separate billing contract:
+The enterprise payment model is a separate billing contract:
 
 - see [docs/enterprise-billing-architecture.md](/c:/projects/verification-contract/docs/enterprise-billing-architecture.md:1)
 
@@ -349,6 +351,7 @@ Its main properties:
 - no requirement for a trusted backend
 - submitter can prepare and sign transactions directly
 - suited for enterprise and integrator usage
+- `submit` and `submitroot` require a matching enterprise usage authorization from `verifbill`
 
 ### Legacy cleanup
 
@@ -499,6 +502,82 @@ Retail `submit` and `submitroot` do all shared validation plus:
 
 This gives a practical `atomic pay + submit` model without a deposit balance.
 
+## `verifbill` Specific Behavior
+
+### Product model
+
+`verifbill` is the enterprise billing and entitlement contract.
+
+Its main properties:
+
+- no deposit balance inside `verifent`
+- plans and packs instead of floating internal balance
+- delegated submitter support
+- one-time usage authorization tied to request key
+
+### Billing Tables
+
+#### `billtokens`
+
+Stores accepted enterprise billing tokens.
+
+#### `plans`
+
+Stores plan definitions with duration and single or batch quotas.
+
+#### `packs`
+
+Stores usage-pack definitions with single or batch units.
+
+#### `entitlements`
+
+Stores purchased plan and pack rights for a payer.
+
+#### `delegates`
+
+Stores enabled payer to submitter delegation mappings.
+
+#### `usageauths`
+
+Stores one-time enterprise usage authorizations created by `use(...)`.
+
+#### `billcounters`
+
+Stores monotonic IDs for enterprise billing tables.
+
+### Billing Actions
+
+- `settoken(token_contract, token_symbol)`
+- `rmtoken(token_contract, token_symbol)`
+- `setplan(plan_code, token_contract, price, duration_sec, single_quota, batch_quota, active)`
+- `deactplan(plan_id)`
+- `setpack(pack_code, token_contract, price, single_units, batch_units, active)`
+- `deactpack(pack_id)`
+- `grantdelegate(payer, submitter)`
+- `revokedeleg(payer, submitter)`
+- `use(payer, submitter, mode, external_ref)`
+- `consume(auth_id)`
+- `withdraw(token_contract, to, quantity, memo)`
+
+### Billing Transfer Flow
+
+Enterprise purchases happen through:
+
+- `eosio.token::transfer -> verifbill`
+
+Current memo families:
+
+```text
+plan|payer|plan_code
+pack|payer|pack_code
+```
+
+### Current implementation boundary
+
+`verifbill` already owns enterprise purchase, delegation, quota allocation, and usage-authorization state.
+
+`verifent` now validates enterprise usage authorization from `verifbill` and consumes it after successful anchor creation.
+
 ## Authorization Model
 
 ### Governance account
@@ -528,6 +607,14 @@ In retail flow, the payer currently:
 
 - sends the exact token transfer
 - must match the declared submitter
+
+### Enterprise payer and delegates
+
+In enterprise flow, the payer currently:
+
+- buys plans and packs on-chain through `verifbill`
+- may delegate one or more submitter accounts
+- may create usage authorization directly or let the submitter do it
 
 ## Request Identity and Uniqueness
 
@@ -567,6 +654,7 @@ Current final names:
 
 - enterprise contract/account: `verifent`
 - retail contract/account: `verifretail`
+- enterprise billing contract/account: `verifbill`
 
 Build outputs:
 
@@ -574,6 +662,8 @@ Build outputs:
 - `dist/verifent/verifent.abi`
 - `dist/verifretail/verifretail.wasm`
 - `dist/verifretail/verifretail.abi`
+- `dist/verifbill/verifbill.wasm`
+- `dist/verifbill/verifbill.abi`
 
 Primary runbooks:
 
@@ -588,8 +678,10 @@ Primary runbooks:
 
 `verifretail` is the retail anchoring contract with exact atomic on-chain payment.
 
+`verifbill` is the enterprise billing and entitlement contract.
+
 Together they provide:
 
 - one shared anchoring core
-- two different commercial and trust models
+- two anchoring surfaces and one enterprise billing surface
 - clean separation between enterprise and retail behavior

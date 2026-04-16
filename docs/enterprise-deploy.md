@@ -25,9 +25,9 @@ The unified `verif` contract is the billing-agnostic anchoring surface for:
 - batch anchoring
 - commitment and batch lifecycle
 
-It does not support retail token payment flow.
+It does not embed payment logic.
 
-For live enterprise usage it now expects enterprise usage authorization from `verifbill`.
+For live enterprise usage it expects usage authorization from `verifbill`.
 
 ## Build
 
@@ -73,6 +73,15 @@ cleos -u <rpc> get table verif verif policies
 cleos -u <rpc> get table verif verif commitments
 cleos -u <rpc> get table verif verif batches
 cleos -u <rpc> get table verifbill verifbill usageauths
+```
+
+## Post-deploy wiring
+
+After both contracts are deployed, configure which billing contract `verif` should trust and which `verif` account may consume enterprise usage authorizations:
+
+```bash
+cleos -u <rpc> push action verif setauthsrcs '["verifbill","verifretpay"]' -p verif@active
+cleos -u <rpc> push action verifbill setverifacct '["verif"]' -p verifbill@active
 ```
 
 ## Smoke

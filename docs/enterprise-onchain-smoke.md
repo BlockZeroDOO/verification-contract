@@ -10,6 +10,7 @@ These smoke tests validate the enterprise verification contract surface for:
 - `Commitment`
 - `Batch`
 - `Enterprise Billing Authorization`
+- `Authorization Wiring`
 
 Scripts:
 
@@ -71,7 +72,9 @@ deNotary:
 - `addschema`
 - `setpolicy` for single and batch flows
 - `verifbill::settoken`
+- `verif::setauthsrcs`
 - `verifbill::setpack`
+- `verifbill::setverifacct`
 - pack purchase via `transfer -> verifbill`
 - `verifbill::use` before every enterprise `submit` and `submitroot`
 - `submit`

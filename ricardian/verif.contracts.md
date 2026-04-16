@@ -38,9 +38,13 @@ Enables the optional ZK capability flag on a policy.
 
 Disables the optional ZK capability flag on a policy.
 
+<h1 class="contract">setauthsrcs</h1>
+
+Configures which enterprise billing contract and retail payment contract may supply one-time usage authorizations to `verif`.
+
 <h1 class="contract">submit</h1>
 
-Creates a single anchored commitment after schema, policy, optional KYC, and enterprise authorization validation.
+Creates a single anchored commitment after schema, policy, optional KYC, and external usage-authorization validation.
 
 <h1 class="contract">supersede</h1>
 
@@ -56,7 +60,7 @@ Moves an active commitment into the `expired` business status.
 
 <h1 class="contract">submitroot</h1>
 
-Creates a batch anchoring record after schema, policy, optional KYC, and enterprise authorization validation.
+Creates a batch anchoring record after schema, policy, optional KYC, and external usage-authorization validation.
 
 <h1 class="contract">linkmanifest</h1>
 

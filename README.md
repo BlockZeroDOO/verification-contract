@@ -24,6 +24,9 @@ The unified `verif` contract covers:
 - batch anchoring
 - commitment and batch lifecycle tracking
 - clean unified anchoring surface with no legacy proof-payment path
+- external authorization from:
+  - `verifbill`
+  - `verifretpay`
 
 The retail payment `verifretpay` contract covers:
 
@@ -161,6 +164,8 @@ Jungle4:
 - [scripts/smoke-test-retpay.sh](/c:/projects/verification-contract/scripts/smoke-test-retpay.sh:1)
 - [scripts/smoke-test-retpay-jungle4.sh](/c:/projects/verification-contract/scripts/smoke-test-retpay-jungle4.sh:1)
 - [scripts/smoke-test-retpay-denotary.sh](/c:/projects/verification-contract/scripts/smoke-test-retpay-denotary.sh:1)
+- [scripts/smoke-test-unified-retail.sh](/c:/projects/verification-contract/scripts/smoke-test-unified-retail.sh:1)
+- [scripts/smoke-test-unified-retail-jungle4.sh](/c:/projects/verification-contract/scripts/smoke-test-unified-retail-jungle4.sh:1)
 - [scripts/smoke-test-onchain.sh](/c:/projects/verification-contract/scripts/smoke-test-onchain.sh:1)
 - [scripts/smoke-test-jungle4.sh](/c:/projects/verification-contract/scripts/smoke-test-jungle4.sh:1)
 - [scripts/smoke-test.sh](/c:/projects/verification-contract/scripts/smoke-test.sh:1)
@@ -173,6 +178,7 @@ Jungle4:
 - [docs/contract-reference.md](/c:/projects/verification-contract/docs/contract-reference.md:1)
 - [docs/retail-payment-deploy.md](/c:/projects/verification-contract/docs/retail-payment-deploy.md:1)
 - [docs/retail-payment-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-payment-onchain-smoke.md:1)
+- [docs/unified-retail-onchain-smoke.md](/c:/projects/verification-contract/docs/unified-retail-onchain-smoke.md:1)
 - [docs/denotary-l1-contract-core.md](/c:/projects/verification-contract/docs/denotary-l1-contract-core.md:1)
 - [docs/adr/0002-batch-proof-storage.md](/c:/projects/verification-contract/docs/adr/0002-batch-proof-storage.md:1)
 - [docs/adr/0003-clean-deployment-cutover.md](/c:/projects/verification-contract/docs/adr/0003-clean-deployment-cutover.md:1)

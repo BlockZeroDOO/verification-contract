@@ -60,3 +60,11 @@ cleos -u <rpc> get table verifretpay verifretpay rtltokens
 cleos -u <rpc> get table verifretpay verifretpay rtltariffs
 cleos -u <rpc> get table verifretpay verifretpay rtlauths
 ```
+
+## Post-deploy wiring
+
+After deploy, point `verifretpay` at the deployed `verif` account that is allowed to consume retail usage authorizations:
+
+```bash
+cleos -u <rpc> push action verifretpay setverifacct '["verif"]' -p verifretpay@active
+```

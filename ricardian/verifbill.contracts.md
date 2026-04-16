@@ -30,6 +30,10 @@ Allows a submitter account to consume enterprise usage on behalf of a payer.
 
 Disables a delegated submitter mapping for a payer.
 
+<h1 class="contract">setverifacct</h1>
+
+Configures which deployed `verif` account may consume enterprise usage authorizations after successful anchoring.
+
 <h1 class="contract">use</h1>
 
 Consumes one enterprise quota unit and creates a one-time usage authorization bound to a request key.

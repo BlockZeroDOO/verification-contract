@@ -54,6 +54,16 @@ Optional retail payment deploy:
 ./scripts/deploy-retpay-jungle4.sh
 ```
 
+## Post-deploy wiring
+
+After deploy, wire the three contracts together:
+
+```bash
+cleos -u https://jungle4.api.eosnation.io push action verif setauthsrcs '["verifbill","verifretpay"]' -p verif@active
+cleos -u https://jungle4.api.eosnation.io push action verifbill setverifacct '["verif"]' -p verifbill@active
+cleos -u https://jungle4.api.eosnation.io push action verifretpay setverifacct '["verif"]' -p verifretpay@active
+```
+
 Defaults:
 
 - `RPC_URL=https://jungle4.api.eosnation.io`
@@ -98,4 +108,16 @@ export VERIFICATION_BILLING_ACCOUNT=verifbill
 export VERIFICATION_ACCOUNT=verif
 export SUBMITTER_ACCOUNT=youruser
 ./scripts/smoke-test-jungle4.sh
+```
+
+Unified retail smoke:
+
+```bash
+export VERIFICATION_ACCOUNT=verif
+export VERIFICATION_BILLING_ACCOUNT=verifbill
+export RETPAY_ACCOUNT=verifretpay
+export OWNER_ACCOUNT=verif
+export RETPAY_OWNER_ACCOUNT=verifretpay
+export SUBMITTER_ACCOUNT=youruser
+./scripts/smoke-test-unified-retail-jungle4.sh
 ```

@@ -63,3 +63,11 @@ cleos -u <rpc> get table verifbill verifbill entitlements
 cleos -u <rpc> get table verifbill verifbill delegates
 cleos -u <rpc> get table verifbill verifbill usageauths
 ```
+
+## Post-deploy wiring
+
+After deploy, point `verifbill` at the deployed `verif` account that is allowed to consume enterprise usage authorizations:
+
+```bash
+cleos -u <rpc> push action verifbill setverifacct '["verif"]' -p verifbill@active
+```

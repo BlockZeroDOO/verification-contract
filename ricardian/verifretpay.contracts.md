@@ -10,6 +10,10 @@ Removes a retail payment token when no active tariff depends on it.
 
 Creates or updates an exact retail tariff for single or batch anchoring.
 
+<h1 class="contract">setverifacct</h1>
+
+Configures which deployed `verif` account may consume retail usage authorizations after successful anchoring.
+
 <h1 class="contract">consume</h1>
 
 Marks a retail usage authorization as consumed after a successful downstream anchoring flow.

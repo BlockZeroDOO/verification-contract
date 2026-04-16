@@ -39,7 +39,10 @@ It is intended for:
 - direct client-side transaction signing
 - client-hosted or private backends
 
-It does not accept the retail token-payment flow as an active product path.
+It accepts external one-time usage authorization from both:
+
+- `verifbill` for enterprise usage
+- `verifretpay` for retail usage
 
 The enterprise payment model is a separate billing contract:
 
@@ -355,11 +358,14 @@ Important:
 
 Its main properties:
 
-- no active retail payment flow
+- no embedded payment logic
 - no requirement for a trusted backend
 - submitter can prepare and sign transactions directly
 - suited for enterprise and integrator usage
-- `submit` and `submitroot` require a matching enterprise usage authorization from `verifbill`
+- `submit` and `submitroot` require a matching external usage authorization
+- the external authorization may come from:
+  - `verifbill`
+  - `verifretpay`
 
 ### Legacy cleanup
 
@@ -602,7 +608,26 @@ pack|payer|pack_code
 
 `verifbill` already owns enterprise purchase, delegation, quota allocation, and usage-authorization state.
 
-`verif` now validates enterprise usage authorization from `verifbill` and consumes it after successful anchor creation.
+`verif` validates enterprise usage authorization from `verifbill` and consumes it after successful anchor creation.
+
+## Unified Authorization Wiring
+
+### `verif::setauthsrcs`
+
+Configures the two external authorization sources used by `verif`:
+
+- `billing_account`
+- `retail_payment_account`
+
+This allows real deployed account names to differ from the canonical contract names.
+
+### `verifbill::setverifacct`
+
+Configures which deployed `verif` account is allowed to call `verifbill::consume(...)`.
+
+### `verifretpay::setverifacct`
+
+Configures which deployed `verif` account is allowed to call `verifretpay::consume(...)`.
 
 ## Authorization Model
 
@@ -701,6 +726,7 @@ Primary runbooks:
 - [docs/retail-deploy.md](/c:/projects/verification-contract/docs/retail-deploy.md:1)
 - [docs/enterprise-onchain-smoke.md](/c:/projects/verification-contract/docs/enterprise-onchain-smoke.md:1)
 - [docs/retail-payment-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-payment-onchain-smoke.md:1)
+- [docs/unified-retail-onchain-smoke.md](/c:/projects/verification-contract/docs/unified-retail-onchain-smoke.md:1)
 - [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)
 
 ## Summary

@@ -9,13 +9,16 @@ These smoke tests validate the current on-chain production paths for:
 - `Policy`
 - `Commitment`
 - `Batch`
+- enterprise authorization
+- unified retail authorization
 
 Scripts:
 
 - [scripts/smoke-test-enterprise.sh](/c:/projects/verification-contract/scripts/smoke-test-enterprise.sh:1)
 - [scripts/smoke-test-onchain.sh](/c:/projects/verification-contract/scripts/smoke-test-onchain.sh:1)
 - [scripts/smoke-test-billing.sh](/c:/projects/verification-contract/scripts/smoke-test-billing.sh:1)
-- [scripts/smoke-test-retail.sh](/c:/projects/verification-contract/scripts/smoke-test-retail.sh:1)
+- [scripts/smoke-test-retpay.sh](/c:/projects/verification-contract/scripts/smoke-test-retpay.sh:1)
+- [scripts/smoke-test-unified-retail.sh](/c:/projects/verification-contract/scripts/smoke-test-unified-retail.sh:1)
 
 ## Prerequisites
 
@@ -79,10 +82,16 @@ Legacy compatibility wrapper:
 
 It now delegates directly to `smoke-test-onchain.sh`.
 
-Retail smoke:
+Standalone retail payment smoke:
 
 ```bash
-./scripts/smoke-test-retail.sh
+./scripts/smoke-test-retpay.sh
+```
+
+Unified retail smoke:
+
+```bash
+./scripts/smoke-test-unified-retail.sh
 ```
 
 Standalone billing smoke:
@@ -118,4 +127,5 @@ Standalone billing smoke:
 - table polling uses `get table --limit 1000` to avoid missing rows on larger registries
 - enterprise wrappers are documented separately in [docs/enterprise-onchain-smoke.md](/c:/projects/verification-contract/docs/enterprise-onchain-smoke.md:1)
 - billing smoke is documented separately in [docs/billing-onchain-smoke.md](/c:/projects/verification-contract/docs/billing-onchain-smoke.md:1)
-- retail smoke is documented separately in [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)
+- retail payment smoke is documented separately in [docs/retail-payment-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-payment-onchain-smoke.md:1)
+- unified retail smoke is documented separately in [docs/unified-retail-onchain-smoke.md](/c:/projects/verification-contract/docs/unified-retail-onchain-smoke.md:1)

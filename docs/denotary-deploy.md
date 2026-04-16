@@ -69,6 +69,16 @@ Optional retail payment deploy:
 ./scripts/deploy-retpay-denotary.sh
 ```
 
+## Post-deploy wiring
+
+After deploy, wire the three contracts together:
+
+```bash
+cleos -u https://history.denotary.io push action verif setauthsrcs '["verifbill","verifretpay"]' -p verif@active
+cleos -u https://history.denotary.io push action verifbill setverifacct '["verif"]' -p verifbill@active
+cleos -u https://history.denotary.io push action verifretpay setverifacct '["verif"]' -p verifretpay@active
+```
+
 ## Manual deploy
 
 ```bash
@@ -109,4 +119,16 @@ export VERIFICATION_BILLING_ACCOUNT=verifbill
 export VERIFICATION_ACCOUNT=verif
 export SUBMITTER_ACCOUNT=youruser
 ./scripts/smoke-test-onchain.sh
+```
+
+Unified retail smoke:
+
+```bash
+export VERIFICATION_ACCOUNT=verif
+export VERIFICATION_BILLING_ACCOUNT=verifbill
+export RETPAY_ACCOUNT=verifretpay
+export OWNER_ACCOUNT=verif
+export RETPAY_OWNER_ACCOUNT=verifretpay
+export SUBMITTER_ACCOUNT=youruser
+./scripts/smoke-test-unified-retail.sh
 ```

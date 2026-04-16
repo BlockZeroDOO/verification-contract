@@ -11,6 +11,7 @@ These smoke tests validate the standalone `verifretpay` surface for:
 - retail authorization creation
 - duplicate authorization rejection for the same request
 - explicit authorization consumption
+- downstream consume authorization wiring
 
 Scripts:
 
@@ -33,6 +34,7 @@ Scripts:
 export RPC_URL=https://your-rpc
 export READ_RPC_URL=${RPC_URL}
 export RETPAY_ACCOUNT=verifretpay
+export VERIFICATION_ACCOUNT=verif
 export OWNER_ACCOUNT=verifretpay
 export SUBMITTER_ACCOUNT=someuser
 ```
@@ -67,3 +69,4 @@ deNotary:
 - duplicate request rejection
 - `consume`
 - exact batch retail authorization
+- configured `verif` downstream consumer

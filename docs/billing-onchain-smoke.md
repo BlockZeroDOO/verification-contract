@@ -9,6 +9,7 @@ These smoke tests validate the standalone `verifbill` surface for:
 - pack configuration
 - entitlement purchase
 - enterprise usage authorization
+- size-aware `billable_bytes -> billable_kib` authorization binding
 - explicit authorization consumption
 
 Scripts:
@@ -36,6 +37,10 @@ export BILLING_ACCOUNT=verifbill
 export OWNER_ACCOUNT=verifbill
 export PAYER_ACCOUNT=somepayer
 export SUBMITTER_ACCOUNT=somesubmitter
+export PLAN_INCLUDED_KIB=8
+export PACK_INCLUDED_KIB=6
+export USE_SINGLE_BYTES=1536
+export USE_BATCH_BYTES=3072
 ```
 
 ## Run
@@ -65,7 +70,8 @@ deNotary:
 - `setpack`
 - plan purchase through `transfer -> verifbill`
 - pack purchase through `transfer -> verifbill`
-- `use` for single mode
+- `use` for single mode with payer authority
 - duplicate request authorization rejection
 - `consume`
 - `use` for batch mode
+- stored `billable_kib` matching the declared request size

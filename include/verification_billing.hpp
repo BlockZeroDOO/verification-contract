@@ -34,8 +34,7 @@ public:
         const name& token_contract,
         const asset& price,
         uint32_t duration_sec,
-        uint64_t single_quota,
-        uint64_t batch_quota,
+        uint64_t included_kib,
         bool active
     );
 
@@ -47,8 +46,7 @@ public:
         const name& pack_code,
         const name& token_contract,
         const asset& price,
-        uint64_t single_units,
-        uint64_t batch_units,
+        uint64_t included_kib,
         bool active
     );
 
@@ -59,7 +57,13 @@ public:
     void setverifacct(const name& verification_account);
 
     [[eosio::action]]
-    void use(const name& payer, const name& submitter, uint8_t mode, const checksum256& external_ref);
+    void use(
+        const name& payer,
+        const name& submitter,
+        uint8_t mode,
+        const checksum256& external_ref,
+        uint64_t billable_bytes
+    );
 
     [[eosio::action]]
     void consume(uint64_t auth_id);
@@ -115,5 +119,5 @@ private:
     uint64_t next_usageauth_id();
     billing_config get_billing_config() const;
     std::tuple<string, name, name> parse_purchase_memo(const string& memo) const;
-    entitlement_row allocate_usage(const name& payer, uint8_t mode);
+    entitlement_row select_entitlement(const name& payer, uint64_t required_kib);
 };

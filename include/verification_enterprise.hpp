@@ -123,7 +123,9 @@ private:
     usage_authorization_ref require_usage_authorization(
         uint8_t mode,
         const name& submitter,
-        const checksum256& external_ref
+        const checksum256& external_ref,
+        uint64_t billable_bytes,
+        uint64_t billable_kib
     ) const;
     void consume_usage_authorization(const usage_authorization_ref& authorization) const;
     uint64_t next_batch_id();

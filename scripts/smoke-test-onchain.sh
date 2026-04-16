@@ -16,8 +16,7 @@ PAYMENT_SYMBOL="${PAYMENT_SYMBOL:-EOS}"
 PAYMENT_PRECISION="${PAYMENT_PRECISION:-4}"
 ENTERPRISE_PACK_CODE="${ENTERPRISE_PACK_CODE:-smokepack}"
 ENTERPRISE_PACK_PRICE="${ENTERPRISE_PACK_PRICE:-0.0500 EOS}"
-ENTERPRISE_PACK_SINGLE_UNITS="${ENTERPRISE_PACK_SINGLE_UNITS:-4}"
-ENTERPRISE_PACK_BATCH_UNITS="${ENTERPRISE_PACK_BATCH_UNITS:-1}"
+ENTERPRISE_PACK_INCLUDED_KIB="${ENTERPRISE_PACK_INCLUDED_KIB:-12}"
 BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
 BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-4096}"
 
@@ -58,8 +57,9 @@ log() {
 enterprise_use() {
     local mode="$1"
     local external_ref="$2"
+    local billable_bytes="$3"
     cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" use \
-        "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${mode},\"${external_ref}\"]" \
+        "[\"${SUBMITTER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",${mode},\"${external_ref}\",${billable_bytes}]" \
         -p "${SUBMITTER_ACCOUNT}@active"
 }
 
@@ -263,7 +263,7 @@ cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" settoken \
 
 log "Configuring enterprise billing pack"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" setpack \
-    "[\"${ENTERPRISE_PACK_CODE}\",\"${PAYMENT_TOKEN_CONTRACT}\",\"${ENTERPRISE_PACK_PRICE}\",${ENTERPRISE_PACK_SINGLE_UNITS},${ENTERPRISE_PACK_BATCH_UNITS},true]" \
+    "[\"${ENTERPRISE_PACK_CODE}\",\"${PAYMENT_TOKEN_CONTRACT}\",\"${ENTERPRISE_PACK_PRICE}\",${ENTERPRISE_PACK_INCLUDED_KIB},true]" \
     -p "${BILLING_OWNER_ACCOUNT}@active"
 
 log "Funding enterprise billing entitlement"
@@ -274,7 +274,7 @@ cleos -u "${RPC_URL}" transfer \
     "pack|${SUBMITTER_ACCOUNT}|${ENTERPRISE_PACK_CODE}"
 
 log "Submitting commitment #1"
-enterprise_use 0 "${COMMIT_EXTREF_1}"
+enterprise_use 0 "${COMMIT_EXTREF_1}" "${BILLABLE_BYTES_SINGLE}"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
     "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_1}\",\"${COMMIT_EXTREF_1}\",${BILLABLE_BYTES_SINGLE}]" \
     -p "${SUBMITTER_ACCOUNT}@active"
@@ -300,7 +300,7 @@ if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
 fi
 
 log "Submitting successor commitment #2"
-enterprise_use 0 "${COMMIT_EXTREF_2}"
+enterprise_use 0 "${COMMIT_EXTREF_2}" "${BILLABLE_BYTES_SINGLE}"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
     "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_2}\",\"${COMMIT_EXTREF_2}\",${BILLABLE_BYTES_SINGLE}]" \
     -p "${SUBMITTER_ACCOUNT}@active"
@@ -309,7 +309,7 @@ assert_commitment_field "${COMMITMENT_ID_2}" "billable_bytes" "${BILLABLE_BYTES_
 assert_commitment_field "${COMMITMENT_ID_2}" "billable_kib" "2"
 
 log "Submitting batch #1"
-enterprise_use 1 "${BATCH_EXTREF}"
+enterprise_use 1 "${BATCH_EXTREF}" "${BILLABLE_BYTES_BATCH}"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submitroot \
     "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\",${BILLABLE_BYTES_BATCH}]" \
     -p "${SUBMITTER_ACCOUNT}@active"

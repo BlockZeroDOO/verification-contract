@@ -181,11 +181,11 @@ It is responsible for:
 
 - `settoken(token_contract, token_symbol)`
 - `rmtoken(token_contract, token_symbol)`
-- `setplan(plan_code, token_contract, price, duration_sec, single_quota, batch_quota, active)`
+- `setplan(plan_code, token_contract, price, duration_sec, included_kib, active)`
 - `deactplan(plan_id)`
-- `setpack(pack_code, token_contract, price, single_units, batch_units, active)`
+- `setpack(pack_code, token_contract, price, included_kib, active)`
 - `deactpack(pack_id)`
-- `use(payer, submitter, mode, external_ref)`
+- `use(payer, submitter, mode, external_ref, billable_bytes)`
 - `consume(auth_id)`
 - `setverifacct(verification_account)`
 - `withdraw(token_contract, to, quantity, memo)`
@@ -206,14 +206,14 @@ pack|payer|pack_code
 ### Usage Flow
 
 1. enterprise payer buys plan or pack
-2. `use(...)` issues one-time auth for a concrete request
+2. `use(...)` issues one-time auth for a concrete request and billable size
 3. `verif` anchors the request
 4. `verif` calls `verifbill::consume(...)`
 
 ### Authority Model
 
 - governance config is controlled by contract authority
-- `use(...)` accepts real user authority
+- `use(...)` requires real payer authority
 - account delegation should be handled by native Antelope permissions, not by contract state
 
 ## `verifretpay`

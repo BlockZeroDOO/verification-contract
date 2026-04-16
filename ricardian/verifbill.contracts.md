@@ -8,7 +8,7 @@ Removes an enterprise billing token when no active plan or pack depends on it.
 
 <h1 class="contract">setplan</h1>
 
-Creates or updates a plan definition with duration and single or batch quotas.
+Creates or updates a plan definition with duration and included `KiB`.
 
 <h1 class="contract">deactplan</h1>
 
@@ -16,7 +16,7 @@ Marks a plan inactive for future enterprise purchases.
 
 <h1 class="contract">setpack</h1>
 
-Creates or updates a usage-pack definition with single or batch units.
+Creates or updates a usage-pack definition with included `KiB`.
 
 <h1 class="contract">deactpack</h1>
 
@@ -28,11 +28,11 @@ Configures which deployed `verif` account may consume enterprise usage authoriza
 
 <h1 class="contract">use</h1>
 
-Consumes one enterprise quota unit and creates a one-time usage authorization bound to a request key.
+Creates a one-time enterprise usage authorization bound to a request key and billable size.
 
 <h1 class="contract">consume</h1>
 
-Marks an enterprise usage authorization as consumed after a successful downstream anchoring flow.
+Marks an enterprise usage authorization as consumed after a successful downstream anchoring flow and burns the matching `KiB` quota.
 
 <h1 class="contract">withdraw</h1>
 

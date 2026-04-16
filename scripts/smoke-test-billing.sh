@@ -17,10 +17,10 @@ PACK_CODE="${PACK_CODE:-smokepack}"
 PLAN_PRICE="${PLAN_PRICE:-0.0300 EOS}"
 PACK_PRICE="${PACK_PRICE:-0.0200 EOS}"
 PLAN_DURATION_SEC="${PLAN_DURATION_SEC:-2592000}"
-PLAN_SINGLE_QUOTA="${PLAN_SINGLE_QUOTA:-1}"
-PLAN_BATCH_QUOTA="${PLAN_BATCH_QUOTA:-1}"
-PACK_SINGLE_UNITS="${PACK_SINGLE_UNITS:-2}"
-PACK_BATCH_UNITS="${PACK_BATCH_UNITS:-1}"
+PLAN_INCLUDED_KIB="${PLAN_INCLUDED_KIB:-8}"
+PACK_INCLUDED_KIB="${PACK_INCLUDED_KIB:-6}"
+USE_SINGLE_BYTES="${USE_SINGLE_BYTES:-1536}"
+USE_BATCH_BYTES="${USE_BATCH_BYTES:-3072}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 
@@ -109,12 +109,12 @@ cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" setverifacct \
 
 log "Configuring enterprise plan"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" setplan \
-    "[\"${PLAN_CODE}\",\"${PAYMENT_TOKEN_CONTRACT}\",\"${PLAN_PRICE}\",${PLAN_DURATION_SEC},${PLAN_SINGLE_QUOTA},${PLAN_BATCH_QUOTA},true]" \
+    "[\"${PLAN_CODE}\",\"${PAYMENT_TOKEN_CONTRACT}\",\"${PLAN_PRICE}\",${PLAN_DURATION_SEC},${PLAN_INCLUDED_KIB},true]" \
     -p "${OWNER_ACCOUNT}@active"
 
 log "Configuring enterprise pack"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" setpack \
-    "[\"${PACK_CODE}\",\"${PAYMENT_TOKEN_CONTRACT}\",\"${PACK_PRICE}\",${PACK_SINGLE_UNITS},${PACK_BATCH_UNITS},true]" \
+    "[\"${PACK_CODE}\",\"${PAYMENT_TOKEN_CONTRACT}\",\"${PACK_PRICE}\",${PACK_INCLUDED_KIB},true]" \
     -p "${OWNER_ACCOUNT}@active"
 
 log "Purchasing enterprise plan"
@@ -139,10 +139,22 @@ wait_for_table_match \
     ".rows[] | select(.payer == \"${PAYER_ACCOUNT}\" and .kind == 1)" \
     "pack entitlement for ${PAYER_ACCOUNT}"
 
+PLAN_ENTITLEMENT_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
+    --arg payer "${PAYER_ACCOUNT}" \
+    '.rows[] | select(.payer == $payer and .kind == 0) | .entitlement_id' | tail -n 1)"
+
+PLAN_KIB_BEFORE_USE="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
+    --argjson id "${PLAN_ENTITLEMENT_ID}" \
+    '.rows[] | select(.entitlement_id == $id) | .kib_remaining')"
+assert_eq "${PLAN_INCLUDED_KIB}" "${PLAN_KIB_BEFORE_USE}" "plan entitlement kib_remaining after purchase"
+
+EXPECTED_SINGLE_KIB="$(( (USE_SINGLE_BYTES + 1023) / 1024 ))"
+EXPECTED_BATCH_KIB="$(( (USE_BATCH_BYTES + 1023) / 1024 ))"
+
 log "Creating enterprise single usage authorization"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_SINGLE}\"]" \
-    -p "${SUBMITTER_ACCOUNT}@active"
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_SINGLE}\",${USE_SINGLE_BYTES}]" \
+    -p "${PAYER_ACCOUNT}@active"
 
 wait_for_table_match \
     "${BILLING_ACCOUNT}" \
@@ -151,10 +163,15 @@ wait_for_table_match \
     ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 0 and ((.consumed == false) or (.consumed == 0)))" \
     "single usage authorization"
 
+PLAN_KIB_AFTER_USE="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
+    --argjson id "${PLAN_ENTITLEMENT_ID}" \
+    '.rows[] | select(.entitlement_id == $id) | .kib_remaining')"
+assert_eq "${PLAN_INCLUDED_KIB}" "${PLAN_KIB_AFTER_USE}" "plan entitlement kib_remaining after use before consume"
+
 log "Rejecting duplicate enterprise single authorization for the same request"
 if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_SINGLE}\"]" \
-    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",0,\"${USE_REF_SINGLE}\",${USE_SINGLE_BYTES}]" \
+    -p "${PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: duplicate enterprise single authorization was accepted." >&2
     exit 1
 fi
@@ -162,6 +179,11 @@ fi
 SINGLE_AUTH_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
     --arg submitter "${SUBMITTER_ACCOUNT}" \
     '.rows[] | select(.submitter == $submitter and .mode == 0 and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
+
+SINGLE_AUTH_KIB="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
+    --argjson id "${SINGLE_AUTH_ID}" \
+    '.rows[] | select(.auth_id == $id) | .billable_kib')"
+assert_eq "${EXPECTED_SINGLE_KIB}" "${SINGLE_AUTH_KIB}" "single auth billable_kib"
 
 log "Consuming enterprise single usage authorization"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" consume "[${SINGLE_AUTH_ID}]" -p "${OWNER_ACCOUNT}@active"
@@ -173,10 +195,15 @@ wait_for_table_match \
     ".rows[] | select(.auth_id == ${SINGLE_AUTH_ID} and ((.consumed == true) or (.consumed == 1)))" \
     "consumed single usage authorization"
 
+PLAN_KIB_AFTER_CONSUME="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" entitlements | "${JQ_BIN}" -r \
+    --argjson id "${PLAN_ENTITLEMENT_ID}" \
+    '.rows[] | select(.entitlement_id == $id) | .kib_remaining')"
+assert_eq "$(( PLAN_INCLUDED_KIB - EXPECTED_SINGLE_KIB ))" "${PLAN_KIB_AFTER_CONSUME}" "plan entitlement kib_remaining after single consume"
+
 log "Creating enterprise batch usage authorization"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" use \
-    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",1,\"${USE_REF_BATCH}\"]" \
-    -p "${SUBMITTER_ACCOUNT}@active"
+    "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\",1,\"${USE_REF_BATCH}\",${USE_BATCH_BYTES}]" \
+    -p "${PAYER_ACCOUNT}@active"
 
 wait_for_table_match \
     "${BILLING_ACCOUNT}" \
@@ -184,5 +211,14 @@ wait_for_table_match \
     "usageauths" \
     ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 1 and ((.consumed == false) or (.consumed == 0)))" \
     "batch usage authorization"
+
+BATCH_AUTH_ID="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
+    --arg submitter "${SUBMITTER_ACCOUNT}" \
+    '.rows[] | select(.submitter == $submitter and .mode == 1 and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
+
+BATCH_AUTH_KIB="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT}" usageauths | "${JQ_BIN}" -r \
+    --argjson id "${BATCH_AUTH_ID}" \
+    '.rows[] | select(.auth_id == $id) | .billable_kib')"
+assert_eq "${EXPECTED_BATCH_KIB}" "${BATCH_AUTH_KIB}" "batch auth billable_kib"
 
 log "Enterprise billing smoke test passed"

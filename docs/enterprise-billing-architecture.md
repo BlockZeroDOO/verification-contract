@@ -73,7 +73,7 @@ The verification contract should remain focused on anchoring only:
 It should not:
 
 - hold plan state
-- hold enterprise quotas
+- hold enterprise size allowances
 - parse billing memos
 - accept enterprise payment transfers
 
@@ -113,19 +113,18 @@ Examples:
 
 A plan may include:
 
-- single-submit quota
-- batch-submit quota
+- included `KiB`
 - expiration time
 - optional organization scope
 
 ### Usage packs
 
-A usage pack grants a finite amount of enterprise usage without requiring a deposit.
+A usage pack grants a finite amount of enterprise billable `KiB` without requiring a deposit.
 
 Examples:
 
-- `10,000` single-submit units
-- `1,000` batch-submit units
+- `10,240 KiB` usage pack
+- `102,400 KiB` usage pack
 
 This is better than deposit because:
 
@@ -146,7 +145,7 @@ So the billing architecture must support:
 Meaning:
 
 - one enterprise account buys plan/pack entitlement
-- `use(...)` may be signed by the payer or the submitter
+- `use(...)` must be signed by the payer
 - if organizations need delegated operational signing, they configure it at the account-permission layer
 
 ## High-Level Flow
@@ -169,7 +168,7 @@ Output:
 
 Output:
 
-- remaining single quota and/or batch quota
+- remaining `KiB` entitlement
 
 ### Flow C. Use entitlement for submit
 
@@ -189,6 +188,7 @@ The `use(...)` action creates a one-time usage authorization tied to:
 - submitter
 - request key
 - mode
+- billable size
 
 Then `verif` validates that authorization before accepting the anchor.
 
@@ -263,8 +263,7 @@ Fields:
 - `token_contract`
 - `price`
 - `duration_sec`
-- `single_quota`
-- `batch_quota`
+- `included_kib`
 - `active`
 - `updated_at`
 
@@ -278,8 +277,7 @@ Fields:
 - `pack_code`
 - `token_contract`
 - `price`
-- `single_units`
-- `batch_units`
+- `included_kib`
 - `active`
 - `updated_at`
 
@@ -294,8 +292,7 @@ Fields:
 - `kind`
 - `plan_id`
 - `pack_id`
-- `single_remaining`
-- `batch_remaining`
+- `kib_remaining`
 - `active_from`
 - `expires_at`
 - `status`
@@ -305,7 +302,7 @@ Meaning:
 
 - `kind` distinguishes plan vs pack
 - plans use time bounds
-- packs use remaining units
+- packs use remaining `KiB`
 
 ### `usageauths`
 
@@ -318,6 +315,8 @@ Fields:
 - `submitter`
 - `mode`
 - `request_key`
+- `billable_bytes`
+- `billable_kib`
 - `entitlement_id`
 - `consumed`
 - `created_at`
@@ -364,7 +363,7 @@ Recommended memo families:
 
 ### Usage
 
-- `use(payer, submitter, mode, external_ref)`
+- `use(payer, submitter, mode, external_ref, billable_bytes)`
 - `consume(auth_id)` or internal consumption by `verif`-verified flow
 
 ## Authorization Policy
@@ -438,11 +437,11 @@ This prevents:
 
 Recommended behavior:
 
-- `use(...)` creates pending authorization
+- `use(...)` creates pending authorization without burning quota
 - failed submit does not consume it
 - authorization expires after short TTL if unused
 
-This avoids accidental quota loss.
+This avoids accidental `KiB` loss.
 
 ### If `submit(...)` succeeds twice
 
@@ -484,7 +483,7 @@ Recommended Phase 1 scope:
 - pack purchases
 - `use(...)`
 - one-time `usageauths`
-- single and batch quota split
+- size-bound single and batch authorization
 
 Do not add yet:
 

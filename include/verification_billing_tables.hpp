@@ -45,8 +45,7 @@ struct [[eosio::table("plans")]] plan_row {
     name token_contract;
     asset price;
     uint32_t duration_sec;
-    uint64_t single_quota;
-    uint64_t batch_quota;
+    uint64_t included_kib;
     bool active;
     time_point_sec updated_at;
 
@@ -70,8 +69,7 @@ struct [[eosio::table("packs")]] pack_row {
     name pack_code;
     name token_contract;
     asset price;
-    uint64_t single_units;
-    uint64_t batch_units;
+    uint64_t included_kib;
     bool active;
     time_point_sec updated_at;
 
@@ -96,8 +94,7 @@ struct [[eosio::table("entitlements")]] entitlement_row {
     uint8_t kind;
     uint64_t plan_id;
     uint64_t pack_id;
-    uint64_t single_remaining;
-    uint64_t batch_remaining;
+    uint64_t kib_remaining;
     time_point_sec active_from;
     time_point_sec expires_at;
     uint8_t status;
@@ -121,6 +118,8 @@ struct [[eosio::table("usageauths")]] usage_auth_row {
     name submitter;
     uint8_t mode;
     checksum256 request_key;
+    uint64_t billable_bytes;
+    uint64_t billable_kib;
     uint64_t entitlement_id;
     bool consumed;
     time_point_sec created_at;

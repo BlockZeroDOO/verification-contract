@@ -134,7 +134,13 @@ void verification_enterprise::submit(
     check(policy.active, "policy is inactive");
     check(policy.allow_single, "policy does not allow single submissions");
 
-    const auto usage_auth = require_usage_authorization(enterprise_mode_single, submitter, external_ref);
+    const auto usage_auth = require_usage_authorization(
+        enterprise_mode_single,
+        submitter,
+        external_ref,
+        billable_bytes,
+        billable_kib
+    );
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     validate_commitment_request_unique(submitter, external_ref);
 
@@ -184,7 +190,13 @@ void verification_enterprise::submitroot(
     check(policy.active, "policy is inactive");
     check(policy.allow_batch, "policy does not allow batch submissions");
 
-    const auto usage_auth = require_usage_authorization(enterprise_mode_batch, submitter, external_ref);
+    const auto usage_auth = require_usage_authorization(
+        enterprise_mode_batch,
+        submitter,
+        external_ref,
+        billable_bytes,
+        billable_kib
+    );
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     validate_batch_request_unique(submitter, external_ref);
 
@@ -247,7 +259,9 @@ verification_enterprise::auth_source_config verification_enterprise::get_auth_so
 verification_enterprise::usage_authorization_ref verification_enterprise::require_usage_authorization(
     uint8_t mode,
     const name& submitter,
-    const checksum256& external_ref
+    const checksum256& external_ref,
+    uint64_t billable_bytes,
+    uint64_t billable_kib
 ) const {
     const auto auth_sources = get_auth_source_config();
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
@@ -265,8 +279,10 @@ verification_enterprise::usage_authorization_ref verification_enterprise::requir
         if (existing != by_request.end() &&
             !existing->consumed &&
             existing->submitter == submitter &&
-        existing->mode == mode &&
-        existing->expires_at > now) {
+            existing->mode == mode &&
+            existing->billable_bytes == billable_bytes &&
+            existing->billable_kib == billable_kib &&
+            existing->expires_at > now) {
             has_enterprise_auth = true;
             auth_id = existing->auth_id;
             source_contract = auth_sources.billing_account;

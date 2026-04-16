@@ -25,24 +25,22 @@ void validate_plan_config(
     const eosio::name& plan_code,
     const eosio::asset& price,
     uint32_t duration_sec,
-    uint64_t single_quota,
-    uint64_t batch_quota
+    uint64_t included_kib
 ) {
     eosio::check(plan_code.value > 0, "plan_code is invalid");
     verification_validators::validate_payment_price(price, "price");
     eosio::check(duration_sec > 0, "duration_sec must be greater than zero");
-    eosio::check(single_quota > 0 || batch_quota > 0, "plan must provide at least one quota");
+    eosio::check(included_kib > 0, "plan must provide positive included_kib");
 }
 
 void validate_pack_config(
     const eosio::name& pack_code,
     const eosio::asset& price,
-    uint64_t single_units,
-    uint64_t batch_units
+    uint64_t included_kib
 ) {
     eosio::check(pack_code.value > 0, "pack_code is invalid");
     verification_validators::validate_payment_price(price, "price");
-    eosio::check(single_units > 0 || batch_units > 0, "pack must provide at least one usage unit");
+    eosio::check(included_kib > 0, "pack must provide positive included_kib");
 }
 }  // namespace
 
@@ -102,13 +100,12 @@ void verification_billing::setplan(
     const name& token_contract,
     const asset& price,
     uint32_t duration_sec,
-    uint64_t single_quota,
-    uint64_t batch_quota,
+    uint64_t included_kib,
     bool active
 ) {
     require_auth(get_self());
     check(is_account(token_contract), "token_contract does not exist");
-    validate_plan_config(plan_code, price, duration_sec, single_quota, batch_quota);
+    validate_plan_config(plan_code, price, duration_sec, included_kib);
     validate_token_contract_stat(token_contract, price.symbol);
     require_accepted_token(token_contract, price.symbol.code());
 
@@ -124,8 +121,7 @@ void verification_billing::setplan(
             row.token_contract = token_contract;
             row.price = price;
             row.duration_sec = duration_sec;
-            row.single_quota = single_quota;
-            row.batch_quota = batch_quota;
+            row.included_kib = included_kib;
             row.active = active;
             row.updated_at = now;
         });
@@ -136,8 +132,7 @@ void verification_billing::setplan(
         row.token_contract = token_contract;
         row.price = price;
         row.duration_sec = duration_sec;
-        row.single_quota = single_quota;
-        row.batch_quota = batch_quota;
+        row.included_kib = included_kib;
         row.active = active;
         row.updated_at = now;
     });
@@ -161,13 +156,12 @@ void verification_billing::setpack(
     const name& pack_code,
     const name& token_contract,
     const asset& price,
-    uint64_t single_units,
-    uint64_t batch_units,
+    uint64_t included_kib,
     bool active
 ) {
     require_auth(get_self());
     check(is_account(token_contract), "token_contract does not exist");
-    validate_pack_config(pack_code, price, single_units, batch_units);
+    validate_pack_config(pack_code, price, included_kib);
     validate_token_contract_stat(token_contract, price.symbol);
     require_accepted_token(token_contract, price.symbol.code());
 
@@ -182,8 +176,7 @@ void verification_billing::setpack(
             row.pack_code = pack_code;
             row.token_contract = token_contract;
             row.price = price;
-            row.single_units = single_units;
-            row.batch_units = batch_units;
+            row.included_kib = included_kib;
             row.active = active;
             row.updated_at = now;
         });
@@ -193,8 +186,7 @@ void verification_billing::setpack(
     by_code.modify(existing, get_self(), [&](auto& row) {
         row.token_contract = token_contract;
         row.price = price;
-        row.single_units = single_units;
-        row.batch_units = batch_units;
+        row.included_kib = included_kib;
         row.active = active;
         row.updated_at = now;
     });
@@ -222,27 +214,45 @@ void verification_billing::setverifacct(const name& verification_account) {
     config.set(billing_config{verification_account}, get_self());
 }
 
-void verification_billing::use(const name& payer, const name& submitter, uint8_t mode, const checksum256& external_ref) {
+void verification_billing::use(
+    const name& payer,
+    const name& submitter,
+    uint8_t mode,
+    const checksum256& external_ref,
+    uint64_t billable_bytes
+) {
     check(is_account(payer), "payer account does not exist");
     check(is_account(submitter), "submitter account does not exist");
     check(mode == enterprise_mode_single || mode == enterprise_mode_batch, "unsupported enterprise usage mode");
     verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
-    check(has_auth(submitter) || has_auth(payer), "missing required authority of submitter or payer");
+    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
+    require_auth(payer);
 
+    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     usage_auth_table usage_auths(get_self(), get_self().value);
     auto by_request = usage_auths.get_index<"byrequest"_n>();
-    check(by_request.find(request_key) == by_request.end(), "enterprise usage authorization already exists for request");
-
-    const auto allocated = allocate_usage(payer, mode);
     const auto now = time_point_sec(current_time_point());
+    auto existing = by_request.find(request_key);
+    if (existing != by_request.end()) {
+        const bool expired = existing->expires_at <= now;
+        if (existing->consumed || expired) {
+            by_request.erase(existing);
+        } else {
+            check(false, "enterprise usage authorization already exists for request");
+        }
+    }
+
+    const auto entitlement = select_entitlement(payer, billable_kib);
     usage_auths.emplace(get_self(), [&](auto& row) {
         row.auth_id = next_usageauth_id();
         row.payer = payer;
         row.submitter = submitter;
         row.mode = mode;
         row.request_key = request_key;
-        row.entitlement_id = allocated.entitlement_id;
+        row.billable_bytes = billable_bytes;
+        row.billable_kib = billable_kib;
+        row.entitlement_id = entitlement.entitlement_id;
         row.consumed = false;
         row.created_at = now;
         row.consumed_at = time_point_sec{};
@@ -263,9 +273,33 @@ void verification_billing::consume(uint64_t auth_id) {
     check(existing != usage_auths.end(), "enterprise usage authorization does not exist");
     check(!existing->consumed, "enterprise usage authorization is already consumed");
 
+    entitlement_table entitlements(get_self(), get_self().value);
+    auto entitlement = entitlements.find(existing->entitlement_id);
+    check(entitlement != entitlements.end(), "enterprise entitlement does not exist");
+    check(entitlement->status == entitlement_status_active, "enterprise entitlement is not active");
+
+    const auto now = time_point_sec(current_time_point());
+    const bool has_expiry = entitlement->expires_at.sec_since_epoch() > 0;
+    if (has_expiry && entitlement->expires_at <= now) {
+        entitlements.modify(entitlement, get_self(), [&](auto& row) {
+            row.status = entitlement_status_expired;
+            row.updated_at = now;
+        });
+        check(false, "enterprise entitlement has expired");
+    }
+    check(entitlement->kib_remaining >= existing->billable_kib, "enterprise entitlement has insufficient remaining KiB");
+
+    entitlements.modify(entitlement, get_self(), [&](auto& row) {
+        row.kib_remaining -= existing->billable_kib;
+        if (row.kib_remaining == 0) {
+            row.status = entitlement_status_exhausted;
+        }
+        row.updated_at = now;
+    });
+
     usage_auths.modify(existing, get_self(), [&](auto& row) {
         row.consumed = true;
-        row.consumed_at = time_point_sec(current_time_point());
+        row.consumed_at = now;
     });
 }
 
@@ -321,8 +355,7 @@ void verification_billing::ontransfer(const name& from, const name& to, const as
             row.kind = entitlement_kind_plan;
             row.plan_id = existing->plan_id;
             row.pack_id = 0;
-            row.single_remaining = existing->single_quota;
-            row.batch_remaining = existing->batch_quota;
+            row.kib_remaining = existing->included_kib;
             row.active_from = now;
             row.expires_at = time_point_sec(now.sec_since_epoch() + existing->duration_sec);
             row.status = entitlement_status_active;
@@ -346,8 +379,7 @@ void verification_billing::ontransfer(const name& from, const name& to, const as
             row.kind = entitlement_kind_pack;
             row.plan_id = 0;
             row.pack_id = existing->pack_id;
-            row.single_remaining = existing->single_units;
-            row.batch_remaining = existing->batch_units;
+            row.kib_remaining = existing->included_kib;
             row.active_from = now;
             row.expires_at = time_point_sec{};
             row.status = entitlement_status_active;
@@ -470,7 +502,10 @@ std::tuple<string, name, name> verification_billing::parse_purchase_memo(const s
     return std::make_tuple(kind, payer, code);
 }
 
-verification_billing::entitlement_row verification_billing::allocate_usage(const name& payer, uint8_t mode) {
+verification_billing::entitlement_row verification_billing::select_entitlement(
+    const name& payer,
+    uint64_t required_kib
+) {
     entitlement_table entitlements(get_self(), get_self().value);
     const auto now = time_point_sec(current_time_point());
 
@@ -488,37 +523,19 @@ verification_billing::entitlement_row verification_billing::allocate_usage(const
             continue;
         }
 
-        const bool can_consume = mode == enterprise_mode_single
-            ? itr->single_remaining > 0
-            : itr->batch_remaining > 0;
-        if (!can_consume) {
-            if (itr->single_remaining == 0 && itr->batch_remaining == 0) {
-                entitlements.modify(itr, get_self(), [&](auto& row) {
-                    row.status = entitlement_status_exhausted;
-                    row.updated_at = now;
-                });
-            }
+        if (itr->kib_remaining == 0) {
+            entitlements.modify(itr, get_self(), [&](auto& row) {
+                row.status = entitlement_status_exhausted;
+                row.updated_at = now;
+            });
             continue;
         }
 
-        const auto entitlement_id = itr->entitlement_id;
-        entitlements.modify(itr, get_self(), [&](auto& row) {
-            if (mode == enterprise_mode_single) {
-                --row.single_remaining;
-            } else {
-                --row.batch_remaining;
-            }
-            if (row.single_remaining == 0 && row.batch_remaining == 0) {
-                row.status = entitlement_status_exhausted;
-            }
-            row.updated_at = now;
-        });
-
-        auto updated = entitlements.find(entitlement_id);
-        check(updated != entitlements.end(), "allocated entitlement disappeared");
-        return *updated;
+        if (itr->kib_remaining >= required_kib) {
+            return *itr;
+        }
     }
 
-    check(false, "payer does not have active enterprise entitlement for requested mode");
+    check(false, "payer does not have active enterprise entitlement with enough remaining KiB");
     return entitlement_row{};
 }

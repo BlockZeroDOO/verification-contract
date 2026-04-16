@@ -77,9 +77,6 @@ deNotary:
 - `submit`
 - duplicate single request rejection
 - zero `object_hash` rejection
-- `supersede` with explicit `successor_id`
-- `revokecmmt`
-- `expirecmmt`
 - `submitroot`
 - duplicate batch request rejection
 - guard on `closebatch` before `linkmanifest`

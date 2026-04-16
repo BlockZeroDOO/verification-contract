@@ -66,15 +66,6 @@ public:
     );
 
     [[eosio::action]]
-    void supersede(uint64_t id, uint64_t successor_id);
-
-    [[eosio::action]]
-    void revokecmmt(uint64_t id);
-
-    [[eosio::action]]
-    void expirecmmt(uint64_t id);
-
-    [[eosio::action]]
     void submitroot(
         const name& submitter,
         uint64_t schema_id,
@@ -143,6 +134,4 @@ private:
     void validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const;
     void validate_batch_is_open(const batch_row& batch) const;
     void validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const;
-    void validate_commitment_can_be_successor(const commitment_row& current, const commitment_row& successor) const;
-    void validate_commitment_is_active(const commitment_row& commitment) const;
 };

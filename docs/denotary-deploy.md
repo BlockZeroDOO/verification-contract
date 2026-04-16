@@ -11,7 +11,7 @@ Optional retail companion:
 
 Repository boundary:
 
-- `C:\projects\verification-contract` owns `verif`, `verifbill`, `verifretpay`, and `verifretail`
+- `C:\projects\verification-contract` owns `verif`, `verifbill`, `verifretpay`, and the deprecated compatibility contract `verifretail`
 - `C:\projects\deNotary` owns the off-chain backend
 - `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
@@ -102,7 +102,6 @@ cleos -u https://history.denotary.io get table verifbill verifbill plans
 cleos -u https://history.denotary.io get table verifbill verifbill packs
 cleos -u https://history.denotary.io get table verifbill verifbill entitlements
 cleos -u https://history.denotary.io get table verifbill verifbill usageauths
-cleos -u https://history.denotary.io get table verif verif kyc
 cleos -u https://history.denotary.io get table verif verif schemas
 cleos -u https://history.denotary.io get table verif verif policies
 cleos -u https://history.denotary.io get table verif verif commitments

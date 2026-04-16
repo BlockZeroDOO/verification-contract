@@ -11,7 +11,7 @@ Current contract mapping:
 
 Repository boundary:
 
-- `C:\projects\verification-contract` owns `verif`, `verifretail`, and `verifbill`
+- `C:\projects\verification-contract` owns `verif`, `verifbill`, `verifretpay`, and the deprecated compatibility contract `verifretail`
 - `C:\projects\deNotary` owns the off-chain backend
 - `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
@@ -72,7 +72,6 @@ Defaults:
 ## Verify
 
 ```bash
-cleos -u <rpc> get table verif verif kyc
 cleos -u <rpc> get table verif verif schemas
 cleos -u <rpc> get table verif verif policies
 cleos -u <rpc> get table verif verif commitments

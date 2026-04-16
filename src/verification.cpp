@@ -11,7 +11,7 @@ extern "C" {
                     verification_enterprise,
                     (addschema)(updateschema)(deprecate)
                     (setpolicy)(setauthsrcs)
-                    (submit)(supersede)(revokecmmt)(expirecmmt)
+                    (submit)
                     (submitroot)(linkmanifest)(closebatch)
                     (withdraw)
                 )

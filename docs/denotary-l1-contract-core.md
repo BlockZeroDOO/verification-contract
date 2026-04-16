@@ -4,7 +4,7 @@ This document describes the canonical on-chain scope of the `verif` contract.
 
 ## Repository Boundary
 
-- `C:\projects\verification-contract` owns the `verif`, `verifretail`, and `verifbill` smart contracts
+- `C:\projects\verification-contract` owns the `verif`, `verifbill`, `verifretpay`, and deprecated compatibility contract `verifretail`
 - `C:\projects\deNotary` owns the off-chain backend
 - `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
@@ -18,7 +18,8 @@ It is responsible for:
 - policy registry
 - single commitment anchoring
 - batch anchoring
-- lifecycle transitions for commitments and batches
+- append-only commitment anchoring
+- batch lifecycle transitions
 
 It is not responsible for:
 
@@ -118,9 +119,6 @@ Fields:
 ### Anchoring
 
 - `submit`
-- `supersede`
-- `revokecmmt`
-- `expirecmmt`
 - `submitroot`
 - `linkmanifest`
 - `closebatch`
@@ -134,9 +132,6 @@ Fields:
 ### Commitments
 
 - `0 = active`
-- `1 = superseded`
-- `2 = revoked`
-- `3 = expired`
 
 ### Batches
 
@@ -167,15 +162,6 @@ Must satisfy:
 - non-zero `external_ref`
 - `leaf_count > 0`
 - unique `request_key`
-
-### `supersede`
-
-Must satisfy:
-
-- source commitment exists
-- source commitment is active
-- successor commitment exists
-- successor is different from source
 
 ### `closebatch`
 

@@ -1,21 +1,22 @@
-# deNotary Retail Verification Deploy
+# deNotary Compatibility Retail Deploy
 
-This runbook covers deployment of the compatibility `verifretail` contract only.
+This runbook covers deployment of the deprecated compatibility `verifretail` contract only.
 
 Repository boundary:
 
-- `C:\projects\verification-contract` owns `verif`, `verifbill`, `verifretpay`, and `verifretail`
+- `C:\projects\verification-contract` owns `verif`, `verifbill`, `verifretpay`, and the deprecated compatibility contract `verifretail`
 - `C:\projects\deNotary` owns the off-chain backend
 - `C:\projects\decentralized_storage\contracts\dfs` owns the DFS contract
 
 ## Purpose
 
-`verifretail` is the compatibility wallet-first retail contract that supports atomic on-chain payment plus submit flow.
+`verifretail` is the deprecated compatibility wallet-first retail contract that supports atomic on-chain payment plus submit flow.
 
 Target-state note:
 
 - the unified architecture is `verif + verifretpay`
 - `verifretail` is retained as a migration-safe compatibility path
+- do not use it for new deployments unless you explicitly need backward compatibility
 
 Retail payment model:
 

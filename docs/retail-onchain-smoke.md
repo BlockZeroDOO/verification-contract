@@ -1,8 +1,8 @@
-# Retail On-Chain Smoke Tests
+# Compatibility Retail On-Chain Smoke Tests
 
 ## Purpose
 
-These smoke tests validate the retail `atomic pay + submit` path for `verifretail`.
+These smoke tests validate the deprecated compatibility `atomic pay + submit` path for `verifretail`.
 
 Scripts:
 
@@ -66,3 +66,4 @@ batch|submitter|external_ref_hex
 ```
 
 - current implementation requires `payer == submitter`
+- use the unified retail path in [docs/unified-retail-onchain-smoke.md](/c:/projects/verification-contract/docs/unified-retail-onchain-smoke.md:1) for new deployments

@@ -162,61 +162,6 @@ void verification_enterprise::submit(
     consume_usage_authorization(usage_auth);
 }
 
-void verification_enterprise::supersede(uint64_t id, uint64_t successor_id) {
-    verification_validators::validate_registry_id(id, "id");
-    verification_validators::validate_registry_id(successor_id, "successor_id");
-    check(id != successor_id, "successor_id must be different from id");
-
-    commitment_table commitments(get_self(), get_self().value);
-    auto existing = commitments.find(id);
-    check(existing != commitments.end(), "commitment does not exist");
-    check(
-        has_auth(existing->submitter) || has_auth(get_self()),
-        "missing required authority of submitter or contract"
-    );
-    validate_commitment_is_active(*existing);
-
-    auto successor = commitments.find(successor_id);
-    check(successor != commitments.end(), "successor commitment does not exist");
-    validate_commitment_can_be_successor(*existing, *successor);
-
-    commitments.modify(existing, get_self(), [&](auto& row) {
-        row.status = verification_core::commitment_status_superseded;
-        row.status_changed_at = time_point_sec(current_time_point());
-        row.superseded_by = successor_id;
-    });
-}
-
-void verification_enterprise::revokecmmt(uint64_t id) {
-    require_auth(get_self());
-    verification_validators::validate_registry_id(id, "id");
-
-    commitment_table commitments(get_self(), get_self().value);
-    auto existing = commitments.find(id);
-    check(existing != commitments.end(), "commitment does not exist");
-    validate_commitment_is_active(*existing);
-
-    commitments.modify(existing, get_self(), [&](auto& row) {
-        row.status = verification_core::commitment_status_revoked;
-        row.status_changed_at = time_point_sec(current_time_point());
-    });
-}
-
-void verification_enterprise::expirecmmt(uint64_t id) {
-    require_auth(get_self());
-    verification_validators::validate_registry_id(id, "id");
-
-    commitment_table commitments(get_self(), get_self().value);
-    auto existing = commitments.find(id);
-    check(existing != commitments.end(), "commitment does not exist");
-    validate_commitment_is_active(*existing);
-
-    commitments.modify(existing, get_self(), [&](auto& row) {
-        row.status = verification_core::commitment_status_expired;
-        row.status_changed_at = time_point_sec(current_time_point());
-    });
-}
-
 void verification_enterprise::submitroot(
     const name& submitter,
     uint64_t schema_id,
@@ -421,15 +366,4 @@ void verification_enterprise::validate_batch_is_open(const batch_row& batch) con
 
 void verification_enterprise::validate_commitment_request_unique(const name& submitter, const checksum256& external_ref) const {
     verification_core::validate_commitment_request_unique(get_self(), submitter, external_ref);
-}
-
-void verification_enterprise::validate_commitment_can_be_successor(
-    const commitment_row& current,
-    const commitment_row& successor
-) const {
-    verification_core::validate_commitment_can_be_successor(current, successor);
-}
-
-void verification_enterprise::validate_commitment_is_active(const commitment_row& commitment) const {
-    verification_core::validate_commitment_is_active(commitment);
 }

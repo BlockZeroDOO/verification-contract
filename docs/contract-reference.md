@@ -7,7 +7,6 @@ This document is the full on-chain reference for the contracts in this repositor
 - `verif`
 - `verifbill`
 - `verifretpay`
-- `verifretail`
 
 The two anchoring contracts share the same anchoring core:
 
@@ -22,7 +21,7 @@ They differ in the access and payment model:
 - `verif` is the unified anchoring contract
 - `verifbill` is the enterprise billing and entitlement contract
 - `verifretpay` is the wallet-first retail payment and authorization contract
-- `verifretail` is a compatibility retail anchoring contract retained during migration
+- `verifretail` is a deprecated compatibility retail anchoring contract retained during migration
 
 ## Contract Roles
 
@@ -66,7 +65,7 @@ It supports:
 
 ### `verifretail`
 
-`verifretail` is the compatibility retail contract.
+`verifretail` is the deprecated compatibility retail contract.
 
 It keeps the old wallet-first retail anchoring flow available during migration, but it is no longer the target end-state architecture.
 
@@ -133,7 +132,7 @@ Meaning:
 
 - one on-chain single-record anchor
 - `request_key` enforces uniqueness for the request
-- `status` tracks business lifecycle
+- `status` and `superseded_by` are retained as compatibility fields, but the primary `verif` path no longer exposes separate commitment lifecycle mutation actions
 
 ### `batches`
 
@@ -177,7 +176,7 @@ Meaning:
 
 ## Shared Actions
 
-The following actions exist in both `verif` and `verifretail`.
+The following actions define the unified `verif` action surface and are still mirrored by `verifretail` only for compatibility.
 
 ### Schema Governance
 
@@ -226,28 +225,6 @@ Expected authority:
 
 - `submitter`
 
-### Commitment Lifecycle
-
-- `supersede(id, successor_id)`
-- `revokecmmt(id)`
-- `expirecmmt(id)`
-
-Purpose:
-
-- move anchored commitments through business lifecycle states
-
-Validation:
-
-- referenced rows must exist
-- source commitment must be active where required
-- successor must be distinct for `supersede`
-
-Expected authority:
-
-- `submitter` for `supersede`
-- governance account for `revokecmmt`
-- governance account for `expirecmmt`
-
 ### Batch Anchoring
 
 - `submitroot(submitter, schema_id, policy_id, root_hash, leaf_count, external_ref)`
@@ -292,9 +269,10 @@ Expected authority:
 ### Commitment status
 
 - `0 = active`
-- `1 = superseded`
-- `2 = revoked`
-- `3 = expired`
+
+Compatibility note:
+
+- legacy compatibility paths may still interpret historical values for superseded, revoked, or expired commitments
 
 ### Batch status
 
@@ -479,7 +457,7 @@ This is the target retail path for the unified architecture.
 
 ### Product model
 
-`verifretail` is the compatibility retail anchoring contract.
+`verifretail` is the deprecated compatibility retail anchoring contract.
 
 It keeps the older wallet-first `atomic pay + submit` flow available while migration proceeds toward the unified `verif + verifretpay` architecture.
 
@@ -490,6 +468,7 @@ Current role:
 - preserve the already validated legacy retail path
 - provide backward compatibility for deployments not yet migrated to `verifretpay`
 - avoid forcing a hard cutover in one step
+- stay out of the primary deploy and smoke path
 
 ## `verifbill` Specific Behavior
 
@@ -589,7 +568,6 @@ The governance account is responsible for:
 - policy management
 - tariff and token management in retail
 - withdrawals
-- explicit revoke/expire operations
 
 ### Submitter
 
@@ -597,7 +575,6 @@ The submitter is responsible for:
 
 - `submit`
 - `submitroot`
-- `supersede`
 - `linkmanifest`
 - `closebatch`
 
@@ -654,7 +631,6 @@ Current final names:
 
 - unified anchoring contract/account: `verif`
 - retail payment contract/account: `verifretpay`
-- retail contract/account: `verifretail`
 - enterprise billing contract/account: `verifbill`
 
 Build outputs:
@@ -663,8 +639,6 @@ Build outputs:
 - `dist/verif/verif.abi`
 - `dist/verifretpay/verifretpay.wasm`
 - `dist/verifretpay/verifretpay.abi`
-- `dist/verifretail/verifretail.wasm`
-- `dist/verifretail/verifretail.abi`
 - `dist/verifbill/verifbill.wasm`
 - `dist/verifbill/verifbill.abi`
 
@@ -672,11 +646,9 @@ Primary runbooks:
 
 - [docs/enterprise-deploy.md](/c:/projects/verification-contract/docs/enterprise-deploy.md:1)
 - [docs/retail-payment-deploy.md](/c:/projects/verification-contract/docs/retail-payment-deploy.md:1)
-- [docs/retail-deploy.md](/c:/projects/verification-contract/docs/retail-deploy.md:1)
 - [docs/enterprise-onchain-smoke.md](/c:/projects/verification-contract/docs/enterprise-onchain-smoke.md:1)
 - [docs/retail-payment-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-payment-onchain-smoke.md:1)
 - [docs/unified-retail-onchain-smoke.md](/c:/projects/verification-contract/docs/unified-retail-onchain-smoke.md:1)
-- [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)
 
 ## Summary
 
@@ -684,7 +656,7 @@ Primary runbooks:
 
 `verifretpay` is the target retail payment and authorization contract for the unified architecture.
 
-`verifretail` is the compatibility retail anchoring contract.
+`verifretail` is a deprecated compatibility retail anchoring contract.
 
 `verifbill` is the enterprise billing and entitlement contract.
 
@@ -693,4 +665,4 @@ Together they provide:
 - one canonical anchoring surface
 - one enterprise billing surface
 - one target retail payment surface
-- one compatibility retail anchoring surface during migration
+- one deprecated compatibility retail anchoring surface during migration

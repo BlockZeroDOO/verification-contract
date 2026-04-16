@@ -22,18 +22,6 @@ Configures which enterprise billing contract and retail payment contract may sup
 
 Creates a single anchored commitment after schema, policy, and external usage-authorization validation.
 
-<h1 class="contract">supersede</h1>
-
-Moves an active commitment into the `superseded` business status and links it to a successor commitment.
-
-<h1 class="contract">revokecmmt</h1>
-
-Moves an active commitment into the `revoked` business status.
-
-<h1 class="contract">expirecmmt</h1>
-
-Moves an active commitment into the `expired` business status.
-
 <h1 class="contract">submitroot</h1>
 
 Creates a batch anchoring record after schema, policy, and external usage-authorization validation.

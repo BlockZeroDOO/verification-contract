@@ -97,9 +97,6 @@ Standalone billing smoke:
 - `submit`
 - duplicate single request rejection
 - zero `object_hash` rejection
-- `supersede` with explicit `successor_id`
-- `revokecmmt`
-- `expirecmmt`
 - `submitroot`
 - duplicate batch request rejection
 - guard on `closebatch` before `linkmanifest`
@@ -117,3 +114,4 @@ Standalone billing smoke:
 - billing smoke is documented separately in [docs/billing-onchain-smoke.md](/c:/projects/verification-contract/docs/billing-onchain-smoke.md:1)
 - retail payment smoke is documented separately in [docs/retail-payment-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-payment-onchain-smoke.md:1)
 - unified retail smoke is documented separately in [docs/unified-retail-onchain-smoke.md](/c:/projects/verification-contract/docs/unified-retail-onchain-smoke.md:1)
+- compatibility retail smoke for deprecated `verifretail` remains available in [docs/retail-onchain-smoke.md](/c:/projects/verification-contract/docs/retail-onchain-smoke.md:1)

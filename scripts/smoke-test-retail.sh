@@ -50,6 +50,9 @@ log() {
     printf '[smoke-test-retail] %s\n' "$1"
 }
 
+log "WARNING: verifretail is a deprecated compatibility path."
+log "WARNING: Prefer unified retail validation with verif + verifretpay for new deployments."
+
 get_table_json() {
     local code="$1"
     local scope="$2"

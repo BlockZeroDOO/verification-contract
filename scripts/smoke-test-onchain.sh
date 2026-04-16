@@ -212,13 +212,9 @@ POLICY_BATCH_ID="${POLICY_BATCH_ID:-$((BASE_ID + 2001))}"
 
 COMMIT_EXTREF_1="$(hash_text "commit-1-${TIMESTAMP}")"
 COMMIT_EXTREF_2="$(hash_text "commit-2-${TIMESTAMP}")"
-COMMIT_EXTREF_3="$(hash_text "commit-3-${TIMESTAMP}")"
-COMMIT_EXTREF_4="$(hash_text "commit-4-${TIMESTAMP}")"
 
 OBJECT_HASH_1="$(hash_text "object-1-${TIMESTAMP}")"
 OBJECT_HASH_2="$(hash_text "object-2-${TIMESTAMP}")"
-OBJECT_HASH_3="$(hash_text "object-3-${TIMESTAMP}")"
-OBJECT_HASH_4="$(hash_text "object-4-${TIMESTAMP}")"
 ZERO_HASH="$(printf '0%.0s' {1..64})"
 
 BATCH_EXTREF="$(hash_text "batch-${TIMESTAMP}")"
@@ -306,32 +302,7 @@ cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
     "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_2}\",\"${COMMIT_EXTREF_2}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active"
 COMMITMENT_ID_2="$(get_commitment_id_by_external_ref "${COMMIT_EXTREF_2}")"
-
-log "Superseding commitment #1 with #2"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" supersede \
-    "[${COMMITMENT_ID_1},${COMMITMENT_ID_2}]" \
-    -p "${SUBMITTER_ACCOUNT}@active"
-assert_commitment_field "${COMMITMENT_ID_1}" "status" "1"
-assert_commitment_field "${COMMITMENT_ID_1}" "superseded_by" "${COMMITMENT_ID_2}"
 assert_commitment_field "${COMMITMENT_ID_2}" "status" "0"
-
-log "Submitting commitment #3 for revoke path"
-enterprise_use 0 "${COMMIT_EXTREF_3}"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_3}\",\"${COMMIT_EXTREF_3}\"]" \
-    -p "${SUBMITTER_ACCOUNT}@active"
-COMMITMENT_ID_3="$(get_commitment_id_by_external_ref "${COMMIT_EXTREF_3}")"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" revokecmmt "[${COMMITMENT_ID_3}]" -p "${OWNER_ACCOUNT}@active"
-assert_commitment_field "${COMMITMENT_ID_3}" "status" "2"
-
-log "Submitting commitment #4 for expire path"
-enterprise_use 0 "${COMMIT_EXTREF_4}"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${OBJECT_HASH_4}\",\"${COMMIT_EXTREF_4}\"]" \
-    -p "${SUBMITTER_ACCOUNT}@active"
-COMMITMENT_ID_4="$(get_commitment_id_by_external_ref "${COMMIT_EXTREF_4}")"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" expirecmmt "[${COMMITMENT_ID_4}]" -p "${OWNER_ACCOUNT}@active"
-assert_commitment_field "${COMMITMENT_ID_4}" "status" "3"
 
 log "Submitting batch #1"
 enterprise_use 1 "${BATCH_EXTREF}"

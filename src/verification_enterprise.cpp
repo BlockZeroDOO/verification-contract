@@ -1,11 +1,5 @@
 #include <verification_enterprise.hpp>
 
-namespace {
-bool is_zero_checksum(const eosio::checksum256& value) {
-    return verification_validators::is_zero_checksum(value);
-}
-}  // namespace
-
 void verification_enterprise::addschema(
     uint64_t id,
     const string& version,
@@ -112,26 +106,6 @@ void verification_enterprise::setauthsrcs(const name& billing_account, const nam
     auth_sources.set(auth_source_config{billing_account, retail_payment_account}, get_self());
 }
 
-void verification_enterprise::submit(
-    const name& submitter,
-    uint64_t schema_id,
-    uint64_t policy_id,
-    const checksum256& object_hash,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
-) {
-    require_auth(submitter);
-    const auto usage_auth = require_usage_authorization(
-        enterprise_mode_single,
-        submitter,
-        external_ref,
-        billable_bytes,
-        verification_validators::derive_billable_kib(billable_bytes)
-    );
-    anchor_single_request(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes);
-    consume_usage_authorization(usage_auth);
-}
-
 void verification_enterprise::billsubmit(
     const name& submitter,
     uint64_t schema_id,
@@ -156,37 +130,6 @@ void verification_enterprise::retailsub(
     const auto auth_sources = get_auth_source_config();
     require_internal_registry_caller(auth_sources.retail_payment_account);
     anchor_single_request(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes);
-}
-
-void verification_enterprise::submitroot(
-    const name& submitter,
-    uint64_t schema_id,
-    uint64_t policy_id,
-    const checksum256& root_hash,
-    uint32_t leaf_count,
-    const checksum256& manifest_hash,
-    const checksum256& external_ref,
-    uint64_t billable_bytes
-) {
-    require_auth(submitter);
-    const auto usage_auth = require_usage_authorization(
-        enterprise_mode_batch,
-        submitter,
-        external_ref,
-        billable_bytes,
-        verification_validators::derive_billable_kib(billable_bytes)
-    );
-    anchor_batch_request(
-        submitter,
-        schema_id,
-        policy_id,
-        root_hash,
-        leaf_count,
-        manifest_hash,
-        external_ref,
-        billable_bytes
-    );
-    consume_usage_authorization(usage_auth);
 }
 
 void verification_enterprise::billbatch(
@@ -269,78 +212,6 @@ verification_enterprise::policy_row verification_enterprise::require_policy(uint
 verification_enterprise::auth_source_config verification_enterprise::get_auth_source_config() const {
     auth_source_singleton auth_sources(get_self(), get_self().value);
     return auth_sources.exists() ? auth_sources.get() : auth_source_config{};
-}
-
-verification_enterprise::usage_authorization_ref verification_enterprise::require_usage_authorization(
-    uint8_t mode,
-    const name& submitter,
-    const checksum256& external_ref,
-    uint64_t billable_bytes,
-    uint64_t billable_kib
-) const {
-    const auto auth_sources = get_auth_source_config();
-    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
-    const auto now = time_point_sec(current_time_point());
-
-    bool has_enterprise_auth = false;
-    bool has_retail_auth = false;
-    uint64_t auth_id = 0;
-    name source_contract = name{};
-
-    {
-        enterprise_usage_auth_table usage_auths(auth_sources.billing_account, auth_sources.billing_account.value);
-        auto by_request = usage_auths.get_index<"byrequest"_n>();
-        auto existing = by_request.find(request_key);
-        if (existing != by_request.end() &&
-            !existing->consumed &&
-            existing->submitter == submitter &&
-            existing->mode == mode &&
-            existing->billable_bytes == billable_bytes &&
-            existing->billable_kib == billable_kib &&
-            existing->expires_at > now) {
-            has_enterprise_auth = true;
-            auth_id = existing->auth_id;
-            source_contract = auth_sources.billing_account;
-        }
-    }
-
-    {
-        retail_usage_auth_table usage_auths(auth_sources.retail_payment_account, auth_sources.retail_payment_account.value);
-        auto by_request = usage_auths.get_index<"byrequest"_n>();
-        auto existing = by_request.find(request_key);
-        if (existing != by_request.end() &&
-            !existing->consumed &&
-            existing->submitter == submitter &&
-            existing->mode == mode &&
-            existing->external_ref == external_ref &&
-            existing->billable_bytes == billable_bytes &&
-            existing->billable_kib == billable_kib &&
-            existing->expires_at > now) {
-            has_retail_auth = true;
-            auth_id = existing->auth_id;
-            source_contract = auth_sources.retail_payment_account;
-        }
-    }
-
-    check(
-        has_enterprise_auth || has_retail_auth,
-        "usage authorization is missing for request"
-    );
-    check(
-        !(has_enterprise_auth && has_retail_auth),
-        "multiple usage authorizations exist for request"
-    );
-
-    return usage_authorization_ref{source_contract, auth_id};
-}
-
-void verification_enterprise::consume_usage_authorization(const usage_authorization_ref& authorization) const {
-    action(
-        permission_level{get_self(), "active"_n},
-        authorization.source_contract,
-        "consume"_n,
-        std::make_tuple(authorization.auth_id)
-    ).send();
 }
 
 void verification_enterprise::require_internal_registry_caller(const name& expected_contract) const {

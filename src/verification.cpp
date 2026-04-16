@@ -11,8 +11,8 @@ extern "C" {
                     verification_enterprise,
                     (addschema)(updateschema)(deprecate)
                     (setpolicy)(setauthsrcs)
-                    (submit)(billsubmit)(retailsub)
-                    (submitroot)(billbatch)(retailbatch)
+                    (billsubmit)(retailsub)
+                    (billbatch)(retailbatch)
                     (withdraw)
                 )
             }

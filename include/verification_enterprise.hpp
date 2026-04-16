@@ -7,17 +7,13 @@
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
-#include <eosio/transaction.hpp>
 
 #include <request_key.hpp>
-#include <verification_billing_tables.hpp>
 #include <verification_core.hpp>
-#include <verification_retail_payment_tables.hpp>
 #include <verification_tables.hpp>
 #include <verification_validators.hpp>
 
 #include <string>
-#include <tuple>
 
 using namespace eosio;
 using std::string;
@@ -57,16 +53,6 @@ public:
     void setauthsrcs(const name& billing_account, const name& retail_payment_account);
 
     [[eosio::action]]
-    void submit(
-        const name& submitter,
-        uint64_t schema_id,
-        uint64_t policy_id,
-        const checksum256& object_hash,
-        const checksum256& external_ref,
-        uint64_t billable_bytes
-    );
-
-    [[eosio::action]]
     void billsubmit(
         const name& submitter,
         uint64_t schema_id,
@@ -82,18 +68,6 @@ public:
         uint64_t schema_id,
         uint64_t policy_id,
         const checksum256& object_hash,
-        const checksum256& external_ref,
-        uint64_t billable_bytes
-    );
-
-    [[eosio::action]]
-    void submitroot(
-        const name& submitter,
-        uint64_t schema_id,
-        uint64_t policy_id,
-        const checksum256& root_hash,
-        uint32_t leaf_count,
-        const checksum256& manifest_hash,
         const checksum256& external_ref,
         uint64_t billable_bytes
     );
@@ -139,17 +113,6 @@ private:
     using commitment_table = verification_tables::commitment_table;
     using batch_row = verification_tables::batch_row;
     using batch_table = verification_tables::batch_table;
-    using counter_state = verification_tables::counter_state;
-    using counter_singleton = verification_tables::counter_singleton;
-    using enterprise_usage_auth_row = verification_billing_tables::usage_auth_row;
-    using enterprise_usage_auth_table = verification_billing_tables::usage_auth_table;
-    using retail_usage_auth_row = verification_retail_payment_tables::usage_auth_row;
-    using retail_usage_auth_table = verification_retail_payment_tables::usage_auth_table;
-
-    struct usage_authorization_ref {
-        name source_contract;
-        uint64_t auth_id;
-    };
 
     struct [[eosio::table("authsources")]] auth_source_config {
         name billing_account = "verifbill"_n;
@@ -158,21 +121,10 @@ private:
 
     using auth_source_singleton = singleton<"authsources"_n, auth_source_config>;
 
-    static constexpr uint8_t enterprise_mode_single = 0;
-    static constexpr uint8_t enterprise_mode_batch = 1;
-
     schema_row require_schema(uint64_t id) const;
     policy_row require_policy(uint64_t id) const;
     auth_source_config get_auth_source_config() const;
-    usage_authorization_ref require_usage_authorization(
-        uint8_t mode,
-        const name& submitter,
-        const checksum256& external_ref,
-        uint64_t billable_bytes,
-        uint64_t billable_kib
-    ) const;
     void require_internal_registry_caller(const name& expected_contract) const;
-    void consume_usage_authorization(const usage_authorization_ref& authorization) const;
     void anchor_single_request(
         const name& submitter,
         uint64_t schema_id,

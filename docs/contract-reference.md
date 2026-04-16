@@ -27,7 +27,6 @@ It is responsible for:
 - single-record anchoring
 - batch anchoring
 - request uniqueness
-- consuming external usage authorization after successful anchor creation
 - transitional internal anchoring entrypoints for payment contracts
 
 ### Tables
@@ -106,10 +105,8 @@ Fields:
 
 #### Anchoring
 
-- `submit(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
 - `billsubmit(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
 - `retailsub(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
-- `submitroot(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
 - `billbatch(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
 - `retailbatch(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
 
@@ -119,42 +116,16 @@ Fields:
 
 ### Validation Rules
 
-`submit(...)` requires:
-
-- active schema
-- active policy
-- policy allows single mode
-- non-zero `object_hash`
-- non-zero `external_ref`
-- `billable_bytes > 0`
-- derived `billable_kib >= 1`
-- unique request
-- valid external authorization
-
-`submitroot(...)` requires:
-
-- active schema
-- active policy
-- policy allows batch mode
-- non-zero `root_hash`
-- non-zero `manifest_hash`
-- non-zero `external_ref`
-- `billable_bytes > 0`
-- derived `billable_kib >= 1`
-- `leaf_count > 0`
-- unique request
-- valid external authorization
-
 Contract-only transition:
 
 - `billsubmit(...)` and `billbatch(...)` require `verifbill` authority
 - `retailsub(...)` and `retailbatch(...)` require `verifretpay` authority
 - these internal entrypoints perform the same registry validation and uniqueness checks
-- they do not perform external auth lookup or external `consume(...)` callbacks
+- they are the active anchoring runtime for the supported payment contracts
 
 ### Authorization Wiring
 
-`verif` accepts one-time authorization from:
+`verif` allows contract-only anchoring from:
 
 - `verifbill`
 - `verifretpay`
@@ -162,6 +133,8 @@ Contract-only transition:
 The deployed accounts are configured through:
 
 - `setauthsrcs(billing_account, retail_payment_account)`
+
+This transitional config now controls allowed internal callers, not external auth-table lookup.
 
 ## `verifbill`
 

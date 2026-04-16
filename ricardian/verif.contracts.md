@@ -18,10 +18,6 @@ Creates or updates a minimal policy registry row for single and batch submit rul
 
 Configures which enterprise billing contract and retail payment contract may supply one-time usage authorizations to `verif`.
 
-<h1 class="contract">submit</h1>
-
-Creates a single anchored commitment after schema, policy, and external usage-authorization validation.
-
 <h1 class="contract">billsubmit</h1>
 
 Creates a single anchored commitment through the contract-only enterprise path, callable only by the configured `verifbill` account.
@@ -29,10 +25,6 @@ Creates a single anchored commitment through the contract-only enterprise path, 
 <h1 class="contract">retailsub</h1>
 
 Creates a single anchored commitment through the contract-only retail path, callable only by the configured `verifretpay` account.
-
-<h1 class="contract">submitroot</h1>
-
-Creates a finalized batch anchoring record with embedded manifest hash after schema, policy, and external usage-authorization validation.
 
 <h1 class="contract">billbatch</h1>
 

@@ -20,7 +20,6 @@ Implemented in the current shell:
 - plan definitions
 - pack definitions
 - entitlement rows created by purchases
-- delegated submitter mapping
 - `use(...)` with one-time `usageauths`
 - deploy tooling
 - standalone billing smoke tooling
@@ -38,7 +37,7 @@ The target architecture must satisfy all of the following:
 - no trusted backend required by protocol
 - direct client-side transaction signing must remain possible
 - enterprise and integrator customers must be able to pre-purchase usage rights on-chain
-- one account must be able to pay for usage performed by other delegated submitter accounts
+- payer and submitter authorization should rely on native Antelope permissions instead of contract-managed delegate state
 
 ## Core Recommendation
 
@@ -54,7 +53,6 @@ This contract should own:
 - plans
 - usage packs
 - entitlements
-- delegate mappings
 - usage authorizations
 
 The verification contract should remain focused on anchoring only:
@@ -70,7 +68,7 @@ The verification contract should remain focused on anchoring only:
 
 - billing-agnostic
 - anchoring-only
-- schema/policy/KYC/lifecycle focused
+- schema/policy/lifecycle focused
 
 It should not:
 
@@ -91,7 +89,6 @@ It should:
 
 - receive enterprise payments on-chain
 - convert payment into plans or usage packs
-- manage delegated usage rights
 - mint one-time submit authorizations
 - mark usage as consumed
 
@@ -103,7 +100,7 @@ The recommended commercial model is:
 
 1. subscription plans
 2. usage packs
-3. delegated usage
+3. native-permission usage
 
 ### Subscription plans
 
@@ -136,19 +133,21 @@ This is better than deposit because:
 - accounting is clearer
 - there is no need to manually reconcile a contract-held internal wallet balance
 
-### Delegated usage
+### Native-permission usage
 
-Enterprise customers often pay from one account and submit from many accounts.
+Enterprise customers often pay from one account and submit from another operational account.
 
 So the billing architecture must support:
 
 - payer account
-- delegated submitter accounts
+- submitter account
+- native Antelope permission delegation outside contract state
 
 Meaning:
 
 - one enterprise account buys plan/pack entitlement
-- multiple submitter accounts are granted the right to consume it
+- `use(...)` may be signed by the payer or the submitter
+- if organizations need delegated operational signing, they configure it at the account-permission layer
 
 ## High-Level Flow
 
@@ -172,16 +171,7 @@ Output:
 
 - remaining single quota and/or batch quota
 
-### Flow C. Delegate usage
-
-1. payer or billing owner calls `grantdelegate`
-2. delegated submitter is bound to the payer entitlement scope
-
-Output:
-
-- delegated submitter may consume enterprise usage
-
-### Flow D. Use entitlement for submit
+### Flow C. Use entitlement for submit
 
 Recommended atomic request structure:
 
@@ -230,7 +220,7 @@ This architecture avoids the main deposit problems:
 - no internal user balance table in `verif`
 - no need for the client to track a second wallet-like state
 - enterprise customer buys plan or pack, not floating balance
-- entitlement is easier to audit and delegate
+- entitlement is easier to audit than a floating deposit balance
 
 ## Why This Is Better Than Retail Atomic Payment
 
@@ -317,19 +307,6 @@ Meaning:
 - plans use time bounds
 - packs use remaining units
 
-### `delegates`
-
-Stores authorized submitters per payer or entitlement scope.
-
-Fields:
-
-- `delegate_id`
-- `payer`
-- `submitter`
-- `enabled`
-- `created_at`
-- `updated_at`
-
 ### `usageauths`
 
 Stores one-time usage authorizations.
@@ -360,7 +337,6 @@ Fields:
 - `next_plan_id`
 - `next_pack_id`
 - `next_entitlement_id`
-- `next_delegate_id`
 - `next_usageauth_id`
 
 ## Recommended `verifbill` Actions
@@ -386,11 +362,6 @@ Recommended memo families:
 - `plan|payer|plan_code`
 - `pack|payer|pack_code`
 
-### Delegation
-
-- `grantdelegate(payer, submitter)`
-- `revokedeleg(payer, submitter)`
-
 ### Usage
 
 - `use(payer, submitter, mode, external_ref)`
@@ -402,15 +373,10 @@ Recommended memo families:
 
 - any account that pays with an accepted token
 
-### Who may delegate
-
-- payer
-- or optionally contract governance, if explicitly allowed by business policy
-
 ### Who may use entitlement
 
 - payer directly
-- or delegated submitter accounts
+- or a submitter account that already has the required authority through native Antelope permissions
 
 ### Who may consume authorization
 
@@ -501,7 +467,6 @@ The billing architecture must enforce:
 - accepted token whitelist
 - exact plan/pack purchase validation
 - no hidden deposit balance model
-- delegate checks
 - one-time usage authorization
 - request-key binding
 - replay protection
@@ -517,7 +482,6 @@ Recommended Phase 1 scope:
 - one accepted token
 - plan purchases
 - pack purchases
-- delegate mapping
 - `use(...)`
 - one-time `usageauths`
 - single and batch quota split
@@ -552,7 +516,7 @@ The recommended enterprise payment model is:
 
 - separate billing contract
 - plans and packs instead of deposit
-- delegated usage
+- payer or submitter initiated usage through native permissions
 - atomic `verifbill::use + verif::submit`
 - one-time usage authorization tied to request key
 
@@ -561,4 +525,4 @@ This gives enterprise customers:
 - on-chain payment
 - no deposit tracking inside `verif`
 - no trusted backend requirement
-- better organization-level delegation and accounting
+- better organization-level accounting without duplicating access control inside contract state

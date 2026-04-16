@@ -4,7 +4,6 @@
 
 These smoke tests validate the enterprise verification contract surface for:
 
-- `KYC`
 - `Schema`
 - `Policy`
 - `Commitment`
@@ -67,10 +66,8 @@ deNotary:
 
 ## What the enterprise smoke validates
 
-- `issuekyc`
-- `renewkyc`
 - `addschema`
-- `setpolicy` for single and batch flows
+- minimal `setpolicy` for single and batch flows
 - `verifbill::settoken`
 - `verif::setauthsrcs`
 - `verifbill::setpack`

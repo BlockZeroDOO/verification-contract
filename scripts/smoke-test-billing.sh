@@ -26,7 +26,7 @@ WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the billing contract authority account.}"
 : "${PAYER_ACCOUNT:?Set PAYER_ACCOUNT to a funded account that can purchase billing products.}"
-: "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to an account used for delegated enterprise usage.}"
+: "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to the account that signs enterprise usage requests.}"
 
 if [[ ${#BILLING_ACCOUNT} -gt 12 ]]; then
     echo "BILLING_ACCOUNT must be 12 characters or fewer for Antelope account names: ${BILLING_ACCOUNT}" >&2
@@ -117,13 +117,6 @@ cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" setpack \
     "[\"${PACK_CODE}\",\"${PAYMENT_TOKEN_CONTRACT}\",\"${PACK_PRICE}\",${PACK_SINGLE_UNITS},${PACK_BATCH_UNITS},true]" \
     -p "${OWNER_ACCOUNT}@active"
 
-if [[ "${PAYER_ACCOUNT}" != "${SUBMITTER_ACCOUNT}" ]]; then
-    log "Granting delegated submitter"
-    cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" grantdelegate \
-        "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\"]" \
-        -p "${PAYER_ACCOUNT}@active"
-fi
-
 log "Purchasing enterprise plan"
 cleos -u "${RPC_URL}" transfer "${PAYER_ACCOUNT}" "${BILLING_ACCOUNT}" "${PLAN_PRICE}" \
     "plan|${PAYER_ACCOUNT}|${PLAN_CODE}"
@@ -191,12 +184,5 @@ wait_for_table_match \
     "usageauths" \
     ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .mode == 1 and ((.consumed == false) or (.consumed == 0)))" \
     "batch usage authorization"
-
-if [[ "${PAYER_ACCOUNT}" != "${SUBMITTER_ACCOUNT}" ]]; then
-    log "Revoking delegated submitter"
-    cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" revokedeleg \
-        "[\"${PAYER_ACCOUNT}\",\"${SUBMITTER_ACCOUNT}\"]" \
-        -p "${PAYER_ACCOUNT}@active"
-fi
 
 log "Enterprise billing smoke test passed"

@@ -115,28 +115,6 @@ using entitlement_table = multi_index<
     indexed_by<"bystatus"_n, const_mem_fun<entitlement_row, uint64_t, &entitlement_row::bystatus>>
 >;
 
-struct [[eosio::table("delegates")]] delegate_row {
-    uint64_t delegate_id;
-    name payer;
-    name submitter;
-    bool enabled;
-    time_point_sec created_at;
-    time_point_sec updated_at;
-
-    uint64_t primary_key() const { return delegate_id; }
-    uint128_t bypair() const {
-        return (static_cast<uint128_t>(payer.value) << 64) | submitter.value;
-    }
-    uint64_t bysubmitter() const { return submitter.value; }
-};
-
-using delegate_table = multi_index<
-    "delegates"_n,
-    delegate_row,
-    indexed_by<"bypair"_n, const_mem_fun<delegate_row, uint128_t, &delegate_row::bypair>>,
-    indexed_by<"bysubmitter"_n, const_mem_fun<delegate_row, uint64_t, &delegate_row::bysubmitter>>
->;
-
 struct [[eosio::table("usageauths")]] usage_auth_row {
     uint64_t auth_id;
     name payer;
@@ -166,7 +144,6 @@ struct [[eosio::table("billcounters")]] counter_state {
     uint64_t next_plan_id = 1;
     uint64_t next_pack_id = 1;
     uint64_t next_entitlement_id = 1;
-    uint64_t next_delegate_id = 1;
     uint64_t next_usageauth_id = 1;
 };
 

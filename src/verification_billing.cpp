@@ -214,50 +214,6 @@ void verification_billing::deactpack(uint64_t pack_id) {
     });
 }
 
-void verification_billing::grantdelegate(const name& payer, const name& submitter) {
-    check(is_account(payer), "payer account does not exist");
-    check(is_account(submitter), "submitter account does not exist");
-    check(has_auth(payer) || has_auth(get_self()), "missing required authority of payer or contract");
-
-    delegate_table delegates(get_self(), get_self().value);
-    auto by_pair = delegates.get_index<"bypair"_n>();
-    const auto pair_key = (static_cast<uint128_t>(payer.value) << 64) | submitter.value;
-    auto existing = by_pair.find(pair_key);
-    const auto now = time_point_sec(current_time_point());
-
-    if (existing == by_pair.end()) {
-        delegates.emplace(get_self(), [&](auto& row) {
-            row.delegate_id = next_delegate_id();
-            row.payer = payer;
-            row.submitter = submitter;
-            row.enabled = true;
-            row.created_at = now;
-            row.updated_at = now;
-        });
-        return;
-    }
-
-    by_pair.modify(existing, get_self(), [&](auto& row) {
-        row.enabled = true;
-        row.updated_at = now;
-    });
-}
-
-void verification_billing::revokedeleg(const name& payer, const name& submitter) {
-    check(has_auth(payer) || has_auth(get_self()), "missing required authority of payer or contract");
-
-    delegate_table delegates(get_self(), get_self().value);
-    auto by_pair = delegates.get_index<"bypair"_n>();
-    const auto pair_key = (static_cast<uint128_t>(payer.value) << 64) | submitter.value;
-    auto existing = by_pair.find(pair_key);
-    check(existing != by_pair.end(), "delegate mapping does not exist");
-
-    by_pair.modify(existing, get_self(), [&](auto& row) {
-        row.enabled = false;
-        row.updated_at = time_point_sec(current_time_point());
-    });
-}
-
 void verification_billing::setverifacct(const name& verification_account) {
     require_auth(get_self());
     check(is_account(verification_account), "verification_account does not exist");
@@ -271,14 +227,7 @@ void verification_billing::use(const name& payer, const name& submitter, uint8_t
     check(is_account(submitter), "submitter account does not exist");
     check(mode == enterprise_mode_single || mode == enterprise_mode_batch, "unsupported enterprise usage mode");
     verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
-    check(
-        has_auth(submitter) || has_auth(payer),
-        "missing required authority of submitter or payer"
-    );
-
-    if (submitter != payer) {
-        check(has_delegate_permission(payer, submitter), "submitter is not delegated by payer");
-    }
+    check(has_auth(submitter) || has_auth(payer), "missing required authority of submitter or payer");
 
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     usage_auth_table usage_auths(get_self(), get_self().value);
@@ -443,14 +392,6 @@ verification_billing::pack_row verification_billing::require_pack_by_id(uint64_t
     return *existing;
 }
 
-bool verification_billing::has_delegate_permission(const name& payer, const name& submitter) const {
-    delegate_table delegates(get_self(), get_self().value);
-    auto by_pair = delegates.get_index<"bypair"_n>();
-    const auto pair_key = (static_cast<uint128_t>(payer.value) << 64) | submitter.value;
-    auto existing = by_pair.find(pair_key);
-    return existing != by_pair.end() && existing->enabled;
-}
-
 uint64_t verification_billing::next_token_id() {
     counter_singleton counters(get_self(), get_self().value);
     auto state = counters.exists() ? counters.get() : counter_state{};
@@ -483,15 +424,6 @@ uint64_t verification_billing::next_entitlement_id() {
     auto state = counters.exists() ? counters.get() : counter_state{};
     const auto allocated = state.next_entitlement_id == 0 ? 1 : state.next_entitlement_id;
     state.next_entitlement_id = allocated + 1;
-    counters.set(state, get_self());
-    return allocated;
-}
-
-uint64_t verification_billing::next_delegate_id() {
-    counter_singleton counters(get_self(), get_self().value);
-    auto state = counters.exists() ? counters.get() : counter_state{};
-    const auto allocated = state.next_delegate_id == 0 ? 1 : state.next_delegate_id;
-    state.next_delegate_id = allocated + 1;
     counters.set(state, get_self());
     return allocated;
 }

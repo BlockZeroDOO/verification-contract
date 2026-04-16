@@ -19,7 +19,6 @@ Repository boundary:
 
 The unified `verif` contract is the billing-agnostic anchoring surface for:
 
-- KYC-gated access control
 - schema and policy governance
 - single-record anchoring
 - batch anchoring
@@ -28,6 +27,12 @@ The unified `verif` contract is the billing-agnostic anchoring surface for:
 It does not embed payment logic.
 
 For live enterprise usage it expects usage authorization from `verifbill`.
+
+The current simplified `verif` policy surface is:
+
+- `allow_single`
+- `allow_batch`
+- `active`
 
 ## Build
 

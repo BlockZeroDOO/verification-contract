@@ -27,24 +27,6 @@ public:
     using contract::contract;
 
     [[eosio::action]]
-    void issuekyc(
-        const name& account,
-        uint8_t level,
-        const string& provider,
-        const string& jurisdiction,
-        const time_point_sec& expires_at
-    );
-
-    [[eosio::action]]
-    void renewkyc(const name& account, const time_point_sec& expires_at);
-
-    [[eosio::action]]
-    void revokekyc(const name& account);
-
-    [[eosio::action]]
-    void suspendkyc(const name& account);
-
-    [[eosio::action]]
     void addschema(
         uint64_t id,
         const string& version,
@@ -68,16 +50,8 @@ public:
         uint64_t id,
         bool allow_single,
         bool allow_batch,
-        bool require_kyc,
-        uint8_t min_kyc_level,
         bool active
     );
-
-    [[eosio::action]]
-    void enablezk(uint64_t id);
-
-    [[eosio::action]]
-    void disablezk(uint64_t id);
 
     [[eosio::action]]
     void setauthsrcs(const name& billing_account, const name& retail_payment_account);
@@ -125,8 +99,6 @@ public:
     );
 
 private:
-    using kyc_row = verification_tables::kyc_row;
-    using kyc_table = verification_tables::kyc_table;
     using schema_row = verification_tables::schema_row;
     using schema_table = verification_tables::schema_table;
     using policy_row = verification_tables::policy_row;
@@ -157,7 +129,6 @@ private:
     static constexpr uint8_t enterprise_mode_single = 0;
     static constexpr uint8_t enterprise_mode_batch = 1;
 
-    kyc_row require_kyc_record(const name& account) const;
     schema_row require_schema(uint64_t id) const;
     policy_row require_policy(uint64_t id) const;
     auth_source_config get_auth_source_config() const;

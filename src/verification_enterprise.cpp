@@ -6,77 +6,6 @@ bool is_zero_checksum(const eosio::checksum256& value) {
 }
 }  // namespace
 
-void verification_enterprise::issuekyc(
-    const name& account,
-    uint8_t level,
-    const string& provider,
-    const string& jurisdiction,
-    const time_point_sec& expires_at
-) {
-    require_auth(get_self());
-    check(is_account(account), "account does not exist");
-    verification_validators::validate_printable_ascii_text(provider, 64, "provider", false);
-    verification_validators::validate_printable_ascii_text(jurisdiction, 32, "jurisdiction", false);
-    verification_validators::validate_future_time(expires_at, "expires_at");
-
-    kyc_table kyc_records(get_self(), get_self().value);
-    check(kyc_records.find(account.value) == kyc_records.end(), "kyc record already exists");
-
-    const auto now = time_point_sec(current_time_point());
-    kyc_records.emplace(get_self(), [&](auto& row) {
-        row.account = account;
-        row.level = level;
-        row.provider = provider;
-        row.jurisdiction = jurisdiction;
-        row.active = true;
-        row.issued_at = now;
-        row.expires_at = expires_at;
-    });
-}
-
-void verification_enterprise::renewkyc(const name& account, const time_point_sec& expires_at) {
-    require_auth(get_self());
-    verification_validators::validate_future_time(expires_at, "expires_at");
-
-    kyc_table kyc_records(get_self(), get_self().value);
-    auto existing = kyc_records.find(account.value);
-    check(existing != kyc_records.end(), "kyc record does not exist");
-
-    const auto now = time_point_sec(current_time_point());
-    kyc_records.modify(existing, get_self(), [&](auto& row) {
-        row.active = true;
-        row.issued_at = now;
-        row.expires_at = expires_at;
-    });
-}
-
-void verification_enterprise::revokekyc(const name& account) {
-    require_auth(get_self());
-
-    kyc_table kyc_records(get_self(), get_self().value);
-    auto existing = kyc_records.find(account.value);
-    check(existing != kyc_records.end(), "kyc record does not exist");
-
-    const auto now = time_point_sec(current_time_point());
-    kyc_records.modify(existing, get_self(), [&](auto& row) {
-        row.active = false;
-        row.expires_at = now;
-    });
-}
-
-void verification_enterprise::suspendkyc(const name& account) {
-    require_auth(get_self());
-
-    kyc_table kyc_records(get_self(), get_self().value);
-    auto existing = kyc_records.find(account.value);
-    check(existing != kyc_records.end(), "kyc record does not exist");
-    check(existing->active, "kyc record is already inactive");
-
-    kyc_records.modify(existing, get_self(), [&](auto& row) {
-        row.active = false;
-    });
-}
-
 void verification_enterprise::addschema(
     uint64_t id,
     const string& version,
@@ -144,28 +73,22 @@ void verification_enterprise::setpolicy(
     uint64_t id,
     bool allow_single,
     bool allow_batch,
-    bool require_kyc,
-    uint8_t min_kyc_level,
     bool active
 ) {
     require_auth(get_self());
     verification_validators::validate_registry_id(id, "id");
+    verification_validators::validate_policy_settings(allow_single, allow_batch, false, 0, false, active);
 
     policy_table policies(get_self(), get_self().value);
     auto existing = policies.find(id);
-    const bool allow_zk = existing == policies.end() ? false : existing->allow_zk;
-    verification_validators::validate_policy_settings(
-        allow_single, allow_batch, require_kyc, min_kyc_level, allow_zk, active
-    );
-
     const auto now = time_point_sec(current_time_point());
     if (existing == policies.end()) {
         policies.emplace(get_self(), [&](auto& row) {
             row.id = id;
             row.allow_single = allow_single;
             row.allow_batch = allow_batch;
-            row.require_kyc = require_kyc;
-            row.min_kyc_level = min_kyc_level;
+            row.require_kyc = false;
+            row.min_kyc_level = 0;
             row.allow_zk = false;
             row.active = active;
             row.created_at = now;
@@ -177,47 +100,11 @@ void verification_enterprise::setpolicy(
     policies.modify(existing, get_self(), [&](auto& row) {
         row.allow_single = allow_single;
         row.allow_batch = allow_batch;
-        row.require_kyc = require_kyc;
-        row.min_kyc_level = min_kyc_level;
+        row.require_kyc = false;
+        row.min_kyc_level = 0;
+        row.allow_zk = false;
         row.active = active;
         row.updated_at = now;
-    });
-}
-
-void verification_enterprise::enablezk(uint64_t id) {
-    require_auth(get_self());
-    verification_validators::validate_registry_id(id, "id");
-
-    policy_table policies(get_self(), get_self().value);
-    auto existing = policies.find(id);
-    check(existing != policies.end(), "policy does not exist");
-    check(existing->active, "policy is inactive");
-    verification_validators::validate_policy_settings(
-        existing->allow_single,
-        existing->allow_batch,
-        existing->require_kyc,
-        existing->min_kyc_level,
-        true,
-        existing->active
-    );
-
-    policies.modify(existing, get_self(), [&](auto& row) {
-        row.allow_zk = true;
-        row.updated_at = time_point_sec(current_time_point());
-    });
-}
-
-void verification_enterprise::disablezk(uint64_t id) {
-    require_auth(get_self());
-    verification_validators::validate_registry_id(id, "id");
-
-    policy_table policies(get_self(), get_self().value);
-    auto existing = policies.find(id);
-    check(existing != policies.end(), "policy does not exist");
-
-    policies.modify(existing, get_self(), [&](auto& row) {
-        row.allow_zk = false;
-        row.updated_at = time_point_sec(current_time_point());
     });
 }
 
@@ -249,13 +136,6 @@ void verification_enterprise::submit(
     const auto policy = require_policy(policy_id);
     check(policy.active, "policy is inactive");
     check(policy.allow_single, "policy does not allow single submissions");
-
-    if (policy.require_kyc) {
-        const auto kyc = require_kyc_record(submitter);
-        check(kyc.active, "kyc record is inactive");
-        check(kyc.expires_at > time_point_sec(current_time_point()), "kyc record is expired");
-        check(kyc.level >= policy.min_kyc_level, "kyc level is below policy minimum");
-    }
 
     const auto usage_auth = require_usage_authorization(enterprise_mode_single, submitter, external_ref);
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
@@ -358,13 +238,6 @@ void verification_enterprise::submitroot(
     check(policy.active, "policy is inactive");
     check(policy.allow_batch, "policy does not allow batch submissions");
 
-    if (policy.require_kyc) {
-        const auto kyc = require_kyc_record(submitter);
-        check(kyc.active, "kyc record is inactive");
-        check(kyc.expires_at > time_point_sec(current_time_point()), "kyc record is expired");
-        check(kyc.level >= policy.min_kyc_level, "kyc level is below policy minimum");
-    }
-
     const auto usage_auth = require_usage_authorization(enterprise_mode_batch, submitter, external_ref);
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     validate_batch_request_unique(submitter, external_ref);
@@ -450,10 +323,6 @@ void verification_enterprise::withdraw(
         "transfer"_n,
         std::make_tuple(get_self(), to, quantity, memo)
     ).send();
-}
-
-verification_enterprise::kyc_row verification_enterprise::require_kyc_record(const name& account) const {
-    return verification_core::require_kyc_record(get_self(), account);
 }
 
 verification_enterprise::schema_row verification_enterprise::require_schema(uint64_t id) const {

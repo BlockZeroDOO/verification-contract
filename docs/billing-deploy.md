@@ -15,7 +15,6 @@ Repository boundary:
 - accepted enterprise billing tokens
 - subscription plans
 - usage packs
-- delegated submitter rights
 - one-time usage authorizations consumed by `verif`
 
 ## Build
@@ -60,7 +59,6 @@ cleos -u <rpc> get table verifbill verifbill billtokens
 cleos -u <rpc> get table verifbill verifbill plans
 cleos -u <rpc> get table verifbill verifbill packs
 cleos -u <rpc> get table verifbill verifbill entitlements
-cleos -u <rpc> get table verifbill verifbill delegates
 cleos -u <rpc> get table verifbill verifbill usageauths
 ```
 

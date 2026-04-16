@@ -99,7 +99,7 @@ chain id: ${DENOTARY_CHAIN_ID}
 verification account: ${VERIFICATION_ACCOUNT}
 
 Next steps:
-  - Configure enterprise KYC, schemas, and policies for your target flows.
+  - Configure schemas, policies, and billing/payment wiring for your target flows.
   - If you need the DFS contract, deploy it from C:\projects\decentralized_storage\contracts\dfs
   - Verify tables with cleos get table commands from README.md
 

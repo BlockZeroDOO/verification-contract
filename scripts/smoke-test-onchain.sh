@@ -9,10 +9,6 @@ VERIFICATION_BILLING_ACCOUNT="${VERIFICATION_BILLING_ACCOUNT:-verifbill}"
 SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
 BILLING_OWNER_ACCOUNT="${BILLING_OWNER_ACCOUNT:-${VERIFICATION_BILLING_ACCOUNT}}"
-KYC_PROVIDER="${KYC_PROVIDER:-denotary-kyc}"
-KYC_JURISDICTION="${KYC_JURISDICTION:-EU}"
-KYC_LEVEL="${KYC_LEVEL:-2}"
-KYC_EXPIRES_AT="${KYC_EXPIRES_AT:-2030-01-01T00:00:00}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
@@ -70,12 +66,6 @@ get_table_json() {
     local scope="$2"
     local table="$3"
     cleos -u "${READ_RPC_URL}" get table "${code}" "${scope}" "${table}" --limit 1000
-}
-
-kyc_row_exists() {
-    get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" "kyc" | "${JQ_BIN}" -e \
-        --arg account "${SUBMITTER_ACCOUNT}" \
-        '.rows[] | select(.account == $account)' >/dev/null 2>&1
 }
 
 wait_for_table_match() {
@@ -235,26 +225,6 @@ BATCH_EXTREF="$(hash_text "batch-${TIMESTAMP}")"
 ROOT_HASH="$(hash_text "root-${TIMESTAMP}")"
 MANIFEST_HASH="$(hash_text "manifest-${TIMESTAMP}")"
 
-if kyc_row_exists; then
-    log "KYC row already exists for submitter; skipping issue"
-else
-    log "Creating KYC row for submitter"
-    cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" issuekyc \
-        "[\"${SUBMITTER_ACCOUNT}\",${KYC_LEVEL},\"${KYC_PROVIDER}\",\"${KYC_JURISDICTION}\",\"${KYC_EXPIRES_AT}\"]" \
-        -p "${OWNER_ACCOUNT}@active"
-    wait_for_table_match \
-        "${VERIFICATION_ACCOUNT}" \
-        "${VERIFICATION_ACCOUNT}" \
-        "kyc" \
-        ".rows[] | select(.account == \"${SUBMITTER_ACCOUNT}\")" \
-        "kyc row for ${SUBMITTER_ACCOUNT}"
-fi
-
-log "Renewing KYC row"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" renewkyc \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${KYC_EXPIRES_AT}\"]" \
-    -p "${OWNER_ACCOUNT}@active"
-
 log "Creating schema"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" addschema \
     "[${SCHEMA_ID},\"1.0.0\",\"$(hash_text "schema-rules-${TIMESTAMP}")\",\"$(hash_text "hash-policy-${TIMESTAMP}")\"]" \
@@ -268,7 +238,7 @@ wait_for_table_match \
 
 log "Creating single-submit policy"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
-    "[${POLICY_SINGLE_ID},true,false,true,${KYC_LEVEL},true]" \
+    "[${POLICY_SINGLE_ID},true,false,true]" \
     -p "${OWNER_ACCOUNT}@active"
 wait_for_table_match \
     "${VERIFICATION_ACCOUNT}" \
@@ -279,7 +249,7 @@ wait_for_table_match \
 
 log "Creating batch-submit policy"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
-    "[${POLICY_BATCH_ID},false,true,false,0,true]" \
+    "[${POLICY_BATCH_ID},false,true,true]" \
     -p "${OWNER_ACCOUNT}@active"
 wait_for_table_match \
     "${VERIFICATION_ACCOUNT}" \

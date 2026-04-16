@@ -22,14 +22,6 @@ Creates or updates a usage-pack definition with single or batch units.
 
 Marks a usage pack inactive for future enterprise purchases.
 
-<h1 class="contract">grantdelegate</h1>
-
-Allows a submitter account to consume enterprise usage on behalf of a payer.
-
-<h1 class="contract">revokedeleg</h1>
-
-Disables a delegated submitter mapping for a payer.
-
 <h1 class="contract">setverifacct</h1>
 
 Configures which deployed `verif` account may consume enterprise usage authorizations after successful anchoring.

@@ -17,7 +17,6 @@ Repository boundary:
 
 The unified `verif` contract covers:
 
-- KYC access control
 - schema registry
 - policy registry
 - single-record anchoring
@@ -47,7 +46,6 @@ The enterprise billing `verifbill` contract covers:
 - accepted enterprise billing tokens
 - subscription plans
 - usage packs
-- delegated submitter rights
 - one-time enterprise usage authorizations
 
 ## On-chain tables
@@ -63,16 +61,10 @@ The enterprise billing `verifbill` contract covers:
 
 Registry governance:
 
-- `issuekyc(...)`
-- `renewkyc(...)`
-- `revokekyc(...)`
-- `suspendkyc(...)`
 - `addschema(...)`
 - `updateschema(...)`
 - `deprecate(...)`
 - `setpolicy(...)`
-- `enablezk(...)`
-- `disablezk(...)`
 
 Anchoring core:
 

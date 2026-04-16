@@ -4,7 +4,6 @@
 
 These smoke tests validate the current on-chain production paths for:
 
-- `KYC`
 - `Schema`
 - `Policy`
 - `Commitment`
@@ -40,15 +39,6 @@ export VERIFICATION_ACCOUNT=verif
 export BILLING_OWNER_ACCOUNT=verifbill
 export OWNER_ACCOUNT=verif
 export SUBMITTER_ACCOUNT=someuser
-```
-
-Optional:
-
-```bash
-export KYC_PROVIDER=denotary-kyc
-export KYC_JURISDICTION=EU
-export KYC_LEVEL=2
-export KYC_EXPIRES_AT=2030-01-01T00:00:00
 ```
 
 ## DFS boundary
@@ -102,10 +92,8 @@ Standalone billing smoke:
 
 ## What the enterprise smoke validates
 
-- `issuekyc`
-- `renewkyc`
 - `addschema`
-- `setpolicy` for single and batch flows
+- minimal `setpolicy` for single and batch flows
 - `submit`
 - duplicate single request rejection
 - zero `object_hash` rejection

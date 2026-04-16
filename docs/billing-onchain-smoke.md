@@ -8,7 +8,6 @@ These smoke tests validate the standalone `verifbill` surface for:
 - plan configuration
 - pack configuration
 - entitlement purchase
-- delegated submitter mapping
 - enterprise usage authorization
 - explicit authorization consumption
 
@@ -64,11 +63,9 @@ deNotary:
 - `settoken`
 - `setplan`
 - `setpack`
-- optional `grantdelegate`
 - plan purchase through `transfer -> verifbill`
 - pack purchase through `transfer -> verifbill`
 - `use` for single mode
 - duplicate request authorization rejection
 - `consume`
 - `use` for batch mode
-- optional `revokedeleg`

@@ -14,7 +14,6 @@ The `verif` contract anchors hashes and batch roots on-chain under explicit gove
 
 It is responsible for:
 
-- KYC-gated submit access
 - schema registry
 - policy registry
 - single commitment anchoring
@@ -30,20 +29,6 @@ It is not responsible for:
 - DFS storage payments
 
 ## On-Chain Tables
-
-### `kyc`
-
-Stores submitter access state.
-
-Fields:
-
-- `account`
-- `level`
-- `provider`
-- `jurisdiction`
-- `active`
-- `issued_at`
-- `expires_at`
 
 ### `schemas`
 
@@ -61,16 +46,13 @@ Fields:
 
 ### `policies`
 
-Stores single/batch/KYC/ZK rules.
+Stores minimal single/batch submit rules.
 
 Fields:
 
 - `id`
 - `allow_single`
 - `allow_batch`
-- `require_kyc`
-- `min_kyc_level`
-- `allow_zk`
 - `active`
 - `created_at`
 - `updated_at`
@@ -128,16 +110,10 @@ Fields:
 
 ### Governance
 
-- `issuekyc`
-- `renewkyc`
-- `revokekyc`
-- `suspendkyc`
 - `addschema`
 - `updateschema`
 - `deprecate`
 - `setpolicy`
-- `enablezk`
-- `disablezk`
 
 ### Anchoring
 
@@ -180,7 +156,6 @@ Must satisfy:
 - non-zero `object_hash`
 - non-zero `external_ref`
 - unique `request_key`
-- valid KYC when required by policy
 
 ### `submitroot`
 
@@ -192,7 +167,6 @@ Must satisfy:
 - non-zero `external_ref`
 - `leaf_count > 0`
 - unique `request_key`
-- valid KYC when required by policy
 
 ### `supersede`
 
@@ -217,6 +191,6 @@ The contract is deployed to a clean account and does not perform in-place migrat
 
 That means:
 
-- the current on-chain model is `kyc + schemas + policies + commitments + batches`
+- the current on-chain model is `schemas + policies + commitments + batches`
 - legacy proof-payment state and actions are removed
 - off-chain read services are external to this repository

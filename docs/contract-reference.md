@@ -11,7 +11,6 @@ This document is the full on-chain reference for the contracts in this repositor
 
 The two anchoring contracts share the same anchoring core:
 
-- KYC registry
 - schema registry
 - policy registry
 - single commitment anchoring
@@ -75,25 +74,6 @@ It keeps the old wallet-first retail anchoring flow available during migration, 
 
 Both contracts use the same core business registries.
 
-### `kyc`
-
-Stores submitter access state.
-
-Fields:
-
-- `account`
-- `level`
-- `provider`
-- `jurisdiction`
-- `active`
-- `issued_at`
-- `expires_at`
-
-Meaning:
-
-- one row per account
-- governs whether a policy requiring KYC may be used
-
 ### `schemas`
 
 Stores schema and canonicalization references.
@@ -122,9 +102,6 @@ Fields:
 - `id`
 - `allow_single`
 - `allow_batch`
-- `require_kyc`
-- `min_kyc_level`
-- `allow_zk`
 - `active`
 - `created_at`
 - `updated_at`
@@ -132,8 +109,6 @@ Fields:
 Meaning:
 
 - controls whether a request may use `submit` or `submitroot`
-- may require KYC
-- may enable optional ZK capability flags
 
 ### `commitments`
 
@@ -204,21 +179,6 @@ Meaning:
 
 The following actions exist in both `verif` and `verifretail`.
 
-### KYC and Access Governance
-
-- `issuekyc(account, level, provider, jurisdiction, expires_at)`
-- `renewkyc(account, expires_at)`
-- `revokekyc(account)`
-- `suspendkyc(account)`
-
-Purpose:
-
-- govern who may use policies requiring KYC
-
-Expected authority:
-
-- contract owner / governance account
-
 ### Schema Governance
 
 - `addschema(id, version, canonicalization_hash, hash_policy)`
@@ -235,13 +195,11 @@ Expected authority:
 
 ### Policy Governance
 
-- `setpolicy(id, allow_single, allow_batch, require_kyc, min_kyc_level, active)`
-- `enablezk(id)`
-- `disablezk(id)`
+- `setpolicy(id, allow_single, allow_batch, active)`
 
 Purpose:
 
-- create and maintain submit rules
+- create and maintain minimal submit rules
 
 Expected authority:
 
@@ -263,7 +221,6 @@ Validation:
 - `object_hash` must be non-zero
 - `external_ref` must be non-zero
 - request must be unique
-- when policy requires KYC, submitter must have valid active KYC
 
 Expected authority:
 
@@ -312,7 +269,6 @@ Validation:
 - `external_ref` must be non-zero
 - `leaf_count > 0`
 - request must be unique
-- if policy requires KYC, KYC must be valid
 - `closebatch` is allowed only after `linkmanifest`
 
 Expected authority:
@@ -362,6 +318,7 @@ Its main properties:
 - no requirement for a trusted backend
 - submitter can prepare and sign transactions directly
 - suited for enterprise and integrator usage
+- no on-chain KYC access model
 - `submit` and `submitroot` require a matching external usage authorization
 - the external authorization may come from:
   - `verifbill`
@@ -544,7 +501,6 @@ Its main properties:
 
 - no deposit balance inside `verif`
 - plans and packs instead of floating internal balance
-- delegated submitter support
 - one-time usage authorization tied to request key
 
 ### Billing Tables
@@ -565,10 +521,6 @@ Stores usage-pack definitions with single or batch units.
 
 Stores purchased plan and pack rights for a payer.
 
-#### `delegates`
-
-Stores enabled payer to submitter delegation mappings.
-
 #### `usageauths`
 
 Stores one-time enterprise usage authorizations created by `use(...)`.
@@ -585,8 +537,6 @@ Stores monotonic IDs for enterprise billing tables.
 - `deactplan(plan_id)`
 - `setpack(pack_code, token_contract, price, single_units, batch_units, active)`
 - `deactpack(pack_id)`
-- `grantdelegate(payer, submitter)`
-- `revokedeleg(payer, submitter)`
 - `use(payer, submitter, mode, external_ref)`
 - `consume(auth_id)`
 - `withdraw(token_contract, to, quantity, memo)`
@@ -606,7 +556,7 @@ pack|payer|pack_code
 
 ### Current implementation boundary
 
-`verifbill` already owns enterprise purchase, delegation, quota allocation, and usage-authorization state.
+`verifbill` already owns enterprise purchase, quota allocation, and usage-authorization state.
 
 `verif` validates enterprise usage authorization from `verifbill` and consumes it after successful anchor creation.
 
@@ -635,7 +585,6 @@ Configures which deployed `verif` account is allowed to call `verifretpay::consu
 
 The governance account is responsible for:
 
-- KYC registry management
 - schema management
 - policy management
 - tariff and token management in retail
@@ -659,13 +608,13 @@ In retail flow, the payer currently:
 - sends the exact token transfer
 - must match the declared submitter
 
-### Enterprise payer and delegates
+### Enterprise payer and submitter
 
-In enterprise flow, the payer currently:
+In enterprise flow:
 
-- buys plans and packs on-chain through `verifbill`
-- may delegate one or more submitter accounts
-- may create usage authorization directly or let the submitter do it
+- the payer buys plans and packs on-chain through `verifbill`
+- `use(...)` accepts authority from either the payer or the submitter
+- account-level delegation is expected to be handled through native Antelope permissions, not contract state
 
 ## Request Identity and Uniqueness
 

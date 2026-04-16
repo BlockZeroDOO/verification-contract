@@ -56,12 +56,6 @@ public:
     void deactpack(uint64_t pack_id);
 
     [[eosio::action]]
-    void grantdelegate(const name& payer, const name& submitter);
-
-    [[eosio::action]]
-    void revokedeleg(const name& payer, const name& submitter);
-
-    [[eosio::action]]
     void setverifacct(const name& verification_account);
 
     [[eosio::action]]
@@ -90,8 +84,6 @@ private:
     using pack_table = verification_billing_tables::pack_table;
     using entitlement_row = verification_billing_tables::entitlement_row;
     using entitlement_table = verification_billing_tables::entitlement_table;
-    using delegate_row = verification_billing_tables::delegate_row;
-    using delegate_table = verification_billing_tables::delegate_table;
     using usage_auth_row = verification_billing_tables::usage_auth_row;
     using usage_auth_table = verification_billing_tables::usage_auth_table;
     using counter_state = verification_billing_tables::counter_state;
@@ -116,12 +108,10 @@ private:
     accepted_token_row require_accepted_token(const name& token_contract, const symbol_code& token_symbol) const;
     plan_row require_plan_by_id(uint64_t plan_id) const;
     pack_row require_pack_by_id(uint64_t pack_id) const;
-    bool has_delegate_permission(const name& payer, const name& submitter) const;
     uint64_t next_token_id();
     uint64_t next_plan_id();
     uint64_t next_pack_id();
     uint64_t next_entitlement_id();
-    uint64_t next_delegate_id();
     uint64_t next_usageauth_id();
     billing_config get_billing_config() const;
     std::tuple<string, name, name> parse_purchase_memo(const string& memo) const;

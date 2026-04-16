@@ -57,6 +57,30 @@ public:
     void setverifacct(const name& verification_account);
 
     [[eosio::action]]
+    void submit(
+        const name& payer,
+        const name& submitter,
+        uint64_t schema_id,
+        uint64_t policy_id,
+        const checksum256& object_hash,
+        const checksum256& external_ref,
+        uint64_t billable_bytes
+    );
+
+    [[eosio::action]]
+    void submitroot(
+        const name& payer,
+        const name& submitter,
+        uint64_t schema_id,
+        uint64_t policy_id,
+        const checksum256& root_hash,
+        uint32_t leaf_count,
+        const checksum256& manifest_hash,
+        const checksum256& external_ref,
+        uint64_t billable_bytes
+    );
+
+    [[eosio::action]]
     void use(
         const name& payer,
         const name& submitter,
@@ -127,5 +151,7 @@ private:
     billing_config get_billing_config() const;
     std::tuple<string, name, name> parse_purchase_memo(const string& memo) const;
     entitlement_row select_entitlement(const name& payer, uint64_t required_kib);
+    void consume_entitlement_kib(uint64_t entitlement_id, uint64_t required_kib);
+    void require_contract_only_submitter(const name& payer, const name& submitter) const;
     bool has_live_usage_auth(uint64_t entitlement_id, const time_point_sec& now) const;
 };

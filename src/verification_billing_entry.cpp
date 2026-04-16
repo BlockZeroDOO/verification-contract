@@ -13,6 +13,7 @@ extern "C" {
                     (setplan)(deactplan)
                     (setpack)(deactpack)
                     (setverifacct)
+                    (submit)(submitroot)
                     (use)(consume)(cleanauths)(cleanentls)(withdraw)
                 )
             }

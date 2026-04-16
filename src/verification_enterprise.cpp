@@ -121,46 +121,41 @@ void verification_enterprise::submit(
     uint64_t billable_bytes
 ) {
     require_auth(submitter);
-    check(is_account(submitter), "submitter account does not exist");
-    verification_validators::validate_nonzero_checksum(object_hash, "object_hash");
-    verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
-    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
-    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
-
-    const auto schema = require_schema(schema_id);
-    check(schema.active, "schema is inactive");
-
-    const auto policy = require_policy(policy_id);
-    check(policy.active, "policy is inactive");
-    check(policy.allow_single, "policy does not allow single submissions");
-
     const auto usage_auth = require_usage_authorization(
         enterprise_mode_single,
         submitter,
         external_ref,
         billable_bytes,
-        billable_kib
+        verification_validators::derive_billable_kib(billable_bytes)
     );
-    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
-    validate_commitment_request_unique(submitter, external_ref);
-
-    commitment_table commitments(get_self(), get_self().value);
-    const auto now = time_point_sec(current_time_point());
-    const auto commitment_id = next_commitment_id();
-    commitments.emplace(get_self(), [&](auto& row) {
-        row.id = commitment_id;
-        row.submitter = submitter;
-        row.schema_id = schema_id;
-        row.policy_id = policy_id;
-        row.object_hash = object_hash;
-        row.billable_bytes = billable_bytes;
-        row.billable_kib = billable_kib;
-        row.external_ref = external_ref;
-        row.request_key = request_key;
-        row.created_at = now;
-    });
-
+    anchor_single_request(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes);
     consume_usage_authorization(usage_auth);
+}
+
+void verification_enterprise::billsubmit(
+    const name& submitter,
+    uint64_t schema_id,
+    uint64_t policy_id,
+    const checksum256& object_hash,
+    const checksum256& external_ref,
+    uint64_t billable_bytes
+) {
+    const auto auth_sources = get_auth_source_config();
+    require_internal_registry_caller(auth_sources.billing_account);
+    anchor_single_request(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes);
+}
+
+void verification_enterprise::retailsub(
+    const name& submitter,
+    uint64_t schema_id,
+    uint64_t policy_id,
+    const checksum256& object_hash,
+    const checksum256& external_ref,
+    uint64_t billable_bytes
+) {
+    const auto auth_sources = get_auth_source_config();
+    require_internal_registry_caller(auth_sources.retail_payment_account);
+    anchor_single_request(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes);
 }
 
 void verification_enterprise::submitroot(
@@ -174,50 +169,72 @@ void verification_enterprise::submitroot(
     uint64_t billable_bytes
 ) {
     require_auth(submitter);
-    check(is_account(submitter), "submitter account does not exist");
-    check(leaf_count > 0, "leaf_count must be greater than zero");
-    verification_validators::validate_nonzero_checksum(root_hash, "root_hash");
-    verification_validators::validate_nonzero_checksum(manifest_hash, "manifest_hash");
-    verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
-    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
-    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
-
-    const auto schema = require_schema(schema_id);
-    check(schema.active, "schema is inactive");
-
-    const auto policy = require_policy(policy_id);
-    check(policy.active, "policy is inactive");
-    check(policy.allow_batch, "policy does not allow batch submissions");
-
     const auto usage_auth = require_usage_authorization(
         enterprise_mode_batch,
         submitter,
         external_ref,
         billable_bytes,
-        billable_kib
+        verification_validators::derive_billable_kib(billable_bytes)
     );
-    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
-    validate_batch_request_unique(submitter, external_ref);
-
-    batch_table batches(get_self(), get_self().value);
-    const auto now = time_point_sec(current_time_point());
-    const auto batch_id = next_batch_id();
-    batches.emplace(get_self(), [&](auto& row) {
-        row.id = batch_id;
-        row.submitter = submitter;
-        row.root_hash = root_hash;
-        row.leaf_count = leaf_count;
-        row.schema_id = schema_id;
-        row.policy_id = policy_id;
-        row.manifest_hash = manifest_hash;
-        row.billable_bytes = billable_bytes;
-        row.billable_kib = billable_kib;
-        row.external_ref = external_ref;
-        row.request_key = request_key;
-        row.created_at = now;
-    });
-
+    anchor_batch_request(
+        submitter,
+        schema_id,
+        policy_id,
+        root_hash,
+        leaf_count,
+        manifest_hash,
+        external_ref,
+        billable_bytes
+    );
     consume_usage_authorization(usage_auth);
+}
+
+void verification_enterprise::billbatch(
+    const name& submitter,
+    uint64_t schema_id,
+    uint64_t policy_id,
+    const checksum256& root_hash,
+    uint32_t leaf_count,
+    const checksum256& manifest_hash,
+    const checksum256& external_ref,
+    uint64_t billable_bytes
+) {
+    const auto auth_sources = get_auth_source_config();
+    require_internal_registry_caller(auth_sources.billing_account);
+    anchor_batch_request(
+        submitter,
+        schema_id,
+        policy_id,
+        root_hash,
+        leaf_count,
+        manifest_hash,
+        external_ref,
+        billable_bytes
+    );
+}
+
+void verification_enterprise::retailbatch(
+    const name& submitter,
+    uint64_t schema_id,
+    uint64_t policy_id,
+    const checksum256& root_hash,
+    uint32_t leaf_count,
+    const checksum256& manifest_hash,
+    const checksum256& external_ref,
+    uint64_t billable_bytes
+) {
+    const auto auth_sources = get_auth_source_config();
+    require_internal_registry_caller(auth_sources.retail_payment_account);
+    anchor_batch_request(
+        submitter,
+        schema_id,
+        policy_id,
+        root_hash,
+        leaf_count,
+        manifest_hash,
+        external_ref,
+        billable_bytes
+    );
 }
 
 void verification_enterprise::withdraw(
@@ -324,6 +341,98 @@ void verification_enterprise::consume_usage_authorization(const usage_authorizat
         "consume"_n,
         std::make_tuple(authorization.auth_id)
     ).send();
+}
+
+void verification_enterprise::require_internal_registry_caller(const name& expected_contract) const {
+    require_auth(expected_contract);
+}
+
+void verification_enterprise::anchor_single_request(
+    const name& submitter,
+    uint64_t schema_id,
+    uint64_t policy_id,
+    const checksum256& object_hash,
+    const checksum256& external_ref,
+    uint64_t billable_bytes
+) {
+    check(is_account(submitter), "submitter account does not exist");
+    verification_validators::validate_nonzero_checksum(object_hash, "object_hash");
+    verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
+    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
+    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
+
+    const auto schema = require_schema(schema_id);
+    check(schema.active, "schema is inactive");
+
+    const auto policy = require_policy(policy_id);
+    check(policy.active, "policy is inactive");
+    check(policy.allow_single, "policy does not allow single submissions");
+
+    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
+    validate_commitment_request_unique(submitter, external_ref);
+
+    commitment_table commitments(get_self(), get_self().value);
+    const auto now = time_point_sec(current_time_point());
+    const auto commitment_id = next_commitment_id();
+    commitments.emplace(get_self(), [&](auto& row) {
+        row.id = commitment_id;
+        row.submitter = submitter;
+        row.schema_id = schema_id;
+        row.policy_id = policy_id;
+        row.object_hash = object_hash;
+        row.billable_bytes = billable_bytes;
+        row.billable_kib = billable_kib;
+        row.external_ref = external_ref;
+        row.request_key = request_key;
+        row.created_at = now;
+    });
+}
+
+void verification_enterprise::anchor_batch_request(
+    const name& submitter,
+    uint64_t schema_id,
+    uint64_t policy_id,
+    const checksum256& root_hash,
+    uint32_t leaf_count,
+    const checksum256& manifest_hash,
+    const checksum256& external_ref,
+    uint64_t billable_bytes
+) {
+    check(is_account(submitter), "submitter account does not exist");
+    check(leaf_count > 0, "leaf_count must be greater than zero");
+    verification_validators::validate_nonzero_checksum(root_hash, "root_hash");
+    verification_validators::validate_nonzero_checksum(manifest_hash, "manifest_hash");
+    verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
+    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
+    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
+
+    const auto schema = require_schema(schema_id);
+    check(schema.active, "schema is inactive");
+
+    const auto policy = require_policy(policy_id);
+    check(policy.active, "policy is inactive");
+    check(policy.allow_batch, "policy does not allow batch submissions");
+
+    const auto request_key = verification_common::compute_request_key(submitter, external_ref);
+    validate_batch_request_unique(submitter, external_ref);
+
+    batch_table batches(get_self(), get_self().value);
+    const auto now = time_point_sec(current_time_point());
+    const auto batch_id = next_batch_id();
+    batches.emplace(get_self(), [&](auto& row) {
+        row.id = batch_id;
+        row.submitter = submitter;
+        row.root_hash = root_hash;
+        row.leaf_count = leaf_count;
+        row.schema_id = schema_id;
+        row.policy_id = policy_id;
+        row.manifest_hash = manifest_hash;
+        row.billable_bytes = billable_bytes;
+        row.billable_kib = billable_kib;
+        row.external_ref = external_ref;
+        row.request_key = request_key;
+        row.created_at = now;
+    });
 }
 
 uint64_t verification_enterprise::next_batch_id() {

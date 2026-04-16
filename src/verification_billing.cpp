@@ -214,6 +214,88 @@ void verification_billing::setverifacct(const name& verification_account) {
     config.set(billing_config{verification_account}, get_self());
 }
 
+void verification_billing::submit(
+    const name& payer,
+    const name& submitter,
+    uint64_t schema_id,
+    uint64_t policy_id,
+    const checksum256& object_hash,
+    const checksum256& external_ref,
+    uint64_t billable_bytes
+) {
+    check(is_account(payer), "payer account does not exist");
+    check(is_account(submitter), "submitter account does not exist");
+    verification_validators::validate_nonzero_checksum(object_hash, "object_hash");
+    verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
+    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
+    require_auth(payer);
+    require_contract_only_submitter(payer, submitter);
+
+    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
+    const auto entitlement = select_entitlement(payer, billable_kib);
+    const auto config = get_billing_config();
+
+    action(
+        permission_level{get_self(), "active"_n},
+        config.verification_account,
+        "billsubmit"_n,
+        std::make_tuple(
+            submitter,
+            schema_id,
+            policy_id,
+            object_hash,
+            external_ref,
+            billable_bytes
+        )
+    ).send();
+
+    consume_entitlement_kib(entitlement.entitlement_id, billable_kib);
+}
+
+void verification_billing::submitroot(
+    const name& payer,
+    const name& submitter,
+    uint64_t schema_id,
+    uint64_t policy_id,
+    const checksum256& root_hash,
+    uint32_t leaf_count,
+    const checksum256& manifest_hash,
+    const checksum256& external_ref,
+    uint64_t billable_bytes
+) {
+    check(is_account(payer), "payer account does not exist");
+    check(is_account(submitter), "submitter account does not exist");
+    check(leaf_count > 0, "leaf_count must be greater than zero");
+    verification_validators::validate_nonzero_checksum(root_hash, "root_hash");
+    verification_validators::validate_nonzero_checksum(manifest_hash, "manifest_hash");
+    verification_validators::validate_nonzero_checksum(external_ref, "external_ref");
+    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
+    require_auth(payer);
+    require_contract_only_submitter(payer, submitter);
+
+    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
+    const auto entitlement = select_entitlement(payer, billable_kib);
+    const auto config = get_billing_config();
+
+    action(
+        permission_level{get_self(), "active"_n},
+        config.verification_account,
+        "billbatch"_n,
+        std::make_tuple(
+            submitter,
+            schema_id,
+            policy_id,
+            root_hash,
+            leaf_count,
+            manifest_hash,
+            external_ref,
+            billable_bytes
+        )
+    ).send();
+
+    consume_entitlement_kib(entitlement.entitlement_id, billable_kib);
+}
+
 void verification_billing::use(
     const name& payer,
     const name& submitter,
@@ -272,30 +354,14 @@ void verification_billing::consume(uint64_t auth_id) {
     auto existing = usage_auths.find(auth_id);
     check(existing != usage_auths.end(), "enterprise usage authorization does not exist");
     check(!existing->consumed, "enterprise usage authorization is already consumed");
+    const auto now = time_point_sec(current_time_point());
 
     entitlement_table entitlements(get_self(), get_self().value);
     auto entitlement = entitlements.find(existing->entitlement_id);
     check(entitlement != entitlements.end(), "enterprise entitlement does not exist");
-    check(entitlement->status == entitlement_status_active, "enterprise entitlement is not active");
+    check(existing->expires_at > now, "enterprise usage authorization has expired");
 
-    const auto now = time_point_sec(current_time_point());
-    const bool has_expiry = entitlement->expires_at.sec_since_epoch() > 0;
-    if (has_expiry && entitlement->expires_at <= now) {
-        entitlements.modify(entitlement, get_self(), [&](auto& row) {
-            row.status = entitlement_status_expired;
-            row.updated_at = now;
-        });
-        check(false, "enterprise entitlement has expired");
-    }
-    check(entitlement->kib_remaining >= existing->billable_kib, "enterprise entitlement has insufficient remaining KiB");
-
-    entitlements.modify(entitlement, get_self(), [&](auto& row) {
-        row.kib_remaining -= existing->billable_kib;
-        if (row.kib_remaining == 0) {
-            row.status = entitlement_status_exhausted;
-        }
-        row.updated_at = now;
-    });
+    consume_entitlement_kib(existing->entitlement_id, existing->billable_kib);
 
     usage_auths.modify(existing, get_self(), [&](auto& row) {
         row.consumed = true;
@@ -629,6 +695,39 @@ verification_billing::entitlement_row verification_billing::select_entitlement(
 
     check(found_candidate, "payer does not have active enterprise entitlement with enough remaining KiB");
     return candidate;
+}
+
+void verification_billing::consume_entitlement_kib(uint64_t entitlement_id, uint64_t required_kib) {
+    entitlement_table entitlements(get_self(), get_self().value);
+    auto entitlement = entitlements.find(entitlement_id);
+    check(entitlement != entitlements.end(), "enterprise entitlement does not exist");
+    check(entitlement->status == entitlement_status_active, "enterprise entitlement is not active");
+
+    const auto now = time_point_sec(current_time_point());
+    const bool has_expiry = entitlement->expires_at.sec_since_epoch() > 0;
+    if (has_expiry && entitlement->expires_at <= now) {
+        entitlements.modify(entitlement, get_self(), [&](auto& row) {
+            row.status = entitlement_status_expired;
+            row.updated_at = now;
+        });
+        check(false, "enterprise entitlement has expired");
+    }
+
+    check(entitlement->kib_remaining >= required_kib, "enterprise entitlement has insufficient remaining KiB");
+    entitlements.modify(entitlement, get_self(), [&](auto& row) {
+        row.kib_remaining -= required_kib;
+        if (row.kib_remaining == 0) {
+            row.status = entitlement_status_exhausted;
+        }
+        row.updated_at = now;
+    });
+}
+
+void verification_billing::require_contract_only_submitter(const name& payer, const name& submitter) const {
+    check(
+        payer == submitter,
+        "contract-only enterprise flow requires submitter to match payer"
+    );
 }
 
 bool verification_billing::has_live_usage_auth(uint64_t entitlement_id, const time_point_sec& now) const {

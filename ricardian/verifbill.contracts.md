@@ -26,6 +26,14 @@ Marks a usage pack inactive for future enterprise purchases.
 
 Configures which deployed `verif` account may consume enterprise usage authorizations after successful anchoring.
 
+<h1 class="contract">submit</h1>
+
+Performs atomic enterprise single-record billing and inline anchoring through `verif::billsubmit`.
+
+<h1 class="contract">submitroot</h1>
+
+Performs atomic enterprise batch billing and inline anchoring through `verif::billbatch`.
+
 <h1 class="contract">use</h1>
 
 Creates a one-time enterprise usage authorization bound to a request key and billable size.

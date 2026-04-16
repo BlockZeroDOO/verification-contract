@@ -148,24 +148,6 @@ get_batch_id_by_external_ref() {
         '.rows[] | select(.external_ref == $external_ref) | .id' | tail -n 1
 }
 
-get_rtlauth_id_by_external_ref() {
-    local external_ref="$1"
-    get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -r \
-        --arg submitter "${SUBMITTER_ACCOUNT}" \
-        --arg external_ref "${external_ref}" \
-        '.rows[] | select(.submitter == $submitter and .external_ref == $external_ref) | .auth_id' | tail -n 1
-}
-
-assert_rtlauth_consumed() {
-    local external_ref="$1"
-    wait_for_table_match \
-        "${RETPAY_ACCOUNT}" \
-        "${RETPAY_ACCOUNT}" \
-        "rtlauths" \
-        ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .external_ref == \"${external_ref}\" and ((.consumed == true) or (.consumed == 1)))" \
-        "consumed retail authorization for ${external_ref}"
-}
-
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
 BASE_ID="$(date -u +%s)"
 SINGLE_KIB="$(( (BILLABLE_BYTES_SINGLE + 1023) / 1024 ))"
@@ -229,24 +211,7 @@ cleos -u "${RPC_URL}" transfer \
     "${SUBMITTER_ACCOUNT}" \
     "${RETPAY_ACCOUNT}" \
     "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SINGLE_EXTREF}|${BILLABLE_BYTES_SINGLE}"
-
-wait_for_table_match \
-    "${RETPAY_ACCOUNT}" \
-    "${RETPAY_ACCOUNT}" \
-    "rtlauths" \
-    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .external_ref == \"${SINGLE_EXTREF}\" and ((.consumed == false) or (.consumed == 0)))" \
-    "retail single authorization"
-
-SINGLE_AUTH_ID="$(get_rtlauth_id_by_external_ref "${SINGLE_EXTREF}")"
-SINGLE_AUTH_KIB="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -r \
-    --argjson id "${SINGLE_AUTH_ID}" '.rows[] | select(.auth_id == $id) | .billable_kib')"
-assert_eq "${SINGLE_KIB}" "${SINGLE_AUTH_KIB}" "unified retail single auth billable kib"
-
-log "Submitting unified retail single commitment"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${SINGLE_OBJECT_HASH}\",\"${SINGLE_EXTREF}\",${BILLABLE_BYTES_SINGLE}]" \
-    -p "${SUBMITTER_ACCOUNT}@active"
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|${SINGLE_OBJECT_HASH}|${SINGLE_EXTREF}|${BILLABLE_BYTES_SINGLE}"
 
 COMMITMENT_ID="$(get_commitment_id_by_external_ref "${SINGLE_EXTREF}")"
 COMMITMENT_SUBMITTER="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" commitments | "${JQ_BIN}" -r \
@@ -258,66 +223,40 @@ COMMITMENT_KIB="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOU
 assert_eq "${SUBMITTER_ACCOUNT}" "${COMMITMENT_SUBMITTER}" "unified retail commitment submitter"
 assert_eq "${BILLABLE_BYTES_SINGLE}" "${COMMITMENT_BYTES}" "unified retail commitment billable bytes"
 assert_eq "2" "${COMMITMENT_KIB}" "unified retail commitment billable kib"
-assert_rtlauth_consumed "${SINGLE_EXTREF}"
 
-log "Funding unified retail auth for size mismatch test"
+log "Rejecting atomic retail single transfer with invalid policy"
+if cleos -u "${RPC_URL}" transfer \
+    "${SUBMITTER_ACCOUNT}" \
+    "${RETPAY_ACCOUNT}" \
+    "${PRICE_SINGLE}" \
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_BATCH_ID}|$(hash_text "unified-retail-invalid-policy-${TIMESTAMP}")|$(hash_text "unified-retail-invalid-policy-ext-${TIMESTAMP}")|${BILLABLE_BYTES_SINGLE}" >/dev/null 2>&1; then
+    echo "Assertion failed: atomic retail single transfer with invalid policy was accepted." >&2
+    exit 1
+fi
+
+log "Funding unified retail transfer for duplicate request test"
 cleos -u "${RPC_URL}" transfer \
     "${SUBMITTER_ACCOUNT}" \
     "${RETPAY_ACCOUNT}" \
     "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SINGLE_EXTREF_MISMATCH}|${BILLABLE_BYTES_SINGLE}"
-
-wait_for_table_match \
-    "${RETPAY_ACCOUNT}" \
-    "${RETPAY_ACCOUNT}" \
-    "rtlauths" \
-    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .external_ref == \"${SINGLE_EXTREF_MISMATCH}\" and ((.consumed == false) or (.consumed == 0)))" \
-    "retail mismatch authorization"
-
-log "Rejecting unified retail submit with mismatched billable_bytes"
-if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "unified-retail-object-mismatch-${TIMESTAMP}")\",\"${SINGLE_EXTREF_MISMATCH}\",${MISMATCH_BYTES_SINGLE}]" \
-    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
-    echo "Assertion failed: unified retail submit with mismatched billable_bytes was accepted." >&2
-    exit 1
-fi
-
-log "Submitting unified retail commitment after size mismatch rejection"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "unified-retail-object-mismatch-ok-${TIMESTAMP}")\",\"${SINGLE_EXTREF_MISMATCH}\",${BILLABLE_BYTES_SINGLE}]" \
-    -p "${SUBMITTER_ACCOUNT}@active"
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|$(hash_text "unified-retail-object-mismatch-ok-${TIMESTAMP}")|${SINGLE_EXTREF_MISMATCH}|${BILLABLE_BYTES_SINGLE}"
 
 log "Rejecting duplicate unified retail single submit"
-if cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"${SINGLE_OBJECT_HASH}\",\"${SINGLE_EXTREF}\",${BILLABLE_BYTES_SINGLE}]" \
-    -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
-    echo "Assertion failed: duplicate unified retail single submit was accepted." >&2
+if cleos -u "${RPC_URL}" transfer \
+    "${SUBMITTER_ACCOUNT}" \
+    "${RETPAY_ACCOUNT}" \
+    "${PRICE_SINGLE}" \
+    "single|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_SINGLE_ID}|$(hash_text "unified-retail-duplicate-${TIMESTAMP}")|${SINGLE_EXTREF}|${BILLABLE_BYTES_SINGLE}" >/dev/null 2>&1; then
+    echo "Assertion failed: duplicate unified retail single request was accepted." >&2
     exit 1
 fi
 
-log "Funding unified retail batch authorization"
+log "Funding unified retail batch transfer"
 cleos -u "${RPC_URL}" transfer \
     "${SUBMITTER_ACCOUNT}" \
     "${RETPAY_ACCOUNT}" \
     "${PRICE_BATCH}" \
-    "batch|${SUBMITTER_ACCOUNT}|${BATCH_EXTREF}|${BILLABLE_BYTES_BATCH}"
-
-wait_for_table_match \
-    "${RETPAY_ACCOUNT}" \
-    "${RETPAY_ACCOUNT}" \
-    "rtlauths" \
-    ".rows[] | select(.submitter == \"${SUBMITTER_ACCOUNT}\" and .external_ref == \"${BATCH_EXTREF}\" and .mode == 1 and ((.consumed == false) or (.consumed == 0)))" \
-    "retail batch authorization"
-
-BATCH_AUTH_ID="$(get_rtlauth_id_by_external_ref "${BATCH_EXTREF}")"
-BATCH_AUTH_KIB="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -r \
-    --argjson id "${BATCH_AUTH_ID}" '.rows[] | select(.auth_id == $id) | .billable_kib')"
-assert_eq "${BATCH_KIB}" "${BATCH_AUTH_KIB}" "unified retail batch auth billable kib"
-
-log "Submitting unified retail batch root"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submitroot \
-    "[\"${SUBMITTER_ACCOUNT}\",${SCHEMA_ID},${POLICY_BATCH_ID},\"${BATCH_ROOT_HASH}\",2,\"${MANIFEST_HASH}\",\"${BATCH_EXTREF}\",${BILLABLE_BYTES_BATCH}]" \
-    -p "${SUBMITTER_ACCOUNT}@active"
+    "batch|${SUBMITTER_ACCOUNT}|${SCHEMA_ID}|${POLICY_BATCH_ID}|${BATCH_ROOT_HASH}|2|${MANIFEST_HASH}|${BATCH_EXTREF}|${BILLABLE_BYTES_BATCH}"
 
 BATCH_ID="$(get_batch_id_by_external_ref "${BATCH_EXTREF}")"
 BATCH_SUBMITTER="$(get_table_json "${VERIFICATION_ACCOUNT}" "${VERIFICATION_ACCOUNT}" batches | "${JQ_BIN}" -r \
@@ -332,6 +271,5 @@ assert_eq "${SUBMITTER_ACCOUNT}" "${BATCH_SUBMITTER}" "unified retail batch subm
 assert_eq "${MANIFEST_HASH}" "${BATCH_MANIFEST}" "unified retail batch manifest hash"
 assert_eq "${BILLABLE_BYTES_BATCH}" "${BATCH_BYTES}" "unified retail batch billable bytes"
 assert_eq "4" "${BATCH_KIB}" "unified retail batch billable kib"
-assert_rtlauth_consumed "${BATCH_EXTREF}"
 
 log "Unified retail smoke test passed"

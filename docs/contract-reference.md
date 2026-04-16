@@ -28,6 +28,7 @@ It is responsible for:
 - batch anchoring
 - request uniqueness
 - consuming external usage authorization after successful anchor creation
+- transitional internal anchoring entrypoints for payment contracts
 
 ### Tables
 
@@ -106,7 +107,11 @@ Fields:
 #### Anchoring
 
 - `submit(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
+- `billsubmit(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
+- `retailsub(submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
 - `submitroot(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
+- `billbatch(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
+- `retailbatch(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
 
 #### Treasury
 
@@ -139,6 +144,13 @@ Fields:
 - `leaf_count > 0`
 - unique request
 - valid external authorization
+
+Contract-only transition:
+
+- `billsubmit(...)` and `billbatch(...)` require `verifbill` authority
+- `retailsub(...)` and `retailbatch(...)` require `verifretpay` authority
+- these internal entrypoints perform the same registry validation and uniqueness checks
+- they do not perform external auth lookup or external `consume(...)` callbacks
 
 ### Authorization Wiring
 
@@ -183,6 +195,8 @@ It is responsible for:
 - `deactplan(plan_id)`
 - `setpack(pack_code, token_contract, price, included_kib, active)`
 - `deactpack(pack_id)`
+- `submit(payer, submitter, schema_id, policy_id, object_hash, external_ref, billable_bytes)`
+- `submitroot(payer, submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref, billable_bytes)`
 - `use(payer, submitter, mode, external_ref, billable_bytes)`
 - `consume(auth_id)`
 - `cleanauths(limit)`
@@ -210,6 +224,13 @@ pack|payer|pack_code
 3. `verif` anchors the request
 4. `verif` calls `verifbill::consume(...)`
 
+Transitional contract-only flow:
+
+1. enterprise payer buys plan or pack
+2. `verifbill::submit(...)` or `submitroot(...)` validates payer entitlement
+3. `verifbill` calls `verif::billsubmit(...)` or `billbatch(...)`
+4. `verifbill` burns the matching `KiB` after successful inline anchoring
+
 Maintenance:
 
 - `cleanauths(limit)` removes consumed or expired `usageauths`
@@ -224,6 +245,8 @@ Entitlement selection:
 
 - governance config is controlled by contract authority
 - `use(...)` requires real payer authority
+- transitional atomic `submit(...)` and `submitroot(...)` also require real payer authority
+- current contract-only atomic flow requires `payer == submitter`
 - account delegation should be handled by native Antelope permissions, not by contract state
 
 ## `verifretpay`
@@ -262,11 +285,13 @@ Retail payment is funded through:
 
 - `eosio.token::transfer -> verifretpay`
 
-Current memo format:
+Current transitional memo formats:
 
 ```text
 single|submitter|external_ref_hex|billable_bytes
 batch|submitter|external_ref_hex|billable_bytes
+single|submitter|schema_id|policy_id|object_hash|external_ref_hex|billable_bytes
+batch|submitter|schema_id|policy_id|root_hash|leaf_count|manifest_hash|external_ref_hex|billable_bytes
 ```
 
 Rules:
@@ -279,6 +304,7 @@ Rules:
 - auth is one-time and request-bound
 - auth is bound to `billable_bytes` and `billable_kib`
 - payer currently must match submitter
+- atomic retail variants perform inline anchoring and do not create pending auth rows
 
 ### Usage Flow
 
@@ -286,6 +312,13 @@ Rules:
 2. `verifretpay` creates one-time auth for the request
 3. `verif` anchors the request
 4. `verif` calls `verifretpay::consume(...)`
+
+Transitional contract-only flow:
+
+1. retail payer transfers exact amount to `verifretpay`
+2. `verifretpay` validates atomic memo payload and exact tariff
+3. `verifretpay` calls `verif::retailsub(...)` or `retailbatch(...)`
+4. transaction finalizes without creating a pending retail auth row
 
 Maintenance:
 

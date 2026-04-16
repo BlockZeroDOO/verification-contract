@@ -67,7 +67,51 @@ public:
     );
 
     [[eosio::action]]
+    void billsubmit(
+        const name& submitter,
+        uint64_t schema_id,
+        uint64_t policy_id,
+        const checksum256& object_hash,
+        const checksum256& external_ref,
+        uint64_t billable_bytes
+    );
+
+    [[eosio::action]]
+    void retailsub(
+        const name& submitter,
+        uint64_t schema_id,
+        uint64_t policy_id,
+        const checksum256& object_hash,
+        const checksum256& external_ref,
+        uint64_t billable_bytes
+    );
+
+    [[eosio::action]]
     void submitroot(
+        const name& submitter,
+        uint64_t schema_id,
+        uint64_t policy_id,
+        const checksum256& root_hash,
+        uint32_t leaf_count,
+        const checksum256& manifest_hash,
+        const checksum256& external_ref,
+        uint64_t billable_bytes
+    );
+
+    [[eosio::action]]
+    void billbatch(
+        const name& submitter,
+        uint64_t schema_id,
+        uint64_t policy_id,
+        const checksum256& root_hash,
+        uint32_t leaf_count,
+        const checksum256& manifest_hash,
+        const checksum256& external_ref,
+        uint64_t billable_bytes
+    );
+
+    [[eosio::action]]
+    void retailbatch(
         const name& submitter,
         uint64_t schema_id,
         uint64_t policy_id,
@@ -127,7 +171,26 @@ private:
         uint64_t billable_bytes,
         uint64_t billable_kib
     ) const;
+    void require_internal_registry_caller(const name& expected_contract) const;
     void consume_usage_authorization(const usage_authorization_ref& authorization) const;
+    void anchor_single_request(
+        const name& submitter,
+        uint64_t schema_id,
+        uint64_t policy_id,
+        const checksum256& object_hash,
+        const checksum256& external_ref,
+        uint64_t billable_bytes
+    );
+    void anchor_batch_request(
+        const name& submitter,
+        uint64_t schema_id,
+        uint64_t policy_id,
+        const checksum256& root_hash,
+        uint32_t leaf_count,
+        const checksum256& manifest_hash,
+        const checksum256& external_ref,
+        uint64_t billable_bytes
+    );
     uint64_t next_batch_id();
     uint64_t next_commitment_id();
     void validate_batch_request_unique(const name& submitter, const checksum256& external_ref) const;

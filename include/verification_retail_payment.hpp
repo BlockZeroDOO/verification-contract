@@ -60,6 +60,20 @@ private:
     using retail_counter_state = verification_retail_payment_tables::retail_counter_state;
     using retail_counter_singleton = verification_retail_payment_tables::retail_counter_singleton;
 
+    struct parsed_payment_memo {
+        bool atomic = false;
+        uint8_t mode = 0;
+        name submitter{};
+        checksum256 external_ref{};
+        uint64_t billable_bytes = 0;
+        uint64_t schema_id = 0;
+        uint64_t policy_id = 0;
+        checksum256 object_hash{};
+        checksum256 root_hash{};
+        uint32_t leaf_count = 0;
+        checksum256 manifest_hash{};
+    };
+
     struct [[eosio::table("retpaycfg")]] retail_payment_config {
         name verification_account = "verif"_n;
     };
@@ -78,5 +92,5 @@ private:
     uint64_t next_retail_tariff_id();
     uint64_t next_retail_auth_id();
     retail_payment_config get_retail_payment_config() const;
-    std::tuple<uint8_t, name, checksum256, uint64_t> parse_payment_memo(const string& memo) const;
+    parsed_payment_memo parse_payment_memo(const string& memo) const;
 };

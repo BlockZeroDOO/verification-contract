@@ -1,6 +1,7 @@
 #include <verification_retail_payment.hpp>
 
 #include <limits>
+#include <vector>
 
 namespace {
 struct token_stat_row {
@@ -33,6 +34,39 @@ uint8_t parse_mode_label(const string& value) {
 
     eosio::check(false, "unsupported retail payment mode");
     return 0;
+}
+
+std::vector<string> split_memo_fields(const string& memo) {
+    std::vector<string> fields;
+    size_t start = 0;
+    while (true) {
+        const auto separator = memo.find('|', start);
+        if (separator == string::npos) {
+            fields.push_back(memo.substr(start));
+            break;
+        }
+        fields.push_back(memo.substr(start, separator - start));
+        start = separator + 1;
+    }
+    return fields;
+}
+
+uint64_t parse_decimal_u64(const string& value, const char* field_name) {
+    verification_validators::validate_printable_ascii_text(value, 20, field_name, false);
+    check(!value.empty(), string(field_name) + " must not be empty");
+
+    uint64_t parsed = 0;
+    for (char ch : value) {
+        check(ch >= '0' && ch <= '9', string(field_name) + " must be a decimal integer");
+        const auto digit = static_cast<uint64_t>(ch - '0');
+        check(
+            parsed <= (std::numeric_limits<uint64_t>::max() - digit) / 10,
+            string(field_name) + " exceeds supported range"
+        );
+        parsed = (parsed * 10) + digit;
+    }
+
+    return parsed;
 }
 }  // namespace
 
@@ -196,10 +230,10 @@ void verification_retail_payment::ontransfer(
     verification_validators::validate_payment_price(quantity, "quantity");
 
     const auto parsed_payment = parse_payment_memo(memo);
-    const auto mode = std::get<0>(parsed_payment);
-    const auto submitter = std::get<1>(parsed_payment);
-    const auto external_ref = std::get<2>(parsed_payment);
-    const auto billable_bytes = std::get<3>(parsed_payment);
+    const auto mode = parsed_payment.mode;
+    const auto submitter = parsed_payment.submitter;
+    const auto external_ref = parsed_payment.external_ref;
+    const auto billable_bytes = parsed_payment.billable_bytes;
     const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
     check(from == submitter, "payer must match submitter for retail flow");
 
@@ -213,6 +247,43 @@ void verification_retail_payment::ontransfer(
     );
     const auto expected_amount = static_cast<int64_t>(price_per_kib_amount * billable_kib);
     check(quantity == asset(expected_amount, tariff.price_per_kib.symbol), "retail payment must match exact size-based tariff");
+
+    if (parsed_payment.atomic) {
+        const auto config = get_retail_payment_config();
+        if (mode == retail_mode_single) {
+            action(
+                permission_level{get_self(), "active"_n},
+                config.verification_account,
+                "retailsub"_n,
+                std::make_tuple(
+                    submitter,
+                    parsed_payment.schema_id,
+                    parsed_payment.policy_id,
+                    parsed_payment.object_hash,
+                    external_ref,
+                    billable_bytes
+                )
+            ).send();
+            return;
+        }
+
+        action(
+            permission_level{get_self(), "active"_n},
+            config.verification_account,
+            "retailbatch"_n,
+            std::make_tuple(
+                submitter,
+                parsed_payment.schema_id,
+                parsed_payment.policy_id,
+                parsed_payment.root_hash,
+                parsed_payment.leaf_count,
+                parsed_payment.manifest_hash,
+                external_ref,
+                billable_bytes
+            )
+        ).send();
+        return;
+    }
 
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     usage_auth_table usage_auths(get_self(), get_self().value);
@@ -315,50 +386,66 @@ verification_retail_payment::retail_payment_config verification_retail_payment::
     return config.exists() ? config.get() : retail_payment_config{};
 }
 
-std::tuple<uint8_t, name, checksum256, uint64_t> verification_retail_payment::parse_payment_memo(const string& memo) const {
-    const auto first = memo.find('|');
-    const auto second = memo.find('|', first == string::npos ? first : first + 1);
-    const auto third = memo.find('|', second == string::npos ? second : second + 1);
-
+verification_retail_payment::parsed_payment_memo verification_retail_payment::parse_payment_memo(const string& memo) const {
+    const auto fields = split_memo_fields(memo);
     check(
-        first != string::npos &&
-        second != string::npos &&
-        third != string::npos &&
-        memo.find('|', third + 1) == string::npos,
-        "retail memo format must be mode|submitter|external_ref|billable_bytes"
+        fields.size() == 4 || fields.size() == 7 || fields.size() == 9,
+        "retail memo format must be mode|submitter|external_ref|billable_bytes or atomic retail variant"
     );
 
-    const auto mode_value = memo.substr(0, first);
-    const auto submitter_value = memo.substr(first + 1, second - first - 1);
-    const auto external_ref_value = memo.substr(second + 1, third - second - 1);
-    const auto billable_bytes_value = memo.substr(third + 1);
-
+    const auto& mode_value = fields[0];
+    const auto& submitter_value = fields[1];
     verification_validators::validate_printable_ascii_text(mode_value, 16, "mode", false);
     verification_validators::validate_printable_ascii_text(submitter_value, 13, "submitter", false);
-    verification_validators::validate_printable_ascii_text(external_ref_value, 64, "external_ref", false);
-    verification_validators::validate_printable_ascii_text(billable_bytes_value, 20, "billable_bytes", false);
-    check(external_ref_value.size() == 64, "external_ref must be 64 hex characters");
 
-    const name submitter = name(submitter_value);
-    check(submitter.value > 0, "submitter in retail memo is invalid");
-    check(is_account(submitter), "submitter account does not exist");
+    parsed_payment_memo parsed{};
+    parsed.mode = parse_mode_label(mode_value);
+    parsed.submitter = name(submitter_value);
+    check(parsed.submitter.value > 0, "submitter in retail memo is invalid");
+    check(is_account(parsed.submitter), "submitter account does not exist");
 
-    uint64_t billable_bytes = 0;
-    for (char ch : billable_bytes_value) {
-        check(ch >= '0' && ch <= '9', "billable_bytes must be a decimal integer");
-        const auto digit = static_cast<uint64_t>(ch - '0');
-        check(
-            billable_bytes <= (std::numeric_limits<uint64_t>::max() - digit) / 10,
-            "billable_bytes exceeds supported range"
-        );
-        billable_bytes = (billable_bytes * 10) + digit;
+    if (fields.size() == 4) {
+        verification_validators::validate_printable_ascii_text(fields[2], 64, "external_ref", false);
+        check(fields[2].size() == 64, "external_ref must be 64 hex characters");
+        parsed.external_ref = verification_validators::parse_hash(fields[2]);
+        parsed.billable_bytes = parse_decimal_u64(fields[3], "billable_bytes");
+        verification_validators::validate_billable_bytes(parsed.billable_bytes, "billable_bytes");
+        return parsed;
     }
-    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
 
-    return std::make_tuple(
-        parse_mode_label(mode_value),
-        submitter,
-        verification_validators::parse_hash(external_ref_value),
-        billable_bytes
-    );
+    parsed.atomic = true;
+    parsed.schema_id = parse_decimal_u64(fields[2], "schema_id");
+    parsed.policy_id = parse_decimal_u64(fields[3], "policy_id");
+
+    if (fields.size() == 7) {
+        check(parsed.mode == retail_mode_single, "single atomic retail memo must use single mode");
+        verification_validators::validate_printable_ascii_text(fields[4], 64, "object_hash", false);
+        verification_validators::validate_printable_ascii_text(fields[5], 64, "external_ref", false);
+        check(fields[4].size() == 64, "object_hash must be 64 hex characters");
+        check(fields[5].size() == 64, "external_ref must be 64 hex characters");
+        parsed.object_hash = verification_validators::parse_hash(fields[4]);
+        parsed.external_ref = verification_validators::parse_hash(fields[5]);
+        parsed.billable_bytes = parse_decimal_u64(fields[6], "billable_bytes");
+        verification_validators::validate_billable_bytes(parsed.billable_bytes, "billable_bytes");
+        return parsed;
+    }
+
+    check(parsed.mode == retail_mode_batch, "batch atomic retail memo must use batch mode");
+    verification_validators::validate_printable_ascii_text(fields[4], 64, "root_hash", false);
+    verification_validators::validate_printable_ascii_text(fields[5], 20, "leaf_count", false);
+    verification_validators::validate_printable_ascii_text(fields[6], 64, "manifest_hash", false);
+    verification_validators::validate_printable_ascii_text(fields[7], 64, "external_ref", false);
+    check(fields[4].size() == 64, "root_hash must be 64 hex characters");
+    check(fields[6].size() == 64, "manifest_hash must be 64 hex characters");
+    check(fields[7].size() == 64, "external_ref must be 64 hex characters");
+    parsed.root_hash = verification_validators::parse_hash(fields[4]);
+    const auto parsed_leaf_count = parse_decimal_u64(fields[5], "leaf_count");
+    check(parsed_leaf_count <= static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()), "leaf_count exceeds supported range");
+    parsed.leaf_count = static_cast<uint32_t>(parsed_leaf_count);
+    check(parsed.leaf_count > 0, "leaf_count must be greater than zero");
+    parsed.manifest_hash = verification_validators::parse_hash(fields[6]);
+    parsed.external_ref = verification_validators::parse_hash(fields[7]);
+    parsed.billable_bytes = parse_decimal_u64(fields[8], "billable_bytes");
+    verification_validators::validate_billable_bytes(parsed.billable_bytes, "billable_bytes");
+    return parsed;
 }

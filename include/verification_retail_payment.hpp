@@ -28,7 +28,7 @@ public:
     void rmtoken(const name& token_contract, const symbol_code& token_symbol);
 
     [[eosio::action]]
-    void setprice(uint8_t mode, const name& token_contract, const asset& price);
+    void setprice(uint8_t mode, const name& token_contract, const asset& price_per_kib);
 
     [[eosio::action]]
     void setverifacct(const name& verification_account);
@@ -73,5 +73,5 @@ private:
     uint64_t next_retail_tariff_id();
     uint64_t next_retail_auth_id();
     retail_payment_config get_retail_payment_config() const;
-    std::tuple<uint8_t, name, checksum256> parse_payment_memo(const string& memo) const;
+    std::tuple<uint8_t, name, checksum256, uint64_t> parse_payment_memo(const string& memo) const;
 };

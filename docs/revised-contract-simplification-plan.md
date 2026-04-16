@@ -84,7 +84,7 @@ Simplify:
 Keep:
 
 - accepted retail tokens
-- exact tariffs
+- exact `price_per_kib` tariffs
 - one-time request-bound auth
 - `consume`
 - `setverifacct`

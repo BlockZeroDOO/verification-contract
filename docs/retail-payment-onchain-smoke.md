@@ -12,9 +12,11 @@ These smoke tests validate the standalone `verifretpay` surface.
 
 - token configuration
 - tariff configuration
+- size-based payment calculation from `billable_bytes`
 - underpayment rejection
 - wrong-token rejection
 - exact single auth creation
 - duplicate auth rejection for the same request
+- persisted `billable_kib`
 - explicit `consume`
 - configured downstream `verif` consumer

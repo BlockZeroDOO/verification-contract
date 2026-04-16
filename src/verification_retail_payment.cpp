@@ -1,5 +1,7 @@
 #include <verification_retail_payment.hpp>
 
+#include <limits>
+
 namespace {
 struct token_stat_row {
     eosio::asset supply;
@@ -79,22 +81,22 @@ void verification_retail_payment::rmtoken(const name& token_contract, const symb
     by_token.erase(existing);
 }
 
-void verification_retail_payment::setprice(uint8_t mode, const name& token_contract, const asset& price) {
+void verification_retail_payment::setprice(uint8_t mode, const name& token_contract, const asset& price_per_kib) {
     require_auth(get_self());
     check(mode == retail_mode_single || mode == retail_mode_batch, "unsupported retail tariff mode");
     check(is_account(token_contract), "token_contract does not exist");
-    verification_validators::validate_payment_price(price, "price");
-    validate_token_contract_stat(token_contract, price.symbol);
-    require_accepted_token(token_contract, price.symbol.code());
+    verification_validators::validate_payment_price(price_per_kib, "price_per_kib");
+    validate_token_contract_stat(token_contract, price_per_kib.symbol);
+    require_accepted_token(token_contract, price_per_kib.symbol.code());
 
     tariff_table tariffs(get_self(), get_self().value);
     const auto now = time_point_sec(current_time_point());
-    const auto key = make_payment_key(token_contract, price.symbol.code());
+    const auto key = make_payment_key(token_contract, price_per_kib.symbol.code());
 
     for (auto existing = tariffs.begin(); existing != tariffs.end(); ++existing) {
         if (existing->mode == mode && existing->bytokensym() == key) {
             tariffs.modify(existing, get_self(), [&](auto& row) {
-                row.price = price;
+                row.price_per_kib = price_per_kib;
                 row.active = true;
                 row.updated_at = now;
             });
@@ -106,7 +108,7 @@ void verification_retail_payment::setprice(uint8_t mode, const name& token_contr
         row.config_id = next_retail_tariff_id();
         row.mode = mode;
         row.token_contract = token_contract;
-        row.price = price;
+        row.price_per_kib = price_per_kib;
         row.active = true;
         row.updated_at = now;
     });
@@ -176,16 +178,32 @@ void verification_retail_payment::ontransfer(
     const auto mode = std::get<0>(parsed_payment);
     const auto submitter = std::get<1>(parsed_payment);
     const auto external_ref = std::get<2>(parsed_payment);
+    const auto billable_bytes = std::get<3>(parsed_payment);
+    const auto billable_kib = verification_validators::derive_billable_kib(billable_bytes);
     check(from == submitter, "payer must match submitter for retail flow");
 
     require_accepted_token(get_first_receiver(), quantity.symbol.code());
     const auto tariff = require_tariff(mode, get_first_receiver(), quantity.symbol);
-    check(quantity == tariff.price, "retail payment must match exact configured tariff");
+
+    const auto price_per_kib_amount = static_cast<uint64_t>(tariff.price_per_kib.amount);
+    check(
+        billable_kib <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) / price_per_kib_amount,
+        "retail payment amount exceeds supported range"
+    );
+    const auto expected_amount = static_cast<int64_t>(price_per_kib_amount * billable_kib);
+    check(quantity == asset(expected_amount, tariff.price_per_kib.symbol), "retail payment must match exact size-based tariff");
 
     const auto request_key = verification_common::compute_request_key(submitter, external_ref);
     usage_auth_table usage_auths(get_self(), get_self().value);
     auto by_request = usage_auths.get_index<"byrequest"_n>();
-    check(by_request.find(request_key) == by_request.end(), "retail usage authorization already exists for request");
+    auto existing = by_request.find(request_key);
+    if (existing != by_request.end()) {
+        if (existing->consumed) {
+            by_request.erase(existing);
+        } else {
+            check(false, "retail usage authorization already exists for request");
+        }
+    }
 
     const auto now = time_point_sec(current_time_point());
     usage_auths.emplace(get_self(), [&](auto& row) {
@@ -195,6 +213,8 @@ void verification_retail_payment::ontransfer(
         row.submitter = submitter;
         row.external_ref = external_ref;
         row.request_key = request_key;
+        row.billable_bytes = billable_bytes;
+        row.billable_kib = billable_kib;
         row.token_contract = get_first_receiver();
         row.quantity = quantity;
         row.consumed = false;
@@ -231,7 +251,7 @@ verification_retail_payment::tariff_row verification_retail_payment::require_tar
     for (auto existing = tariffs.begin(); existing != tariffs.end(); ++existing) {
         if (existing->mode == mode && existing->bytokensym() == key) {
             check(existing->active, "retail tariff is inactive");
-            check(existing->price.symbol == token_symbol, "retail tariff symbol precision mismatch");
+            check(existing->price_per_kib.symbol == token_symbol, "retail tariff symbol precision mismatch");
             return *existing;
         }
     }
@@ -272,29 +292,50 @@ verification_retail_payment::retail_payment_config verification_retail_payment::
     return config.exists() ? config.get() : retail_payment_config{};
 }
 
-std::tuple<uint8_t, name, checksum256> verification_retail_payment::parse_payment_memo(const string& memo) const {
+std::tuple<uint8_t, name, checksum256, uint64_t> verification_retail_payment::parse_payment_memo(const string& memo) const {
     const auto first = memo.find('|');
     const auto second = memo.find('|', first == string::npos ? first : first + 1);
+    const auto third = memo.find('|', second == string::npos ? second : second + 1);
 
     check(
         first != string::npos &&
         second != string::npos &&
-        memo.find('|', second + 1) == string::npos,
-        "retail memo format must be mode|submitter|external_ref"
+        third != string::npos &&
+        memo.find('|', third + 1) == string::npos,
+        "retail memo format must be mode|submitter|external_ref|billable_bytes"
     );
 
     const auto mode_value = memo.substr(0, first);
     const auto submitter_value = memo.substr(first + 1, second - first - 1);
-    const auto external_ref_value = memo.substr(second + 1);
+    const auto external_ref_value = memo.substr(second + 1, third - second - 1);
+    const auto billable_bytes_value = memo.substr(third + 1);
 
     verification_validators::validate_printable_ascii_text(mode_value, 16, "mode", false);
     verification_validators::validate_printable_ascii_text(submitter_value, 13, "submitter", false);
     verification_validators::validate_printable_ascii_text(external_ref_value, 64, "external_ref", false);
+    verification_validators::validate_printable_ascii_text(billable_bytes_value, 20, "billable_bytes", false);
     check(external_ref_value.size() == 64, "external_ref must be 64 hex characters");
 
-    const auto submitter = name(submitter_value);
+    const name submitter = name(submitter_value);
     check(submitter.value > 0, "submitter in retail memo is invalid");
     check(is_account(submitter), "submitter account does not exist");
 
-    return std::make_tuple(parse_mode_label(mode_value), submitter, verification_validators::parse_hash(external_ref_value));
+    uint64_t billable_bytes = 0;
+    for (char ch : billable_bytes_value) {
+        check(ch >= '0' && ch <= '9', "billable_bytes must be a decimal integer");
+        const auto digit = static_cast<uint64_t>(ch - '0');
+        check(
+            billable_bytes <= (std::numeric_limits<uint64_t>::max() - digit) / 10,
+            "billable_bytes exceeds supported range"
+        );
+        billable_bytes = (billable_bytes * 10) + digit;
+    }
+    verification_validators::validate_billable_bytes(billable_bytes, "billable_bytes");
+
+    return std::make_tuple(
+        parse_mode_label(mode_value),
+        submitter,
+        verification_validators::parse_hash(external_ref_value),
+        billable_bytes
+    );
 }

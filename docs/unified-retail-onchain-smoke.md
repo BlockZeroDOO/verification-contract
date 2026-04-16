@@ -19,6 +19,7 @@ These smoke tests validate the supported retail model:
 - `verif::addschema`
 - `verif::setpolicy`
 - `transfer -> verifretpay`
+- size-bound retail auth creation from `billable_bytes`
 - `verif::submit`
 - `verif::submitroot`
 - persisted `billable_bytes`

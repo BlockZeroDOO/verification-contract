@@ -297,7 +297,9 @@ verification_enterprise::usage_authorization_ref verification_enterprise::requir
             !existing->consumed &&
             existing->submitter == submitter &&
             existing->mode == mode &&
-            existing->external_ref == external_ref) {
+            existing->external_ref == external_ref &&
+            existing->billable_bytes == billable_bytes &&
+            existing->billable_kib == billable_kib) {
             has_retail_auth = true;
             auth_id = existing->auth_id;
             source_contract = auth_sources.retail_payment_account;

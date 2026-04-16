@@ -225,7 +225,7 @@ pack|payer|pack_code
 It is responsible for:
 
 - accepted retail tokens
-- exact tariffs
+- exact size-based tariffs
 - one-time retail auth for `verif`
 - downstream consume authorization for `verif`
 
@@ -240,7 +240,7 @@ It is responsible for:
 
 - `settoken(token_contract, token_symbol)`
 - `rmtoken(token_contract, token_symbol)`
-- `setprice(mode, token_contract, price)`
+- `setprice(mode, token_contract, price_per_kib)`
 - `consume(auth_id)`
 - `setverifacct(verification_account)`
 - `withdraw(token_contract, to, quantity, memo)`
@@ -254,17 +254,19 @@ Retail payment is funded through:
 Current memo format:
 
 ```text
-single|submitter|external_ref_hex
-batch|submitter|external_ref_hex
+single|submitter|external_ref_hex|billable_bytes
+batch|submitter|external_ref_hex|billable_bytes
 ```
 
 Rules:
 
 - exact payment only
+- payment is derived from `billable_kib * price_per_kib`
 - underpayment is rejected
 - wrong token is rejected
 - mode mismatch is rejected
 - auth is one-time and request-bound
+- auth is bound to `billable_bytes` and `billable_kib`
 - payer currently must match submitter
 
 ### Usage Flow

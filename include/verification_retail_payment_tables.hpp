@@ -43,7 +43,7 @@ struct [[eosio::table("rtltariffs")]] tariff_row {
     uint64_t config_id;
     uint8_t mode;
     name token_contract;
-    asset price;
+    asset price_per_kib;
     bool active;
     time_point_sec updated_at;
 
@@ -51,7 +51,7 @@ struct [[eosio::table("rtltariffs")]] tariff_row {
     uint64_t bymode() const { return static_cast<uint64_t>(mode); }
     uint128_t bytokensym() const {
         return (static_cast<uint128_t>(token_contract.value) << 64) |
-               price.symbol.code().raw();
+               price_per_kib.symbol.code().raw();
     }
 };
 
@@ -69,6 +69,8 @@ struct [[eosio::table("rtlauths")]] usage_auth_row {
     name submitter;
     checksum256 external_ref;
     checksum256 request_key;
+    uint64_t billable_bytes;
+    uint64_t billable_kib;
     name token_contract;
     asset quantity;
     bool consumed;

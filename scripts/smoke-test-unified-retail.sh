@@ -13,8 +13,8 @@ SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
 PAYMENT_SYMBOL="${PAYMENT_SYMBOL:-EOS}"
 PAYMENT_PRECISION="${PAYMENT_PRECISION:-4}"
-PRICE_SINGLE="${PRICE_SINGLE:-0.0100 EOS}"
-PRICE_BATCH="${PRICE_BATCH:-0.0200 EOS}"
+PRICE_PER_KIB_SINGLE="${PRICE_PER_KIB_SINGLE:-0.0050 EOS}"
+PRICE_PER_KIB_BATCH="${PRICE_PER_KIB_BATCH:-0.0050 EOS}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
@@ -52,6 +52,31 @@ hash_text() {
 
 log() {
     printf '[smoke-test-unified-retail] %s\n' "$1"
+}
+
+asset_to_units() {
+    local asset="$1"
+    local amount="${asset% *}"
+    local whole="${amount%%.*}"
+    local fraction="${amount#*.}"
+    if [[ "${fraction}" == "${amount}" ]]; then
+        fraction=""
+    fi
+
+    while [[ ${#fraction} -lt ${PAYMENT_PRECISION} ]]; do
+        fraction="${fraction}0"
+    done
+    fraction="${fraction:0:${PAYMENT_PRECISION}}"
+    printf '%s\n' "$((10#${whole} * 10**${PAYMENT_PRECISION} + 10#${fraction}))"
+}
+
+units_to_asset() {
+    local units="$1"
+    local symbol="$2"
+    local scale=$((10**PAYMENT_PRECISION))
+    local whole=$((units / scale))
+    local fraction=$((units % scale))
+    printf "%d.%0${PAYMENT_PRECISION}d %s\n" "${whole}" "${fraction}" "${symbol}"
 }
 
 get_table_json() {
@@ -142,6 +167,10 @@ assert_rtlauth_consumed() {
 
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
 BASE_ID="$(date -u +%s)"
+SINGLE_KIB="$(( (BILLABLE_BYTES_SINGLE + 1023) / 1024 ))"
+BATCH_KIB="$(( (BILLABLE_BYTES_BATCH + 1023) / 1024 ))"
+PRICE_SINGLE="$(units_to_asset "$(( SINGLE_KIB * $(asset_to_units "${PRICE_PER_KIB_SINGLE}") ))" "${PAYMENT_SYMBOL}")"
+PRICE_BATCH="$(units_to_asset "$(( BATCH_KIB * $(asset_to_units "${PRICE_PER_KIB_BATCH}") ))" "${PAYMENT_SYMBOL}")"
 
 SCHEMA_ID="${SCHEMA_ID:-$((BASE_ID + 5000))}"
 POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-$((BASE_ID + 6000))}"
@@ -170,12 +199,12 @@ cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" setverifacct \
 
 log "Configuring retail single tariff"
 cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" setprice \
-    "[0,\"${PAYMENT_TOKEN_CONTRACT}\",\"${PRICE_SINGLE}\"]" \
+    "[0,\"${PAYMENT_TOKEN_CONTRACT}\",\"${PRICE_PER_KIB_SINGLE}\"]" \
     -p "${RETPAY_OWNER_ACCOUNT}@active"
 
 log "Configuring retail batch tariff"
 cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" setprice \
-    "[1,\"${PAYMENT_TOKEN_CONTRACT}\",\"${PRICE_BATCH}\"]" \
+    "[1,\"${PAYMENT_TOKEN_CONTRACT}\",\"${PRICE_PER_KIB_BATCH}\"]" \
     -p "${RETPAY_OWNER_ACCOUNT}@active"
 
 log "Creating unified retail schema"
@@ -198,7 +227,7 @@ cleos -u "${RPC_URL}" transfer \
     "${SUBMITTER_ACCOUNT}" \
     "${RETPAY_ACCOUNT}" \
     "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${SINGLE_EXTREF}"
+    "single|${SUBMITTER_ACCOUNT}|${SINGLE_EXTREF}|${BILLABLE_BYTES_SINGLE}"
 
 wait_for_table_match \
     "${RETPAY_ACCOUNT}" \
@@ -208,6 +237,9 @@ wait_for_table_match \
     "retail single authorization"
 
 SINGLE_AUTH_ID="$(get_rtlauth_id_by_external_ref "${SINGLE_EXTREF}")"
+SINGLE_AUTH_KIB="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -r \
+    --argjson id "${SINGLE_AUTH_ID}" '.rows[] | select(.auth_id == $id) | .billable_kib')"
+assert_eq "${SINGLE_KIB}" "${SINGLE_AUTH_KIB}" "unified retail single auth billable kib"
 
 log "Submitting unified retail single commitment"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submit \
@@ -239,7 +271,7 @@ cleos -u "${RPC_URL}" transfer \
     "${SUBMITTER_ACCOUNT}" \
     "${RETPAY_ACCOUNT}" \
     "${PRICE_BATCH}" \
-    "batch|${SUBMITTER_ACCOUNT}|${BATCH_EXTREF}"
+    "batch|${SUBMITTER_ACCOUNT}|${BATCH_EXTREF}|${BILLABLE_BYTES_BATCH}"
 
 wait_for_table_match \
     "${RETPAY_ACCOUNT}" \
@@ -249,6 +281,9 @@ wait_for_table_match \
     "retail batch authorization"
 
 BATCH_AUTH_ID="$(get_rtlauth_id_by_external_ref "${BATCH_EXTREF}")"
+BATCH_AUTH_KIB="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -r \
+    --argjson id "${BATCH_AUTH_ID}" '.rows[] | select(.auth_id == $id) | .billable_kib')"
+assert_eq "${BATCH_KIB}" "${BATCH_AUTH_KIB}" "unified retail batch auth billable kib"
 
 log "Submitting unified retail batch root"
 cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" submitroot \

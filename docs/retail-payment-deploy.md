@@ -11,7 +11,7 @@ Repository boundary:
 `verifretpay` is used for:
 
 - accepted retail tokens
-- exact tariffs
+- exact `price_per_kib` tariffs
 - one-time retail authorization consumed by `verif`
 
 ## Build

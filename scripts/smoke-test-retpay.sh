@@ -11,9 +11,10 @@ SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
 PAYMENT_SYMBOL="${PAYMENT_SYMBOL:-EOS}"
 PAYMENT_PRECISION="${PAYMENT_PRECISION:-4}"
-PRICE_SINGLE="${PRICE_SINGLE:-0.0100 EOS}"
-PRICE_BATCH="${PRICE_BATCH:-0.0200 EOS}"
-UNDERPAY_SINGLE="${UNDERPAY_SINGLE:-0.0090 EOS}"
+PRICE_PER_KIB_SINGLE="${PRICE_PER_KIB_SINGLE:-0.0050 EOS}"
+PRICE_PER_KIB_BATCH="${PRICE_PER_KIB_BATCH:-0.0050 EOS}"
+BILLABLE_BYTES_SINGLE="${BILLABLE_BYTES_SINGLE:-1536}"
+BILLABLE_BYTES_BATCH="${BILLABLE_BYTES_BATCH:-4096}"
 WRONG_TOKEN_CONTRACT="${WRONG_TOKEN_CONTRACT:-retail.fake}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
@@ -54,6 +55,31 @@ hash_text() {
 
 log() {
     printf '[smoke-test-retpay] %s\n' "$1"
+}
+
+asset_to_units() {
+    local asset="$1"
+    local amount="${asset% *}"
+    local whole="${amount%%.*}"
+    local fraction="${amount#*.}"
+    if [[ "${fraction}" == "${amount}" ]]; then
+        fraction=""
+    fi
+
+    while [[ ${#fraction} -lt ${PAYMENT_PRECISION} ]]; do
+        fraction="${fraction}0"
+    done
+    fraction="${fraction:0:${PAYMENT_PRECISION}}"
+    printf '%s\n' "$((10#${whole} * 10**${PAYMENT_PRECISION} + 10#${fraction}))"
+}
+
+units_to_asset() {
+    local units="$1"
+    local symbol="$2"
+    local scale=$((10**PAYMENT_PRECISION))
+    local whole=$((units / scale))
+    local fraction=$((units % scale))
+    printf "%d.%0${PAYMENT_PRECISION}d %s\n" "${whole}" "${fraction}" "${symbol}"
 }
 
 get_table_json() {
@@ -108,6 +134,13 @@ wait_for_consumed_auth() {
 TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
 EXTREF_SINGLE="$(hash_text "retpay-single-${TIMESTAMP}")"
 EXTREF_BATCH="$(hash_text "retpay-batch-${TIMESTAMP}")"
+SINGLE_KIB="$(( (BILLABLE_BYTES_SINGLE + 1023) / 1024 ))"
+BATCH_KIB="$(( (BILLABLE_BYTES_BATCH + 1023) / 1024 ))"
+SINGLE_TOTAL_UNITS="$(( SINGLE_KIB * $(asset_to_units "${PRICE_PER_KIB_SINGLE}") ))"
+BATCH_TOTAL_UNITS="$(( BATCH_KIB * $(asset_to_units "${PRICE_PER_KIB_BATCH}") ))"
+PRICE_SINGLE="$(units_to_asset "${SINGLE_TOTAL_UNITS}" "${PAYMENT_SYMBOL}")"
+PRICE_BATCH="$(units_to_asset "${BATCH_TOTAL_UNITS}" "${PAYMENT_SYMBOL}")"
+UNDERPAY_SINGLE="$(units_to_asset "$(( SINGLE_TOTAL_UNITS - 1 ))" "${PAYMENT_SYMBOL}")"
 
 log "Configuring accepted retail payment token"
 cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" settoken \
@@ -121,24 +154,24 @@ cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" setverifacct \
 
 log "Configuring retail single tariff"
 cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" setprice \
-    "[0,\"${PAYMENT_TOKEN_CONTRACT}\",\"${PRICE_SINGLE}\"]" \
+    "[0,\"${PAYMENT_TOKEN_CONTRACT}\",\"${PRICE_PER_KIB_SINGLE}\"]" \
     -p "${OWNER_ACCOUNT}@active"
 
 log "Configuring retail batch tariff"
 cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" setprice \
-    "[1,\"${PAYMENT_TOKEN_CONTRACT}\",\"${PRICE_BATCH}\"]" \
+    "[1,\"${PAYMENT_TOKEN_CONTRACT}\",\"${PRICE_PER_KIB_BATCH}\"]" \
     -p "${OWNER_ACCOUNT}@active"
 
 log "Rejecting underpayment for retail single authorization"
 if cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${UNDERPAY_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${EXTREF_SINGLE}" >/dev/null 2>&1; then
+    "single|${SUBMITTER_ACCOUNT}|${EXTREF_SINGLE}|${BILLABLE_BYTES_SINGLE}" >/dev/null 2>&1; then
     echo "Assertion failed: underpayment retail authorization transfer was accepted." >&2
     exit 1
 fi
 
 log "Rejecting wrong token for retail single authorization"
 if cleos -u "${RPC_URL}" push action "${WRONG_TOKEN_CONTRACT}" transfer \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${RETPAY_ACCOUNT}\",\"${PRICE_SINGLE}\",\"single|${SUBMITTER_ACCOUNT}|${EXTREF_SINGLE}\"]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${RETPAY_ACCOUNT}\",\"${PRICE_SINGLE}\",\"single|${SUBMITTER_ACCOUNT}|${EXTREF_SINGLE}|${BILLABLE_BYTES_SINGLE}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: wrong-token retail authorization was accepted." >&2
     exit 1
@@ -146,13 +179,13 @@ fi
 
 log "Funding exact retail single authorization"
 cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${EXTREF_SINGLE}"
+    "single|${SUBMITTER_ACCOUNT}|${EXTREF_SINGLE}|${BILLABLE_BYTES_SINGLE}"
 
 wait_for_auth_request "${SUBMITTER_ACCOUNT}" "${EXTREF_SINGLE}" "retail single authorization"
 
 log "Rejecting duplicate retail single authorization for the same request"
 if cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_SINGLE}" \
-    "single|${SUBMITTER_ACCOUNT}|${EXTREF_SINGLE}" >/dev/null 2>&1; then
+    "single|${SUBMITTER_ACCOUNT}|${EXTREF_SINGLE}|${BILLABLE_BYTES_SINGLE}" >/dev/null 2>&1; then
     echo "Assertion failed: duplicate retail authorization was accepted for the same request." >&2
     exit 1
 fi
@@ -162,6 +195,14 @@ SINGLE_AUTH_ID="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauth
     --arg external_ref "${EXTREF_SINGLE}" \
     '.rows[] | select(.submitter == $submitter and .external_ref == $external_ref and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
 
+SINGLE_AUTH_KIB="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -r \
+    --argjson id "${SINGLE_AUTH_ID}" \
+    '.rows[] | select(.auth_id == $id) | .billable_kib')"
+if [[ "${SINGLE_AUTH_KIB}" != "${SINGLE_KIB}" ]]; then
+    echo "Assertion failed: retail single auth billable_kib mismatch." >&2
+    exit 1
+fi
+
 log "Consuming retail single authorization"
 cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" consume "[${SINGLE_AUTH_ID}]" -p "${OWNER_ACCOUNT}@active"
 
@@ -169,8 +210,21 @@ wait_for_consumed_auth "${SINGLE_AUTH_ID}" "consumed retail single authorization
 
 log "Funding exact retail batch authorization"
 cleos -u "${RPC_URL}" transfer "${SUBMITTER_ACCOUNT}" "${RETPAY_ACCOUNT}" "${PRICE_BATCH}" \
-    "batch|${SUBMITTER_ACCOUNT}|${EXTREF_BATCH}"
+    "batch|${SUBMITTER_ACCOUNT}|${EXTREF_BATCH}|${BILLABLE_BYTES_BATCH}"
 
 wait_for_auth_request "${SUBMITTER_ACCOUNT}" "${EXTREF_BATCH}" "retail batch authorization"
+
+BATCH_AUTH_ID="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -r \
+    --arg submitter "${SUBMITTER_ACCOUNT}" \
+    --arg external_ref "${EXTREF_BATCH}" \
+    '.rows[] | select(.submitter == $submitter and .external_ref == $external_ref and ((.consumed == false) or (.consumed == 0))) | .auth_id' | tail -n 1)"
+
+BATCH_AUTH_KIB="$(get_table_json "${RETPAY_ACCOUNT}" "${RETPAY_ACCOUNT}" rtlauths | "${JQ_BIN}" -r \
+    --argjson id "${BATCH_AUTH_ID}" \
+    '.rows[] | select(.auth_id == $id) | .billable_kib')"
+if [[ "${BATCH_AUTH_KIB}" != "${BATCH_KIB}" ]]; then
+    echo "Assertion failed: retail batch auth billable_kib mismatch." >&2
+    exit 1
+fi
 
 log "Retail payment authorization smoke test passed"

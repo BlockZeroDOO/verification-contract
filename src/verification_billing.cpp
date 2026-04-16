@@ -574,36 +574,61 @@ verification_billing::entitlement_row verification_billing::select_entitlement(
 ) {
     entitlement_table entitlements(get_self(), get_self().value);
     const auto now = time_point_sec(current_time_point());
+    bool found_candidate = false;
+    entitlement_row candidate{};
 
-    for (auto itr = entitlements.begin(); itr != entitlements.end(); ++itr) {
-        if (itr->payer != payer || itr->status != entitlement_status_active) {
+    auto prefers = [](const entitlement_row& lhs, const entitlement_row& rhs) {
+        const bool lhs_has_expiry = lhs.expires_at.sec_since_epoch() > 0;
+        const bool rhs_has_expiry = rhs.expires_at.sec_since_epoch() > 0;
+
+        if (lhs_has_expiry != rhs_has_expiry) {
+            return lhs_has_expiry;
+        }
+
+        if (lhs_has_expiry && rhs_has_expiry && lhs.expires_at != rhs.expires_at) {
+            return lhs.expires_at < rhs.expires_at;
+        }
+
+        return lhs.entitlement_id < rhs.entitlement_id;
+    };
+
+    for (auto itr = entitlements.begin(); itr != entitlements.end(); ) {
+        auto current = itr;
+        ++itr;
+
+        if (current->payer != payer || current->status != entitlement_status_active) {
             continue;
         }
 
-        const bool has_expiry = itr->expires_at.sec_since_epoch() > 0;
-        if (has_expiry && itr->expires_at <= now) {
-            entitlements.modify(itr, get_self(), [&](auto& row) {
+        const bool has_expiry = current->expires_at.sec_since_epoch() > 0;
+        if (has_expiry && current->expires_at <= now) {
+            entitlements.modify(current, get_self(), [&](auto& row) {
                 row.status = entitlement_status_expired;
                 row.updated_at = now;
             });
             continue;
         }
 
-        if (itr->kib_remaining == 0) {
-            entitlements.modify(itr, get_self(), [&](auto& row) {
+        if (current->kib_remaining == 0) {
+            entitlements.modify(current, get_self(), [&](auto& row) {
                 row.status = entitlement_status_exhausted;
                 row.updated_at = now;
             });
             continue;
         }
 
-        if (itr->kib_remaining >= required_kib) {
-            return *itr;
+        if (current->kib_remaining < required_kib) {
+            continue;
+        }
+
+        if (!found_candidate || prefers(*current, candidate)) {
+            candidate = *current;
+            found_candidate = true;
         }
     }
 
-    check(false, "payer does not have active enterprise entitlement with enough remaining KiB");
-    return entitlement_row{};
+    check(found_candidate, "payer does not have active enterprise entitlement with enough remaining KiB");
+    return candidate;
 }
 
 bool verification_billing::has_live_usage_auth(uint64_t entitlement_id, const time_point_sec& now) const {

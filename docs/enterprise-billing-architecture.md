@@ -192,6 +192,8 @@ The `use(...)` action creates a one-time usage authorization tied to:
 
 Then `verif` validates that authorization before accepting the anchor.
 
+When multiple enterprise entitlements can satisfy the same request, selection should prefer the entitlement with the nearest `expires_at`. Non-expiring packs should be used only after expiring entitlements that can still satisfy the request.
+
 ## Recommended Verification Binding
 
 The key design requirement is deterministic request binding.

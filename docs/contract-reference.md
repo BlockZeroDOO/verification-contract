@@ -215,6 +215,11 @@ Maintenance:
 - `cleanauths(limit)` removes consumed or expired `usageauths`
 - `cleanentls(limit)` removes expired or exhausted `entitlements` that are no longer referenced by live auth
 
+Entitlement selection:
+
+- `use(...)` spends the eligible entitlement with the nearest `expires_at`
+- non-expiring pack entitlements are used only when no sooner-expiring entitlement can satisfy the request
+
 ### Authority Model
 
 - governance config is controlled by contract authority

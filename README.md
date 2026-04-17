@@ -74,6 +74,13 @@ Expected artifacts:
 - [docs/jungle4-deploy.md](/c:/projects/verification-contract/docs/jungle4-deploy.md:1)
 - [docs/jungle4-validation-report.md](/c:/projects/verification-contract/docs/jungle4-validation-report.md:1)
 
+## Operations
+
+- [docs/verifbill-plan-admin.md](/c:/projects/verification-contract/docs/verifbill-plan-admin.md:1)
+- [docs/verifretpay-price-admin.md](/c:/projects/verification-contract/docs/verifretpay-price-admin.md:1)
+- [docs/verifbill-plan-purchase.md](/c:/projects/verification-contract/docs/verifbill-plan-purchase.md:1)
+- [docs/corporate-pricing-grid.md](/c:/projects/verification-contract/docs/corporate-pricing-grid.md:1)
+
 ## Smoke
 
 - [docs/billing-onchain-smoke.md](/c:/projects/verification-contract/docs/billing-onchain-smoke.md:1)

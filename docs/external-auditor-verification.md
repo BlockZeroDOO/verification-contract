@@ -167,6 +167,78 @@ python scripts/verify-external-audit.py \
 
 The script returns JSON and exits non-zero if the on-chain state does not match the expected values.
 
+## Batch Leaf Proof Helper
+
+This repository also includes:
+
+- [scripts/verify-batch-leaf-proof.py](/c:/projects/verification-contract/scripts/verify-batch-leaf-proof.py)
+
+This helper is for the second half of batch verification:
+
+- proving that one specific leaf belongs to the anchored batch root
+
+It expects:
+
+- a precomputed `leaf_hash`
+- a Merkle proof
+- either:
+  - an explicit `root_hash`
+  - or `external_ref` so it can fetch the on-chain batch row
+
+Supported proof input styles:
+
+- repeated `--sibling <hash>` with `--leaf-index <n>`
+- a JSON `--proof-file` with:
+  - `leaf_hash`
+  - `leaf_index`
+  - `root_hash` or `external_ref`
+  - `proof`
+
+Proof steps may be either:
+
+- plain hashes, using `leaf_index` to infer left/right order
+- objects like:
+
+```json
+{
+  "hash": "abcdef...",
+  "side": "left"
+}
+```
+
+Current helper algorithm:
+
+- binary Merkle tree
+- parent hash = `sha256(left_child_bytes || right_child_bytes)`
+
+### Example
+
+```bash
+python scripts/verify-batch-leaf-proof.py \
+  --rpc-url https://history.denotary.io \
+  --verification-account verif \
+  --external-ref 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
+  --leaf-hash abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789 \
+  --leaf-index 7 \
+  --sibling 1111111111111111111111111111111111111111111111111111111111111111 \
+  --sibling 2222222222222222222222222222222222222222222222222222222222222222
+```
+
+If `manifest_hash` and `leaf_count` are also known from the proof package, they can be checked too:
+
+```bash
+python scripts/verify-batch-leaf-proof.py \
+  --rpc-url https://history.denotary.io \
+  --verification-account verif \
+  --external-ref 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
+  --leaf-hash abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789 \
+  --leaf-index 7 \
+  --sibling 1111111111111111111111111111111111111111111111111111111111111111 \
+  --sibling 2222222222222222222222222222222222222222222222222222222222222222 \
+  --manifest-hash 3333333333333333333333333333333333333333333333333333333333333333 \
+  --leaf-count 100
+```
+
 ## Scope Boundary
 
 What this repository verifies:
@@ -175,14 +247,15 @@ What this repository verifies:
 - request identity
 - schema/policy linkage
 - stored root or object hash
+- optional batch leaf inclusion proof against the stored root
 
 What still depends on the off-chain evidence package:
 
 - canonicalization of the original source rows
-- proof that a specific row was part of a batch leaf set
 - manifest contents for batch-level forensic review
 
 That split is intentional:
 
 - `verif` proves that a specific hash or root was anchored
 - the operator or agent proof bundle proves how source data produced that hash or root
+- the batch proof helper verifies that a supplied leaf really belongs to the anchored root

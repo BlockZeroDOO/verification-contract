@@ -207,25 +207,50 @@ def post_json(url: str, payload: dict[str, Any]) -> dict[str, Any]:
         return json.loads(response.read().decode("utf-8"))
 
 
-def get_batch_by_external_ref(rpc_url: str, verification_account: str, external_ref: str) -> dict[str, Any]:
+def get_table_rows(
+    rpc_url: str,
+    code: str,
+    scope: str,
+    table: str,
+    limit: int = 1000,
+) -> list[dict[str, Any]]:
     endpoint = rpc_url.rstrip("/") + "/v1/chain/get_table_rows"
-    result = post_json(
-        endpoint,
-        {
+    rows: list[dict[str, Any]] = []
+    lower_bound: str | int | None = None
+
+    while True:
+        payload: dict[str, Any] = {
             "json": True,
-            "code": verification_account,
-            "scope": verification_account,
-            "table": "batches",
-            "index_position": 5,
-            "key_type": "sha256",
-            "lower_bound": external_ref,
-            "upper_bound": external_ref,
-            "limit": 10,
-        },
+            "code": code,
+            "scope": scope,
+            "table": table,
+            "limit": limit,
+        }
+        if lower_bound is not None:
+            payload["lower_bound"] = lower_bound
+
+        result = post_json(endpoint, payload)
+        rows.extend(result.get("rows", []))
+
+        more = result.get("more")
+        next_key = result.get("next_key")
+        if not more or next_key in (None, "", lower_bound):
+            break
+        lower_bound = next_key
+
+    return rows
+
+
+def get_batch_by_external_ref(rpc_url: str, verification_account: str, external_ref: str) -> dict[str, Any]:
+    result_rows = get_table_rows(
+        rpc_url,
+        verification_account,
+        verification_account,
+        "batches",
     )
     matches = [
         row
-        for row in result.get("rows", [])
+        for row in result_rows
         if str(row.get("external_ref", "")).lower() == external_ref
     ]
     if not matches:

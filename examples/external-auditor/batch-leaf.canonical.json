@@ -1,0 +1,16 @@
+{
+  "record_type": "invoice",
+  "source_system": "erp-main",
+  "table": "public.invoices",
+  "primary_key": {
+    "id": 1007
+  },
+  "canonical_row": {
+    "invoice_no": "INV-2026-0007",
+    "customer_id": "CUST-0042",
+    "issue_date": "2026-04-20",
+    "currency": "EUR",
+    "amount_minor": 8400,
+    "status": "paid"
+  }
+}

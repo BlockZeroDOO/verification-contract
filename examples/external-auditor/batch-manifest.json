@@ -1,0 +1,16 @@
+{
+  "manifest_version": "1.0",
+  "batch_external_ref": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "schema_id": 1,
+  "policy_id": 1,
+  "leaf_count": 100,
+  "leaves": [
+    {
+      "leaf_index": 7,
+      "primary_key": {
+        "id": 1007
+      },
+      "leaf_hash": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+    }
+  ]
+}

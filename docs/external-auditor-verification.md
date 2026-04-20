@@ -2,6 +2,10 @@
 
 This document describes the supported path for an external auditor to verify that selected source data was anchored into `verif`.
 
+Operational runbook:
+
+- [docs/external-auditor-runbook.md](/c:/projects/verification-contract/docs/external-auditor-runbook.md:1)
+
 The goal is simple:
 
 1. select a source row or a source batch outside the signer runtime

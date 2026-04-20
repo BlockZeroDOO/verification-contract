@@ -93,6 +93,7 @@ Expected artifacts:
 - [docs/contract-reference.md](/c:/projects/verification-contract/docs/contract-reference.md:1)
 - [docs/canonical-request-size-plan.md](/c:/projects/verification-contract/docs/canonical-request-size-plan.md:1)
 - [docs/external-auditor-verification.md](/c:/projects/verification-contract/docs/external-auditor-verification.md:1)
+- [docs/external-auditor-runbook.md](/c:/projects/verification-contract/docs/external-auditor-runbook.md:1)
 
 ## Notes
 

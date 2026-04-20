@@ -167,6 +167,76 @@ python scripts/verify-external-audit.py \
 
 The script returns JSON and exits non-zero if the on-chain state does not match the expected values.
 
+## Auditor Hash Derivation Helper
+
+This repository also includes:
+
+- [scripts/derive-audit-hash.py](/c:/projects/verification-contract/scripts/derive-audit-hash.py)
+
+This helper is for the first half of external verification:
+
+- deriving the expected `object_hash`
+- deriving a batch `leaf_hash`
+- deriving a `manifest_hash`
+
+The important boundary is explicit:
+
+- this helper hashes the payload exactly as the auditor provides it
+- it does not guess database canonicalization rules
+
+That makes it useful when:
+
+- the auditor already knows the agreed canonical payload shape
+- the operator provided a canonical JSON payload or canonical manifest file
+- both sides want a neutral reproducible hash derivation tool
+
+Supported input modes:
+
+- `--text`
+- `--text-file`
+- `--json`
+- `--json-file`
+- `--hex`
+
+JSON inputs are normalized as:
+
+- UTF-8
+- sorted keys
+- compact separators
+
+### Object Hash Example
+
+```bash
+python scripts/derive-audit-hash.py \
+  --kind object \
+  --json-file selected-row.canonical.json \
+  --pretty
+```
+
+### Leaf Hash Example
+
+```bash
+python scripts/derive-audit-hash.py \
+  --kind leaf \
+  --json-file batch-leaf.canonical.json \
+  --pretty
+```
+
+### Manifest Hash Example
+
+```bash
+python scripts/derive-audit-hash.py \
+  --kind manifest \
+  --json-file batch-manifest.json \
+  --pretty
+```
+
+Recommended external auditor flow for a batch is then:
+
+1. use `derive-audit-hash.py` to compute a leaf hash from the agreed canonical payload
+2. use `verify-batch-leaf-proof.py` to prove inclusion in the batch root
+3. use `verify-external-audit.py` to verify the anchored batch row in `verif`
+
 ## Batch Leaf Proof Helper
 
 This repository also includes:

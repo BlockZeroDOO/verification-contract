@@ -237,6 +237,61 @@ Recommended external auditor flow for a batch is then:
 2. use `verify-batch-leaf-proof.py` to prove inclusion in the batch root
 3. use `verify-external-audit.py` to verify the anchored batch row in `verif`
 
+## End-to-End Audit Chain Helper
+
+This repository also includes:
+
+- [scripts/verify-audit-chain.py](/c:/projects/verification-contract/scripts/verify-audit-chain.py)
+
+This helper is the convenience wrapper for external auditors.
+
+It takes:
+
+- a canonical row JSON file
+- single-mode metadata
+- or batch-mode metadata plus a proof file
+
+And it performs the full verification chain in one command.
+
+### Single Example
+
+```bash
+python scripts/verify-audit-chain.py \
+  --mode single \
+  --row-json-file selected-row.canonical.json \
+  --submitter dbagentstest \
+  --schema-id 1 \
+  --policy-id 1 \
+  --external-ref 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+```
+
+This run:
+
+1. derives `object_hash` from the canonical row payload
+2. recomputes `request_key`
+3. loads the matching `commitments` row from `verif`
+4. verifies the on-chain row
+
+### Batch Example
+
+```bash
+python scripts/verify-audit-chain.py \
+  --mode batch \
+  --row-json-file batch-leaf.canonical.json \
+  --proof-file batch-proof.json \
+  --submitter dbagentstest \
+  --schema-id 1 \
+  --policy-id 1 \
+  --external-ref 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+```
+
+This run:
+
+1. derives `leaf_hash` from the canonical row payload
+2. verifies Merkle inclusion from `proof-file`
+3. fetches the matching `batches` row from `verif`
+4. verifies `root_hash`, `request_key`, schema, policy, and optional proof metadata
+
 ## Batch Leaf Proof Helper
 
 This repository also includes:

@@ -42,14 +42,18 @@ Jungle4:
 ./scripts/deploy-billing-jungle4.sh
 ```
 
+Validated Jungle4 billing account:
+
+- `vadim1111111` -> `verifbill`
+
 ## Verify
 
 ```bash
-cleos -u <rpc> get table verifbill verifbill billtokens
-cleos -u <rpc> get table verifbill verifbill plans
-cleos -u <rpc> get table verifbill verifbill packs
-cleos -u <rpc> get table verifbill verifbill entitlements
-cleos -u <rpc> get table verifbill verifbill billconfig
+cleos -u <rpc> get table vadim1111111 vadim1111111 billtokens
+cleos -u <rpc> get table vadim1111111 vadim1111111 plans
+cleos -u <rpc> get table vadim1111111 vadim1111111 packs
+cleos -u <rpc> get table vadim1111111 vadim1111111 entitlements
+cleos -u <rpc> get table vadim1111111 vadim1111111 billconfig
 ```
 
 ## Wiring
@@ -57,5 +61,5 @@ cleos -u <rpc> get table verifbill verifbill billconfig
 Point `verifbill` at the deployed `verif` account:
 
 ```bash
-cleos -u <rpc> push action verifbill setverifacct '["verif"]' -p verifbill@active
+cleos -u <rpc> push action vadim1111111 setverifacct '["decentrfstor"]' -p vadim1111111@active
 ```

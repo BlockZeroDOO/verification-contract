@@ -7,7 +7,6 @@ READ_RPC_URL="${READ_RPC_URL:-${RPC_URL}}"
 VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verif}"
 VERIFICATION_BILLING_ACCOUNT="${VERIFICATION_BILLING_ACCOUNT:-verifbill}"
 RETPAY_ACCOUNT="${RETPAY_ACCOUNT:-verifretpay}"
-OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
 RETPAY_OWNER_ACCOUNT="${RETPAY_OWNER_ACCOUNT:-${RETPAY_ACCOUNT}}"
 SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
 PAYMENT_TOKEN_CONTRACT="${PAYMENT_TOKEN_CONTRACT:-eosio.token}"
@@ -18,7 +17,6 @@ PRICE_PER_KIB_BATCH="${PRICE_PER_KIB_BATCH:-0.0050 EOS}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 
-: "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the verification contract authority account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded account that can sign submits.}"
 : "${RETPAY_OWNER_ACCOUNT:?Set RETPAY_OWNER_ACCOUNT to the retail payment contract authority account.}"
 
@@ -154,9 +152,12 @@ BATCH_KIB="$(( (EXPECTED_BATCH_BYTES + 1023) / 1024 ))"
 PRICE_SINGLE="$(units_to_asset "$(( SINGLE_KIB * $(asset_to_units "${PRICE_PER_KIB_SINGLE}") ))" "${PAYMENT_SYMBOL}")"
 PRICE_BATCH="$(units_to_asset "$(( BATCH_KIB * $(asset_to_units "${PRICE_PER_KIB_BATCH}") ))" "${PAYMENT_SYMBOL}")"
 
-SCHEMA_ID="${SCHEMA_ID:-$((BASE_ID + 5000))}"
-POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-$((BASE_ID + 6000))}"
-POLICY_BATCH_ID="${POLICY_BATCH_ID:-$((BASE_ID + 6001))}"
+SCHEMA_ID="${SCHEMA_ID:-}"
+POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-}"
+POLICY_BATCH_ID="${POLICY_BATCH_ID:-}"
+: "${SCHEMA_ID:?Set SCHEMA_ID to an existing verif schema row.}"
+: "${POLICY_SINGLE_ID:?Set POLICY_SINGLE_ID to an existing single-submit policy row.}"
+: "${POLICY_BATCH_ID:?Set POLICY_BATCH_ID to an existing batch-submit policy row.}"
 
 SINGLE_EXTREF="$(hash_text "unified-retail-single-${TIMESTAMP}")"
 SINGLE_EXTREF_MISMATCH="$(hash_text "unified-retail-mismatch-${TIMESTAMP}")"
@@ -164,11 +165,6 @@ SINGLE_OBJECT_HASH="$(hash_text "unified-retail-object-${TIMESTAMP}")"
 BATCH_EXTREF="$(hash_text "unified-retail-batch-${TIMESTAMP}")"
 BATCH_ROOT_HASH="$(hash_text "unified-retail-root-${TIMESTAMP}")"
 MANIFEST_HASH="$(hash_text "unified-retail-manifest-${TIMESTAMP}")"
-
-log "Configuring verification authorization sources"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setauthsrcs \
-    "[\"${VERIFICATION_BILLING_ACCOUNT}\",\"${RETPAY_ACCOUNT}\"]" \
-    -p "${OWNER_ACCOUNT}@active"
 
 log "Configuring retail payment token"
 cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" settoken \
@@ -190,20 +186,26 @@ cleos -u "${RPC_URL}" push action "${RETPAY_ACCOUNT}" setprice \
     "[1,\"${PAYMENT_TOKEN_CONTRACT}\",\"${PRICE_PER_KIB_BATCH}\"]" \
     -p "${RETPAY_OWNER_ACCOUNT}@active"
 
-log "Creating unified retail schema"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" addschema \
-    "[${SCHEMA_ID},\"1.0.0\",\"$(hash_text "unified-retail-schema-${TIMESTAMP}")\",\"$(hash_text "unified-retail-policy-${TIMESTAMP}")\"]" \
-    -p "${OWNER_ACCOUNT}@active"
+wait_for_table_match \
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "schemas" \
+    ".rows[] | select(.id == ${SCHEMA_ID})" \
+    "schema ${SCHEMA_ID}"
 
-log "Creating unified retail single policy"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
-    "[${POLICY_SINGLE_ID},true,false,true]" \
-    -p "${OWNER_ACCOUNT}@active"
+wait_for_table_match \
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "policies" \
+    ".rows[] | select(.id == ${POLICY_SINGLE_ID})" \
+    "policy ${POLICY_SINGLE_ID}"
 
-log "Creating unified retail batch policy"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
-    "[${POLICY_BATCH_ID},false,true,true]" \
-    -p "${OWNER_ACCOUNT}@active"
+wait_for_table_match \
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "policies" \
+    ".rows[] | select(.id == ${POLICY_BATCH_ID})" \
+    "policy ${POLICY_BATCH_ID}"
 
 log "Funding unified retail single authorization"
 cleos -u "${RPC_URL}" transfer \

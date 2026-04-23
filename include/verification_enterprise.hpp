@@ -24,36 +24,6 @@ public:
     using contract::contract;
 
     [[eosio::action]]
-    void addschema(
-        uint64_t id,
-        const string& version,
-        const checksum256& canonicalization_hash,
-        const checksum256& hash_policy
-    );
-
-    [[eosio::action]]
-    void updateschema(
-        uint64_t id,
-        const string& version,
-        const checksum256& canonicalization_hash,
-        const checksum256& hash_policy
-    );
-
-    [[eosio::action]]
-    void deprecate(uint64_t id);
-
-    [[eosio::action]]
-    void setpolicy(
-        uint64_t id,
-        bool allow_single,
-        bool allow_batch,
-        bool active
-    );
-
-    [[eosio::action]]
-    void setauthsrcs(const name& billing_account, const name& retail_payment_account);
-
-    [[eosio::action]]
     void billsubmit(
         const name& submitter,
         uint64_t schema_id,
@@ -91,14 +61,6 @@ public:
         uint32_t leaf_count,
         const checksum256& manifest_hash,
         const checksum256& external_ref
-    );
-
-    [[eosio::action]]
-    void withdraw(
-        const name& token_contract,
-        const name& to,
-        const asset& quantity,
-        const string& memo
     );
 
 private:

@@ -9,11 +9,8 @@ extern "C" {
             switch (action) {
                 EOSIO_DISPATCH_HELPER(
                     verification_enterprise,
-                    (addschema)(updateschema)(deprecate)
-                    (setpolicy)(setauthsrcs)
                     (billsubmit)(retailsub)
                     (billbatch)(retailbatch)
-                    (withdraw)
                 )
             }
             return;

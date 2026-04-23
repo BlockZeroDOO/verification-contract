@@ -39,16 +39,20 @@ Jungle4:
 ./scripts/deploy-retpay-jungle4.sh
 ```
 
+Validated Jungle4 retail account:
+
+- `verification` -> `verifretpay`
+
 ## Verify
 
 ```bash
-cleos -u <rpc> get table verifretpay verifretpay rtltokens
-cleos -u <rpc> get table verifretpay verifretpay rtltariffs
-cleos -u <rpc> get table verifretpay verifretpay retpaycfg
+cleos -u <rpc> get table verification verification rtltokens
+cleos -u <rpc> get table verification verification rtltariffs
+cleos -u <rpc> get table verification verification retpaycfg
 ```
 
 ## Wiring
 
 ```bash
-cleos -u <rpc> push action verifretpay setverifacct '["verif"]' -p verifretpay@active
+cleos -u <rpc> push action verification setverifacct '["decentrfstor"]' -p verification@active
 ```

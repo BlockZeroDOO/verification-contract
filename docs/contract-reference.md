@@ -22,11 +22,10 @@ This repository supports three on-chain contracts:
 
 It is responsible for:
 
-- schema registry
-- policy registry
 - single-record anchoring
 - batch anchoring
 - request uniqueness
+- validation against stored schema and policy rows
 - internal anchoring entrypoints for payment contracts
 
 ### Tables
@@ -93,15 +92,14 @@ Fields:
 - `next_commitment_id`
 - `next_batch_id`
 
+#### `authsources`
+
+Fields:
+
+- `billing_account`
+- `retail_payment_account`
+
 ### Actions
-
-#### Governance
-
-- `addschema(id, version, canonicalization_hash, hash_policy)`
-- `updateschema(id, version, canonicalization_hash, hash_policy)`
-- `deprecate(id)`
-- `setpolicy(id, allow_single, allow_batch, active)`
-- `setauthsrcs(billing_account, retail_payment_account)`
 
 #### Anchoring
 
@@ -109,10 +107,6 @@ Fields:
 - `retailsub(submitter, schema_id, policy_id, object_hash, external_ref)`
 - `billbatch(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref)`
 - `retailbatch(submitter, schema_id, policy_id, root_hash, leaf_count, manifest_hash, external_ref)`
-
-#### Treasury
-
-- `withdraw(token_contract, to, quantity, memo)`
 
 ### Validation Rules
 
@@ -123,6 +117,7 @@ Contract-only runtime:
 - these internal entrypoints perform the same registry validation and uniqueness checks
 - they are the active anchoring runtime for the supported payment contracts
 - `billable_bytes` and `billable_kib` are computed inside `verif` from the canonical registry request shape
+- `verif` relies on already provisioned `schemas` and `policies` rows and does not expose runtime governance actions on the live surface
 
 ### Authorization Wiring
 
@@ -131,11 +126,12 @@ Contract-only runtime:
 - `verifbill`
 - `verifretpay`
 
-The deployed accounts are configured through:
+Caller authorization is read from the `authsources` singleton.
 
-- `setauthsrcs(billing_account, retail_payment_account)`
+If the singleton is absent, `verif` defaults to:
 
-This config controls allowed internal callers.
+- `billing_account = verifbill`
+- `retail_payment_account = verifretpay`
 
 ## `verifbill`
 

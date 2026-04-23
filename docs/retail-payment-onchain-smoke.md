@@ -15,18 +15,32 @@ export RPC_URL=https://your-rpc
 export READ_RPC_URL=${RPC_URL}
 export RETPAY_ACCOUNT=verifretpay
 export OWNER_ACCOUNT=verifretpay
-export VERIFICATION_OWNER_ACCOUNT=verif
 export VERIFICATION_ACCOUNT=verif
 export VERIFICATION_BILLING_ACCOUNT=verifbill
 export SUBMITTER_ACCOUNT=someuser
+export SCHEMA_ID=100
+export POLICY_SINGLE_ID=200
+export POLICY_BATCH_ID=201
+```
+
+Latest Jungle4 validated env:
+
+```bash
+export RETPAY_ACCOUNT=verification
+export OWNER_ACCOUNT=verification
+export VERIFICATION_ACCOUNT=decentrfstor
+export VERIFICATION_BILLING_ACCOUNT=vadim1111111
+export SUBMITTER_ACCOUNT=decentrfstor
+export SCHEMA_ID=1776342316
+export POLICY_SINGLE_ID=1776343316
+export POLICY_BATCH_ID=1776343317
 ```
 
 ## Coverage
 
 - token configuration
 - tariff configuration
-- schema/policy setup on `verif`
-- `setauthsrcs` wiring for `verif`
+- pre-provisioned schema/policy usage on `verif`
 - size-based payment calculation from contract-computed canonical request size
 - underpayment rejection
 - wrong-token rejection

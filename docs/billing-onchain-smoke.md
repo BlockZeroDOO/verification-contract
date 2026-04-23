@@ -28,6 +28,7 @@ Scripts:
   - billing owner account
   - payer account
   - submitter account
+- existing `verif` schema and policy rows for the IDs used by the smoke
 
 ## Required env vars
 
@@ -36,11 +37,13 @@ export RPC_URL=https://your-rpc
 export READ_RPC_URL=${RPC_URL}
 export BILLING_ACCOUNT=verifbill
 export OWNER_ACCOUNT=verifbill
-export VERIFICATION_OWNER_ACCOUNT=verif
 export VERIFICATION_ACCOUNT=verif
 export RETAIL_PAYMENT_ACCOUNT=verifretpay
 export PAYER_ACCOUNT=somepayer
 export SUBMITTER_ACCOUNT=somesubmitter
+export SCHEMA_ID=100
+export POLICY_SINGLE_ID=200
+export POLICY_BATCH_ID=201
 export PLAN_INCLUDED_KIB=8
 export PACK_INCLUDED_KIB=6
 ```
@@ -56,6 +59,15 @@ Generic billing smoke:
 Jungle4:
 
 ```bash
+export BILLING_ACCOUNT=vadim1111111
+export OWNER_ACCOUNT=vadim1111111
+export VERIFICATION_ACCOUNT=decentrfstor
+export RETAIL_PAYMENT_ACCOUNT=verification
+export PAYER_ACCOUNT=verification
+export SUBMITTER_ACCOUNT=verification
+export SCHEMA_ID=1776342316
+export POLICY_SINGLE_ID=1776343316
+export POLICY_BATCH_ID=1776343317
 ./scripts/smoke-test-billing-jungle4.sh
 ```
 
@@ -72,8 +84,7 @@ deNotary:
 - `setpack`
 - plan purchase through `transfer -> verifbill`
 - pack purchase through `transfer -> verifbill`
-- `setauthsrcs` wiring for `verif`
-- schema/policy setup on `verif`
+- pre-provisioned schema/policy usage on `verif`
 - atomic `submit` for single mode with payer authority
 - contract-computed canonical single-request size
 - nearest-expiry entitlement selection

@@ -7,7 +7,6 @@ READ_RPC_URL="${READ_RPC_URL:-${RPC_URL}}"
 BILLING_ACCOUNT="${BILLING_ACCOUNT:-verifbill}"
 VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verif}"
 OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
-VERIFICATION_OWNER_ACCOUNT="${VERIFICATION_OWNER_ACCOUNT:-${VERIFICATION_ACCOUNT}}"
 RETAIL_PAYMENT_ACCOUNT="${RETAIL_PAYMENT_ACCOUNT:-${BILLING_ACCOUNT}}"
 PAYER_ACCOUNT="${PAYER_ACCOUNT:-}"
 SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
@@ -25,7 +24,6 @@ WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
 
 : "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the billing contract authority account.}"
-: "${VERIFICATION_OWNER_ACCOUNT:?Set VERIFICATION_OWNER_ACCOUNT to the verif authority account.}"
 : "${PAYER_ACCOUNT:?Set PAYER_ACCOUNT to a funded enterprise payer account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to the enterprise submitter account.}"
 
@@ -128,9 +126,12 @@ if [[ ${#PACK_CODE} -gt 12 ]]; then
     exit 1
 fi
 
-SCHEMA_ID="${SCHEMA_ID:-$((BASE_ID + 1000))}"
-POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-$((BASE_ID + 2000))}"
-POLICY_BATCH_ID="${POLICY_BATCH_ID:-$((BASE_ID + 2001))}"
+SCHEMA_ID="${SCHEMA_ID:-}"
+POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-}"
+POLICY_BATCH_ID="${POLICY_BATCH_ID:-}"
+: "${SCHEMA_ID:?Set SCHEMA_ID to an existing verif schema row.}"
+: "${POLICY_SINGLE_ID:?Set POLICY_SINGLE_ID to an existing single-submit policy row.}"
+: "${POLICY_BATCH_ID:?Set POLICY_BATCH_ID to an existing batch-submit policy row.}"
 
 COMMIT_EXTREF_SINGLE="$(hash_text "bill-single-${TIMESTAMP}")"
 COMMIT_EXTREF_BATCH="$(hash_text "bill-batch-${TIMESTAMP}")"
@@ -146,25 +147,26 @@ EXPECTED_BATCH_BYTES=124
 EXPECTED_SINGLE_KIB="$(( (EXPECTED_SINGLE_BYTES + 1023) / 1024 ))"
 EXPECTED_BATCH_KIB="$(( (EXPECTED_BATCH_BYTES + 1023) / 1024 ))"
 
-log "Configuring verification authorization sources"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setauthsrcs \
-    "[\"${BILLING_ACCOUNT}\",\"${RETAIL_PAYMENT_ACCOUNT}\"]" \
-    -p "${VERIFICATION_OWNER_ACCOUNT}@active"
+wait_for_table_match \
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "schemas" \
+    ".rows[] | select(.id == ${SCHEMA_ID})" \
+    "schema ${SCHEMA_ID}"
 
-log "Creating billing schema"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" addschema \
-    "[${SCHEMA_ID},\"1.0.0\",\"$(hash_text "bill-schema-${TIMESTAMP}")\",\"$(hash_text "bill-schema-policy-${TIMESTAMP}")\"]" \
-    -p "${VERIFICATION_OWNER_ACCOUNT}@active"
+wait_for_table_match \
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "policies" \
+    ".rows[] | select(.id == ${POLICY_SINGLE_ID})" \
+    "policy ${POLICY_SINGLE_ID}"
 
-log "Creating billing single policy"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
-    "[${POLICY_SINGLE_ID},true,false,true]" \
-    -p "${VERIFICATION_OWNER_ACCOUNT}@active"
-
-log "Creating billing batch policy"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
-    "[${POLICY_BATCH_ID},false,true,true]" \
-    -p "${VERIFICATION_OWNER_ACCOUNT}@active"
+wait_for_table_match \
+    "${VERIFICATION_ACCOUNT}" \
+    "${VERIFICATION_ACCOUNT}" \
+    "policies" \
+    ".rows[] | select(.id == ${POLICY_BATCH_ID})" \
+    "policy ${POLICY_BATCH_ID}"
 
 log "Configuring accepted billing token"
 cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" settoken \
@@ -217,7 +219,7 @@ PLAN_KIB_BEFORE_SINGLE="$(get_table_json "${BILLING_ACCOUNT}" "${BILLING_ACCOUNT
 
 log "Rejecting enterprise submit with mismatched payer and submitter"
 if cleos -u "${RPC_URL}" push action "${BILLING_ACCOUNT}" submit \
-    "[\"${PAYER_ACCOUNT}\",\"${OWNER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "bill-mismatch-object-${TIMESTAMP}")\",\"$(hash_text "bill-mismatch-ext-${TIMESTAMP}")\"]" \
+    "[\"${PAYER_ACCOUNT}\",\"${VERIFICATION_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "bill-mismatch-object-${TIMESTAMP}")\",\"$(hash_text "bill-mismatch-ext-${TIMESTAMP}")\"]" \
     -p "${PAYER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: enterprise submit with mismatched payer/submitter was accepted." >&2
     exit 1

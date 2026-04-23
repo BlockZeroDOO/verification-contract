@@ -16,8 +16,8 @@ Supported smoke coverage:
 
 ### Enterprise
 
-- schema and policy setup
-- registry caller wiring
+- pre-provisioned schema and policy rows
+- existing `authsources` row or canonical default caller names
 - billing pack purchase
 - `verifbill::submit -> verif::billsubmit`
 - `verifbill::submitroot -> verif::billbatch`
@@ -29,6 +29,8 @@ Supported smoke coverage:
 ### Retail
 
 - retail token and tariff setup
+- pre-provisioned schema and policy rows
+- existing `authsources` row or canonical default caller names
 - atomic `transfer -> verifretpay`
 - `verif::retailsub`
 - `verif::retailbatch`

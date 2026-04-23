@@ -7,7 +7,6 @@ READ_RPC_URL="${READ_RPC_URL:-${RPC_URL}}"
 VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verif}"
 VERIFICATION_BILLING_ACCOUNT="${VERIFICATION_BILLING_ACCOUNT:-verifbill}"
 SUBMITTER_ACCOUNT="${SUBMITTER_ACCOUNT:-}"
-OWNER_ACCOUNT="${OWNER_ACCOUNT:-}"
 BILLING_OWNER_ACCOUNT="${BILLING_OWNER_ACCOUNT:-${VERIFICATION_BILLING_ACCOUNT}}"
 WAIT_TIMEOUT_SEC="${WAIT_TIMEOUT_SEC:-90}"
 WAIT_INTERVAL_SEC="${WAIT_INTERVAL_SEC:-1}"
@@ -18,7 +17,6 @@ ENTERPRISE_PACK_CODE="${ENTERPRISE_PACK_CODE:-}"
 ENTERPRISE_PACK_PRICE="${ENTERPRISE_PACK_PRICE:-0.0500 EOS}"
 ENTERPRISE_PACK_INCLUDED_KIB="${ENTERPRISE_PACK_INCLUDED_KIB:-12}"
 
-: "${OWNER_ACCOUNT:?Set OWNER_ACCOUNT to the enterprise contract authority account.}"
 : "${SUBMITTER_ACCOUNT:?Set SUBMITTER_ACCOUNT to a funded test account that can sign submits.}"
 : "${BILLING_OWNER_ACCOUNT:?Set BILLING_OWNER_ACCOUNT to the verifbill authority account.}"
 
@@ -209,9 +207,12 @@ if [[ ${#ENTERPRISE_PACK_CODE} -gt 12 ]]; then
     exit 1
 fi
 
-SCHEMA_ID="${SCHEMA_ID:-$((BASE_ID + 1000))}"
-POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-$((BASE_ID + 2000))}"
-POLICY_BATCH_ID="${POLICY_BATCH_ID:-$((BASE_ID + 2001))}"
+SCHEMA_ID="${SCHEMA_ID:-}"
+POLICY_SINGLE_ID="${POLICY_SINGLE_ID:-}"
+POLICY_BATCH_ID="${POLICY_BATCH_ID:-}"
+: "${SCHEMA_ID:?Set SCHEMA_ID to an existing verif schema row.}"
+: "${POLICY_SINGLE_ID:?Set POLICY_SINGLE_ID to an existing single-submit policy row.}"
+: "${POLICY_BATCH_ID:?Set POLICY_BATCH_ID to an existing batch-submit policy row.}"
 
 COMMIT_EXTREF_1="$(hash_text "commit-1-${TIMESTAMP}")"
 COMMIT_EXTREF_2="$(hash_text "commit-2-${TIMESTAMP}")"
@@ -229,10 +230,6 @@ EXPECTED_BATCH_BYTES=124
 EXPECTED_SINGLE_KIB="$(( (EXPECTED_SINGLE_BYTES + 1023) / 1024 ))"
 EXPECTED_BATCH_KIB="$(( (EXPECTED_BATCH_BYTES + 1023) / 1024 ))"
 
-log "Creating schema"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" addschema \
-    "[${SCHEMA_ID},\"1.0.0\",\"$(hash_text "schema-rules-${TIMESTAMP}")\",\"$(hash_text "hash-policy-${TIMESTAMP}")\"]" \
-    -p "${OWNER_ACCOUNT}@active"
 wait_for_table_match \
     "${VERIFICATION_ACCOUNT}" \
     "${VERIFICATION_ACCOUNT}" \
@@ -240,10 +237,6 @@ wait_for_table_match \
     ".rows[] | select(.id == ${SCHEMA_ID})" \
     "schema ${SCHEMA_ID}"
 
-log "Creating single-submit policy"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
-    "[${POLICY_SINGLE_ID},true,false,true]" \
-    -p "${OWNER_ACCOUNT}@active"
 wait_for_table_match \
     "${VERIFICATION_ACCOUNT}" \
     "${VERIFICATION_ACCOUNT}" \
@@ -251,10 +244,6 @@ wait_for_table_match \
     ".rows[] | select(.id == ${POLICY_SINGLE_ID})" \
     "policy ${POLICY_SINGLE_ID}"
 
-log "Creating batch-submit policy"
-cleos -u "${RPC_URL}" push action "${VERIFICATION_ACCOUNT}" setpolicy \
-    "[${POLICY_BATCH_ID},false,true,true]" \
-    -p "${OWNER_ACCOUNT}@active"
 wait_for_table_match \
     "${VERIFICATION_ACCOUNT}" \
     "${VERIFICATION_ACCOUNT}" \
@@ -295,7 +284,7 @@ assert_commitment_field "${COMMITMENT_ID_1}" "billable_kib" "${EXPECTED_SINGLE_K
 
 log "Rejecting contract-only enterprise submit with mismatched payer and submitter"
 if cleos -u "${RPC_URL}" push action "${VERIFICATION_BILLING_ACCOUNT}" submit \
-    "[\"${SUBMITTER_ACCOUNT}\",\"${OWNER_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "object-mismatch-${TIMESTAMP}")\",\"${COMMIT_EXTREF_MISMATCH}\"]" \
+    "[\"${SUBMITTER_ACCOUNT}\",\"${VERIFICATION_ACCOUNT}\",${SCHEMA_ID},${POLICY_SINGLE_ID},\"$(hash_text "object-mismatch-${TIMESTAMP}")\",\"${COMMIT_EXTREF_MISMATCH}\"]" \
     -p "${SUBMITTER_ACCOUNT}@active" >/dev/null 2>&1; then
     echo "Assertion failed: contract-only enterprise submit with mismatched payer/submitter was accepted." >&2
     exit 1

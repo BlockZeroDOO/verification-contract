@@ -18,10 +18,10 @@ Repository boundary:
 
 Unified anchoring registry for:
 
-- schema registry
-- policy registry
 - single-record anchoring
 - batch anchoring
+- validation against pre-provisioned schema and policy rows
+- internal entrypoints from `verifbill` and `verifretpay`
 
 ### `verifbill`
 
@@ -98,8 +98,10 @@ Expected artifacts:
 ## Notes
 
 - `verif` is the only supported registry
+- the live `verif` surface is frozen to runtime anchoring entrypoints and does not expose self-managed registry or treasury actions
 - `verifbill` is the supported enterprise payment model
 - `verifretpay` is the supported retail payment model
+- latest Jungle4-validated layout is `decentrfstor -> verif`, `vadim1111111 -> verifbill`, `verification -> verifretpay`
 
 ## License
 

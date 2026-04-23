@@ -35,10 +35,17 @@ Retail payment companion:
 ## Wiring
 
 ```bash
-cleos -u https://history.denotary.io push action verif setauthsrcs '["verifbill","verifretpay"]' -p verif@active
 cleos -u https://history.denotary.io push action verifbill setverifacct '["verif"]' -p verifbill@active
 cleos -u https://history.denotary.io push action verifretpay setverifacct '["verif"]' -p verifretpay@active
 ```
+
+`verif` no longer exposes a live `setauthsrcs` action.
+
+Production upgrade assumptions:
+
+- existing `schemas` and `policies` rows remain in place
+- existing `authsources` configuration remains in place if already set on-chain
+- if `authsources` is absent, `verif` defaults to `verifbill` and `verifretpay`
 
 ## Smoke
 
@@ -46,11 +53,13 @@ Enterprise:
 
 ```bash
 export RPC_URL=https://history.denotary.io
-export OWNER_ACCOUNT=verif
 export BILLING_OWNER_ACCOUNT=verifbill
 export VERIFICATION_BILLING_ACCOUNT=verifbill
 export VERIFICATION_ACCOUNT=verif
 export SUBMITTER_ACCOUNT=youruser
+export SCHEMA_ID=100
+export POLICY_SINGLE_ID=200
+export POLICY_BATCH_ID=201
 ./scripts/smoke-test-onchain.sh
 ```
 
@@ -60,8 +69,10 @@ Retail end-to-end:
 export VERIFICATION_ACCOUNT=verif
 export VERIFICATION_BILLING_ACCOUNT=verifbill
 export RETPAY_ACCOUNT=verifretpay
-export OWNER_ACCOUNT=verif
 export RETPAY_OWNER_ACCOUNT=verifretpay
 export SUBMITTER_ACCOUNT=youruser
+export SCHEMA_ID=100
+export POLICY_SINGLE_ID=200
+export POLICY_BATCH_ID=201
 ./scripts/smoke-test-unified-retail.sh
 ```

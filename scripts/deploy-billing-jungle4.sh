@@ -7,7 +7,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 RPC_URL="${RPC_URL:-https://jungle4.api.eosnation.io}"
 EXPECTED_CHAIN_ID="${EXPECTED_CHAIN_ID:-73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d}"
-BILLING_ACCOUNT="${BILLING_ACCOUNT:-verifbill}"
+BILLING_ACCOUNT="${BILLING_ACCOUNT:-vadim1111111}"
 BUILD_BEFORE_DEPLOY="${BUILD_BEFORE_DEPLOY:-true}"
 
 if ! command -v cleos >/dev/null 2>&1; then

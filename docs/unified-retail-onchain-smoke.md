@@ -10,14 +10,26 @@ These smoke tests validate the supported retail model:
 - [scripts/smoke-test-unified-retail.sh](/c:/projects/verification-contract/scripts/smoke-test-unified-retail.sh:1)
 - [scripts/smoke-test-unified-retail-jungle4.sh](/c:/projects/verification-contract/scripts/smoke-test-unified-retail-jungle4.sh:1)
 
+Latest Jungle4 validated env:
+
+```bash
+export VERIFICATION_ACCOUNT=decentrfstor
+export VERIFICATION_BILLING_ACCOUNT=vadim1111111
+export RETPAY_ACCOUNT=verification
+export RETPAY_OWNER_ACCOUNT=verification
+export SUBMITTER_ACCOUNT=decentrfstor
+export SCHEMA_ID=1776342316
+export POLICY_SINGLE_ID=1776343316
+export POLICY_BATCH_ID=1776343317
+```
+
 ## Coverage
 
-- `verif::setauthsrcs`
 - `verifretpay::settoken`
 - `verifretpay::setverifacct`
 - `verifretpay::setprice`
-- `verif::addschema`
-- `verif::setpolicy`
+- pre-provisioned `verif` schema/policy rows
+- existing `authsources` row or canonical default caller names
 - `transfer -> verifretpay`
 - `verif::retailsub`
 - `verif::retailbatch`

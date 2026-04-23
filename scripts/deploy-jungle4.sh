@@ -7,7 +7,7 @@ project_root="$(cd "${script_dir}/.." && pwd)"
 
 RPC_URL="${RPC_URL:-https://jungle4.api.eosnation.io}"
 JUNGLE4_CHAIN_ID="${JUNGLE4_CHAIN_ID:-73e4385a2708e6d7048834fbc1079f2fabb17b3c125b146af438971e90716c4d}"
-VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-verif}"
+VERIFICATION_ACCOUNT="${VERIFICATION_ACCOUNT:-decentrfstor}"
 BUILD_BEFORE_DEPLOY="${BUILD_BEFORE_DEPLOY:-true}"
 
 require_command() {

@@ -1,5 +1,8 @@
 # `verif` Runtime Freeze Release Note
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 ## Summary
 
 `verif` has been reduced to the live runtime anchoring surface required by the supported payment contracts.

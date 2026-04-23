@@ -1,5 +1,8 @@
 # Jungle4 Deploy
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 Supported deploy model on Jungle4:
 
 - `verif`

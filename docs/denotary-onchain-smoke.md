@@ -1,5 +1,8 @@
 # On-Chain Smoke Tests
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 Supported smoke coverage:
 
 - enterprise path: `verif + verifbill`

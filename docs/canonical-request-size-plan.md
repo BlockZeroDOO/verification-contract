@@ -1,5 +1,8 @@
 # Canonical Registry Request Size Model
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 ## Current State
 
 Billing is contract-computed from the canonical request that reaches `verif`.

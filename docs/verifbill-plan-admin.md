@@ -1,5 +1,8 @@
 # `verifbill` Plan Administration
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 This runbook explains how the contract administrator creates or updates an enterprise tariff plan in `verifbill`.
 
 ## Purpose

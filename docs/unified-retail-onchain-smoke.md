@@ -1,5 +1,8 @@
 # Retail End-to-End On-Chain Smoke Tests
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 These smoke tests validate the supported retail model:
 
 - `verifretpay` performs atomic retail payment

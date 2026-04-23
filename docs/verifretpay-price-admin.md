@@ -1,5 +1,8 @@
 # `verifretpay` Price Administration
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 This runbook explains how the contract administrator changes the retail `price_per_kib` tariff in `verifretpay`.
 
 ## Purpose

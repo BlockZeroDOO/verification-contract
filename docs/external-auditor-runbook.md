@@ -1,5 +1,8 @@
 # External Auditor Runbook
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 This runbook is the practical companion to:
 
 - [docs/external-auditor-verification.md](/c:/projects/verification-contract/docs/external-auditor-verification.md:1)

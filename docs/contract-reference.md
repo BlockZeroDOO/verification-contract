@@ -1,5 +1,8 @@
 # Verification Contract Reference
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 ## Supported Contracts
 
 This repository supports three on-chain contracts:

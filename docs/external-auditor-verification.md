@@ -1,5 +1,8 @@
 # External Auditor Verification
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 This document describes the supported path for an external auditor to verify that selected source data was anchored into `verif`.
 
 Operational runbook:

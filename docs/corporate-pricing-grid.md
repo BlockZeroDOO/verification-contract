@@ -1,5 +1,8 @@
 # Corporate Pricing Grid Proposal
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 This document proposes a starting corporate pricing grid for `verifbill`.
 
 It is intended for:

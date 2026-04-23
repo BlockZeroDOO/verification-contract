@@ -1,5 +1,8 @@
 # Enterprise Billing Deploy
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 This runbook covers deployment of `verifbill`.
 
 Repository boundary:

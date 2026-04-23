@@ -1,5 +1,8 @@
 # Enterprise Billing On-Chain Smoke Tests
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
 ## Purpose
 
 These smoke tests validate the current `verifbill` runtime together with the required `verif` wiring for:

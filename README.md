@@ -1,5 +1,10 @@
 # DeNotary Verification Contracts
 
+[BlockZero DOO, Serbia https://blockzero.rs](https://blockzero.rs)
+Telegram group: [DeNotaryGroup](https://t.me/DeNotaryGroup)
+
+The basic idea is that the verif smart contract remains trusted; its key is burned. The verifbill and verifretpay contracts are untrusted, so after publishing a record in verif, the record must be linked to the original, which allows the record to be trusted in the future. We have developed a full software cycle for data notarization, verification, and auditing.
+
 This repository is the canonical home of the supported on-chain verification model:
 
 - `verif`

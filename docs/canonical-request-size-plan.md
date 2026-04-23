@@ -1,15 +1,22 @@
-# Canonical Registry Request Size Plan
+# Canonical Registry Request Size Model
 
-## Goal
+## Current State
 
-Move billing away from client-supplied `billable_bytes` and toward a contract-computed
-canonical size of the request that reaches `verif`.
+Billing is contract-computed from the canonical request that reaches `verif`.
 
 Supported model:
 
 - `verif` is the internal-only registry
 - `verifbill` computes canonical enterprise request size
 - `verifretpay` computes canonical retail request size
+
+Current implementation status:
+
+- `verif` computes and stores `billable_bytes`
+- `verif` computes and stores `billable_kib`
+- `verifbill::submit(...)` and `submitroot(...)` no longer take client-supplied `billable_bytes`
+- `verifretpay` derives request size from the atomic payment memo payload
+- Jungle4 live validation has been completed for the contract-computed size model
 
 ## Core Rule
 
@@ -58,43 +65,6 @@ This model does not try to bill for:
 
 That data is outside the registry request model and should not drive anchoring billing.
 
-## Implementation Phases
-
-### Phase 1
-
-Introduce a shared canonical request size helper and switch contracts to use it.
-
-Deliverables:
-
-- shared `verification_request_size` helper
-- `verif` computes `billable_bytes` internally
-- `verifbill` computes size for `submit` and `submitroot`
-- `verifretpay` computes size from atomic retail memo content
-
-### Phase 2
-
-Remove client-supplied `billable_bytes` from public billing interfaces.
-
-Deliverables:
-
-- `verifbill::submit(...)` without `billable_bytes`
-- `verifbill::submitroot(...)` without `billable_bytes`
-- retail atomic memo without trailing `billable_bytes`
-
-### Phase 3
-
-Update smoke coverage and docs to assert contract-computed size.
-
-Deliverables:
-
-- billing smoke derives expected size from canonical request shape
-- retail smoke uses new memo format
-- docs/reference updated to reflect computed request size model
-
-### Phase 4
-
-Run live Jungle4 validation on the computed-size billing model.
-
 ## Migration Notes
 
 - registry tables keep `billable_bytes` and `billable_kib`
@@ -104,5 +74,12 @@ Run live Jungle4 validation on the computed-size billing model.
   - `verifretpay`
   - internal `verif` entrypoints
 
-Fresh validation accounts are recommended for Jungle4 whenever old table rows or old ABI
-assumptions may interfere with the new runtime.
+## Validation Notes
+
+- Jungle4 validation has been run on the contract-computed model
+- current validated Jungle4 layout is recorded in [docs/jungle4-validation-report.md](/c:/projects/verification-contract/docs/jungle4-validation-report.md:1)
+- fresh validation accounts are still useful when old rows or old ABI assumptions could interfere with smoke results
+
+## Summary
+
+The repository now treats canonical request size as part of the active runtime model, not as planned work.
